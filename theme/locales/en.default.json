@@ -22,7 +22,8 @@
       "primary_nav": "Main navigation",
       "sports": "Sports",
       "all_categories": "All categories",
-      "mega_promo": "Build your home gym"
+      "mega_promo": "Build your home gym",
+      "home": "Home"
     },
     "breadcrumb": {
       "home": "Home",
@@ -277,7 +278,10 @@
       "message": "Message",
       "submit": "Send message",
       "form_success": "Thanks for reaching out! We'll get back to you soon.",
-      "form_error": "Something went wrong. Please check your details and try again."
+      "form_error": "Something went wrong. Please check your details and try again.",
+      "map_title": "Our store on Google Maps",
+      "directions": "Get directions",
+      "store_name": "Athletic Horse"
     },
     "about": {
       "eyebrow": "Our story",

@@ -3,7 +3,6 @@
   {%- render 'breadcrumbs', current: crumb -%}
   <div class="ah-page-head">
     <h1 class="ah-page-head__title">{{ 'sections.list_collections.heading' | t }}</h1>
-    <p class="ah-page-head__desc">{{ 'sections.category_tiles.text' | t }}</p>
   </div>
   {%- paginate collections by 250 -%}
     <div data-results style="padding-bottom:var(--section-gap)">

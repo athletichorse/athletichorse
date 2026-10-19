@@ -26,10 +26,16 @@
           <span><strong>{{ 'sections.contact.email' | t }}</strong><span>{{ contact_email }}</span></span>
         </a>
       {%- endif -%}
-      {%- if section.settings.address != blank -%}
+      {%- liquid
+        assign address = section.settings.address
+        if request.locale.iso_code == 'ar' and section.settings.address_ar != blank
+          assign address = section.settings.address_ar
+        endif
+      -%}
+      {%- if address != blank -%}
         <a href="{{ section.settings.maps_url | default: '#' }}" class="ah-channel" target="_blank" rel="noopener noreferrer">
           <span class="ah-channel__icon">{%- render 'icon', name: 'pin' -%}</span>
-          <span><strong>{{ 'sections.contact.visit' | t }}</strong><span>{{ section.settings.address }}</span></span>
+          <span><strong>{{ 'sections.contact.visit' | t }}</strong><span>{{ address }}</span></span>
         </a>
       {%- endif -%}
       {%- if settings.store_hours != blank -%}
@@ -73,6 +79,20 @@
       <button type="submit" class="ah-btn ah-btn--lg ah-btn--block">{{ 'sections.contact.submit' | t }}</button>
     {%- endform -%}
   </div>
+
+  {%- if section.settings.map_query != blank -%}
+    <div class="ah-map">
+      <iframe title="{{ 'sections.contact.map_title' | t | escape }}" src="https://maps.google.com/maps?q={{ section.settings.map_query | url_encode }}&hl={{ request.locale.iso_code }}&z=15&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+      <div class="ah-map__card">
+        <strong>{{ 'sections.contact.store_name' | t }}</strong>
+        {%- if address != blank -%}<span>{{ address }}</span>{%- endif -%}
+        {%- if settings.store_hours != blank -%}<span>{{ settings.store_hours }}</span>{%- endif -%}
+        {%- if section.settings.maps_url != blank -%}
+          <a href="{{ section.settings.maps_url }}" class="ah-btn" target="_blank" rel="noopener noreferrer">{%- render 'icon', name: 'pin' -%}{{ 'sections.contact.directions' | t }}</a>
+        {%- endif -%}
+      </div>
+    </div>
+  {%- endif -%}
 </div>
 
 {% schema %}
@@ -85,7 +105,9 @@
     { "type": "text", "id": "whatsapp_display", "label": "WhatsApp display text" },
     { "type": "text", "id": "email", "label": "Contact email", "info": "Defaults to the store email in theme settings." },
     { "type": "textarea", "id": "address", "label": "Store address" },
+    { "type": "textarea", "id": "address_ar", "label": "Store address (Arabic)" },
     { "type": "url", "id": "maps_url", "label": "Google Maps link" },
+    { "type": "text", "id": "map_query", "label": "Map search (business name and city)", "info": "Shown as an embedded Google map." },
     { "type": "url", "id": "linktree_url", "label": "Linktree / general social link" }
   ],
   "presets": [{ "name": "Contact" }]
