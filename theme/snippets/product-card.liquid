@@ -18,7 +18,11 @@
   if lazy == false
     assign loading = 'eager'
   endif
-  assign img_alt = product.featured_media.alt | default: product.title | escape
+  assign img_alt = product.featured_media.alt | default: product.title
+  if request.locale.iso_code != 'en'
+    assign img_alt = product.title
+  endif
+  assign img_alt = img_alt | escape
   assign variant = product.selected_or_first_available_variant
 -%}
 <article class="ah-card">

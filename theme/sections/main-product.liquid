@@ -115,6 +115,12 @@
               {%- liquid
                 assign slide = slide | plus: 1
                 assign media_alt = media.alt | default: product.title
+                if request.locale.iso_code != 'en'
+                  assign media_alt = product.title
+                  if slide > 1
+                    assign media_alt = media_alt | append: ' – ' | append: slide
+                  endif
+                endif
                 assign zoom_src = media | image_url: width: 2000
                 assign img_loading = 'lazy'
                 assign img_priority = 'auto'

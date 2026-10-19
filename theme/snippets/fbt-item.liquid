@@ -6,7 +6,7 @@
     <span aria-hidden="true"></span>
   </label>
   <a href="{{ item.url }}" class="ah-fbt__media"{% if current %} tabindex="-1"{% endif %}>
-    {%- if item.featured_media -%}{{ item.featured_media | image_url: width: 240 | image_tag: loading: 'lazy', alt: item.featured_media.alt | default: item.title, width: 120, height: 120 }}{%- endif -%}
+    {%- if item.featured_media -%}{{ item.featured_media | image_url: width: 240 | image_tag: loading: 'lazy', alt: item.title, width: 120, height: 120 }}{%- endif -%}
   </a>
   <div class="ah-fbt__info">
     {%- if current -%}<span class="ah-fbt__this">{{ 'sections.product.fbt_this_item' | t }}</span>{%- endif -%}
