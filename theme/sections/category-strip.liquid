@@ -1,0 +1,87 @@
+<section class="ah-section ah-section--tight">
+  <div class="container">
+    {%- if section.settings.show_heading -%}
+      <div class="ah-section__head">
+        <h2 class="ah-section__title">{% if section.settings.heading != blank %}{{ section.settings.heading }}{% else %}{{ 'sections.category_strip.heading' | t }}{% endif %}</h2>
+      </div>
+    {%- endif -%}
+    <ul class="ah-sports" role="list">
+      {%- for block in section.blocks -%}
+        {%- assign coll = block.settings.collection -%}
+        {%- if block.settings.icon == 'all' -%}
+          {%- assign strip_url = routes.collections_url -%}
+        {%- else -%}
+          {%- assign strip_url = coll.url | default: routes.all_products_collection_url -%}
+        {%- endif -%}
+        <li {{ block.shopify_attributes }}>
+          <a href="{{ strip_url }}" class="ah-sports__item{% if block.settings.icon == 'sale' %} ah-sports__item--sale{% endif %}">
+            <span class="ah-sports__icon" aria-hidden="true">{%- render 'icon', name: block.settings.icon -%}</span>
+            <span class="ah-sports__label">
+              {%- if block.settings.label != blank -%}{{ block.settings.label }}
+              {%- elsif block.settings.icon == 'all' -%}{{ 'sections.category_strip.all' | t }}
+              {%- elsif coll.title != blank -%}{{ coll.title }}
+              {%- else -%}{{ 'sections.category_strip.all' | t }}
+              {%- endif -%}
+            </span>
+          </a>
+        </li>
+      {%- endfor -%}
+    </ul>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Shop by sport",
+  "settings": [
+    { "type": "checkbox", "id": "show_heading", "label": "Show heading", "default": true },
+    { "type": "text", "id": "heading", "label": "Heading", "info": "Leave blank to use the translated default." }
+  ],
+  "blocks": [
+    {
+      "type": "item",
+      "name": "Category",
+      "settings": [
+        { "type": "collection", "id": "collection", "label": "Collection" },
+        { "type": "text", "id": "label", "label": "Custom label", "info": "Leave blank to use the collection title." },
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icon",
+          "options": [
+            { "value": "all", "label": "All" },
+            { "value": "sale", "label": "Sale" },
+            { "value": "men", "label": "Men" },
+            { "value": "women", "label": "Women" },
+            { "value": "kids", "label": "Kids" },
+            { "value": "football", "label": "Football" },
+            { "value": "water", "label": "Water sports" },
+            { "value": "beach", "label": "Beach" },
+            { "value": "gym", "label": "Gym" },
+            { "value": "racket", "label": "Racket sports" },
+            { "value": "shoes", "label": "Shoes" },
+            { "value": "martial", "label": "Martial arts" },
+            { "value": "basketball", "label": "Basketball" },
+            { "value": "trophy", "label": "Trophies" },
+            { "value": "backpack", "label": "Bags" }
+          ],
+          "default": "all"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 14,
+  "presets": [
+    {
+      "name": "Shop by sport",
+      "blocks": [
+        { "type": "item", "settings": { "icon": "all" } },
+        { "type": "item", "settings": { "icon": "football" } },
+        { "type": "item", "settings": { "icon": "water" } },
+        { "type": "item", "settings": { "icon": "gym" } },
+        { "type": "item", "settings": { "icon": "racket" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,56 @@
+<div class="container">
+  <div class="ah-page-head" style="padding-top:32px">
+    <h1 class="ah-page-head__title">{% if search.performed %}{{ 'general.search.results_title' | t }}{% else %}{{ 'general.header.search' | t }}{% endif %}</h1>
+    <form action="{{ routes.search_url }}" method="get" role="search" class="ah-search" style="margin-top:20px;max-width:640px">
+      <input type="hidden" name="type" value="product">
+      <label class="visually-hidden" for="SearchPageInput">{{ 'general.header.search' | t }}</label>
+      <input id="SearchPageInput" type="search" name="q" value="{{ search.terms | escape }}" placeholder="{{ 'general.search.placeholder' | t }}" class="ah-search__input" style="height:54px">
+      <button type="submit" class="ah-search__btn" aria-label="{{ 'general.header.search' | t }}">{%- render 'icon', name: 'arrow' -%}</button>
+    </form>
+    {%- if search.performed -%}
+      <p class="ah-page-head__desc">
+        {%- if search.results_count > 0 -%}
+          {{ 'general.search.results_for' | t: terms: search.terms }} — {{ 'general.search.results_count' | t: count: search.results_count }}
+        {%- else -%}
+          {{ 'general.search.no_results' | t: terms: search.terms }}
+        {%- endif -%}
+      </p>
+    {%- endif -%}
+  </div>
+
+  {%- if search.performed and search.results_count > 0 -%}
+    {%- paginate search.results by 24 -%}
+      <div data-results style="padding-bottom:var(--section-gap)">
+        <ul class="ah-grid" role="list" data-grid>
+          {%- for item in search.results -%}
+            {%- if item.object_type == 'product' -%}
+              <li>{%- render 'product-card', product: item -%}</li>
+            {%- endif -%}
+          {%- endfor -%}
+        </ul>
+        {%- if paginate.pages > 1 -%}
+          {%- assign shown = paginate.current_offset | plus: search.results.size -%}
+          <div class="ah-load-more" data-load-more data-total="{{ paginate.items }}" data-next="{% if paginate.next %}{{ paginate.next.url }}{% endif %}">
+            <span>{{ 'sections.main_collection.showing_html' | t: shown: shown, total: paginate.items }}</span>
+            {%- if paginate.next -%}<a href="{{ paginate.next.url }}" class="ah-btn ah-btn--outline">{{ 'sections.main_collection.load_more' | t }}</a>{%- endif -%}
+          </div>
+        {%- endif -%}
+      </div>
+    {%- endpaginate -%}
+  {%- else -%}
+    <div style="padding-bottom:var(--section-gap)">
+      <h2 class="ah-section__title" style="font-size:22px;margin-bottom:16px">{{ 'general.search.popular' | t }}</h2>
+      <div class="ah-active-filters">
+        {%- for link in linklists['main-menu'].links -%}
+          {%- unless link.url contains '/policies' or link.url contains '/pages/' -%}
+            <a class="ah-chip" href="{{ link.url }}">{{ link.title }}</a>
+          {%- endunless -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  {%- endif -%}
+</div>
+
+{% schema %}
+{ "name": "Search results", "settings": [] }
+{% endschema %}

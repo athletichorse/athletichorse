@@ -1,0 +1,13 @@
+{
+  "sections": {
+    "main-product": {
+      "type": "main-product",
+      "settings": { "show_dynamic_checkout": true }
+    },
+    "related-products": {
+      "type": "featured-collection",
+      "settings": { "limit": 8, "columns": 4, "surface": true }
+    }
+  },
+  "order": ["main-product", "related-products"]
+}

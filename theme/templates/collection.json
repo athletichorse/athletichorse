@@ -1,0 +1,21 @@
+{
+  "sections": {
+    "main-collection-banner": {
+      "type": "main-collection-banner",
+      "settings": {
+        "show_image": false
+      }
+    },
+    "main-collection-product-grid": {
+      "type": "main-collection-product-grid",
+      "settings": {
+        "per_page": 24,
+        "enable_filtering": true
+      }
+    }
+  },
+  "order": [
+    "main-collection-banner",
+    "main-collection-product-grid"
+  ]
+}

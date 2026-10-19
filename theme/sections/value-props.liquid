@@ -1,0 +1,79 @@
+<div class="ah-usps">
+  <div class="container">
+    <ul class="ah-usps__list" role="list">
+      {%- for block in section.blocks -%}
+        {%- liquid
+          assign key = block.settings.preset
+          assign title = block.settings.title
+          if title == blank
+            assign title_key = 'sections.value_props.' | append: key | append: '_title'
+            assign title = title_key | t
+          endif
+          assign text = block.settings.text
+          if text == blank
+            assign text_key = 'sections.value_props.' | append: key | append: '_text'
+            assign text = text_key | t
+          endif
+          case key
+            when 'delivery'
+              assign icon = 'truck'
+            when 'authentic'
+              assign icon = 'shield'
+            when 'returns'
+              assign icon = 'return'
+            when 'secure'
+              assign icon = 'lock'
+            when 'support'
+              assign icon = 'chat'
+            else
+              assign icon = 'card'
+          endcase
+        -%}
+        <li class="ah-usp" {{ block.shopify_attributes }}>
+          <span class="ah-usp__icon">{%- render 'icon', name: icon -%}</span>
+          <div><strong>{{ title }}</strong><span>{{ text }}</span></div>
+        </li>
+      {%- endfor -%}
+    </ul>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Trust bar",
+  "blocks": [
+    {
+      "type": "usp",
+      "name": "Benefit",
+      "settings": [
+        {
+          "type": "select", "id": "preset", "label": "Type",
+          "options": [
+            { "value": "delivery", "label": "Fast delivery" },
+            { "value": "authentic", "label": "Authentic products" },
+            { "value": "returns", "label": "Easy returns" },
+            { "value": "secure", "label": "Secure checkout" },
+            { "value": "support", "label": "WhatsApp support" },
+            { "value": "bnpl", "label": "Pay later" }
+          ],
+          "default": "delivery"
+        },
+        { "type": "text", "id": "title", "label": "Title", "info": "Leave blank to use the translated default." },
+        { "type": "text", "id": "text", "label": "Text", "info": "Leave blank to use the translated default." }
+      ]
+    }
+  ],
+  "max_blocks": 4,
+  "presets": [
+    {
+      "name": "Trust bar",
+      "blocks": [
+        { "type": "usp", "settings": { "preset": "delivery" } },
+        { "type": "usp", "settings": { "preset": "authentic" } },
+        { "type": "usp", "settings": { "preset": "returns" } },
+        { "type": "usp", "settings": { "preset": "secure" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

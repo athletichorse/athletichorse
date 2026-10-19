@@ -1,0 +1,303 @@
+{%- liquid
+  assign current_variant = product.selected_or_first_available_variant
+  assign crumb_coll = blank
+  for c in product.collections
+    unless c.handle == 'all-products-newest' or c.handle == 'all' or c.handle == 'frontpage'
+      assign crumb_coll = c
+      break
+    endunless
+  endfor
+  assign has_size = false
+-%}
+
+<div class="container">
+  {%- render 'breadcrumbs', parent_title: crumb_coll.title, parent_url: crumb_coll.url, current: product.title -%}
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": {{ product.title | json }},
+    "url": {{ request.origin | append: product.url | json }},
+    "description": {{ product.description | strip_html | strip_newlines | truncate: 5000 | json }},
+    {%- if current_variant.sku != blank %}"sku": {{ current_variant.sku | json }},{% endif %}
+    {%- if current_variant.barcode != blank %}"gtin": {{ current_variant.barcode | json }},{% endif %}
+    "brand": { "@type": "Brand", "name": {{ product.vendor | default: shop.name | json }} },
+    {%- if product.type != blank %}"category": {{ product.type | json }},{% endif %}
+    "image": [{% for media in product.media limit: 6 %}{% if media.media_type == 'image' %}{% unless forloop.first %},{% endunless %}{{ media | image_url: width: 1200 | prepend: 'https:' | json }}{% endif %}{% endfor %}],
+    "offers": [
+      {%- for variant in product.variants limit: 50 -%}
+        {
+          "@type": "Offer",
+          {%- if variant.sku != blank %}"sku": {{ variant.sku | json }},{% endif %}
+          "name": {{ variant.title | json }},
+          "url": {{ request.origin | append: variant.url | json }},
+          "priceCurrency": {{ cart.currency.iso_code | json }},
+          "price": {{ variant.price | divided_by: 100.0 | json }},
+          "itemCondition": "https://schema.org/NewCondition",
+          "availability": "https://schema.org/{% if variant.available %}InStock{% else %}OutOfStock{% endif %}",
+          "seller": { "@type": "Organization", "name": {{ shop.name | json }} },
+          "shippingDetails": {
+            "@type": "OfferShippingDetails",
+            "shippingDestination": { "@type": "DefinedRegion", "addressCountry": "SA" }
+          },
+          "hasMerchantReturnPolicy": {
+            "@type": "MerchantReturnPolicy",
+            "applicableCountry": "SA",
+            "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+            "merchantReturnDays": {{ settings.return_days | default: 14 }}
+          }
+        }{% unless forloop.last %},{% endunless %}
+      {%- endfor -%}
+    ]
+  }
+</script>
+
+<div class="container ah-product" data-product
+  data-str-add="{{ 'sections.product.add_to_cart' | t | escape }}"
+  data-str-sold-out="{{ 'sections.product.sold_out' | t | escape }}"
+  data-str-unavailable="{{ 'sections.product.unavailable' | t | escape }}"
+  data-str-in-stock="{{ 'sections.product.in_stock' | t | escape }}"
+  data-str-low-stock="{{ 'sections.product.low_stock' | t | escape }}">
+  {%- comment -%}
+    Built by hand rather than `{{ product | json }}`: the drop-to-json output omits
+    inventory_quantity / inventory_policy, which the stock cap and low-stock note need.
+  {%- endcomment -%}
+  <script type="application/json" data-product-json>
+    {
+      "options": [{% for option_name in product.options %}{{ option_name | json }}{% unless forloop.last %},{% endunless %}{% endfor %}],
+      "variants": [
+        {%- for variant in product.variants -%}
+          {
+            "id": {{ variant.id | json }},
+            "option1": {{ variant.option1 | json }},
+            "option2": {{ variant.option2 | json }},
+            "option3": {{ variant.option3 | json }},
+            "available": {{ variant.available | json }},
+            "price": {{ variant.price | json }},
+            "compare_at_price": {{ variant.compare_at_price | json }},
+            "inventory_management": {{ variant.inventory_management | json }},
+            "inventory_policy": {{ variant.inventory_policy | json }},
+            "inventory_quantity": {{ variant.inventory_quantity | json }},
+            "featured_image": {% if variant.featured_media %}{ "id": {{ variant.featured_media.id | json }}, "src": {{ variant.featured_media | image_url: width: 1200 | json }} }{% else %}null{% endif %}
+          }{% unless forloop.last %},{% endunless %}
+        {%- endfor -%}
+      ]
+    }
+  </script>
+
+  <div class="ah-gallery">
+    <div class="ah-gallery__main">
+      <div class="ah-card__badges">
+        {%- unless product.available -%}
+          <span class="ah-badge ah-badge--soldout">{{ 'sections.product.sold_out' | t }}</span>
+        {%- else -%}
+          {%- if product.compare_at_price > product.price -%}<span class="ah-badge ah-badge--sale">{{ 'sections.main_collection.on_sale' | t }}</span>{%- endif -%}
+        {%- endunless -%}
+      </div>
+      {%- assign main_media = current_variant.featured_media | default: product.featured_media -%}
+      {%- if main_media -%}
+        {%- liquid
+          assign main_alt = main_media.alt | default: product.title
+          assign zoom_src = main_media | image_url: width: 2000
+        -%}
+        {{ main_media | image_url: width: 1200 | image_tag:
+          widths: '450,600,800,1000,1200',
+          sizes: '(min-width: 990px) 50vw, 100vw',
+          alt: main_alt,
+          loading: 'eager',
+          fetchpriority: 'high',
+          data-main-image: '',
+          data-zoom: zoom_src
+        }}
+        <button type="button" class="ah-gallery__zoom" data-zoom-open>{%- render 'icon', name: 'zoom' -%}{{ 'sections.product.zoom' | t }}</button>
+      {%- else -%}
+        {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
+      {%- endif -%}
+    </div>
+
+    {%- if product.media.size > 1 -%}
+      <div class="ah-gallery__thumbs" role="list">
+        {%- for media in product.media limit: 10 -%}
+          {%- if media.media_type == 'image' -%}
+            <button type="button" role="listitem" class="ah-gallery__thumb{% if media.id == main_media.id %} is-active{% endif %}" data-thumb data-media-id="{{ media.id }}" data-src="{{ media | image_url: width: 1200 }}" aria-label="{{ 'sections.product.view_image' | t: number: forloop.index }}">
+              {{ media | image_url: width: 160 | image_tag: loading: 'lazy', alt: '' }}
+            </button>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+
+  <div class="ah-pinfo">
+    <div>
+      {%- if product.vendor != blank and product.vendor != shop.name -%}<span class="ah-pinfo__vendor">{{ product.vendor }}</span>{%- endif -%}
+      <h1 class="ah-pinfo__title">{{ product.title }}</h1>
+    </div>
+
+    <div class="ah-price{% if current_variant.compare_at_price > current_variant.price %} ah-price--sale{% endif %}" data-price>
+      <span class="ah-price__now">{{ current_variant.price | money_without_trailing_zeros }}</span>
+      {%- if current_variant.compare_at_price > current_variant.price -%}
+        <s class="ah-price__was">{{ current_variant.compare_at_price | money_without_trailing_zeros }}</s>
+      {%- endif -%}
+    </div>
+    <p class="ah-pinfo__tax">{{ 'sections.product.tax_included' | t }}</p>
+
+    {%- form 'product', product, data-product-form: '', class: 'ah-buy' -%}
+      <input type="hidden" name="id" value="{{ current_variant.id }}">
+
+      {%- unless product.has_only_default_variant -%}
+        {%- for option in product.options_with_values -%}
+          {%- liquid
+            assign option_down = option.name | downcase
+            assign is_color = false
+            assign is_size = false
+            if option_down == 'color' or option_down == 'colour' or option.name == 'اللون'
+              assign is_color = true
+            elsif option_down == 'size' or option.name == 'المقاس' or option.name == 'القياس'
+              assign is_size = true
+              assign has_size = true
+            endif
+          -%}
+          <fieldset class="ah-option" data-option-index="{{ forloop.index0 }}">
+            <div class="ah-option__head">
+              <legend class="ah-option__label">{{ option.name }}: <span data-selected-label="{{ forloop.index0 }}">{{ option.selected_value }}</span></legend>
+              {%- if is_size -%}
+                <button type="button" class="ah-text-btn" data-modal-open="SizeGuide">{{ 'sections.product.size_guide' | t }}</button>
+              {%- endif -%}
+            </div>
+            {%- if is_color -%}
+              <div class="ah-option__values">
+                {%- for value in option.values -%}
+                  <button type="button" role="radio" aria-checked="{% if option.selected_value == value %}true{% else %}false{% endif %}" class="ah-swatch{% if option.selected_value == value %} is-selected{% endif %}" data-value="{{ value | escape }}" aria-label="{{ value | escape }}" title="{{ value | escape }}">
+                    <span style="background: {% render 'swatch-color', value: value %};"></span>
+                  </button>
+                {%- endfor -%}
+              </div>
+            {%- elsif option.values.size <= 12 -%}
+              <div class="ah-option__values">
+                {%- for value in option.values -%}
+                  <button type="button" role="radio" aria-checked="{% if option.selected_value == value %}true{% else %}false{% endif %}" class="ah-chip-opt{% if option.selected_value == value %} is-selected{% endif %}" data-value="{{ value | escape }}">{{ value }}</button>
+                {%- endfor -%}
+              </div>
+            {%- else -%}
+              <select class="ah-select" aria-label="{{ option.name | escape }}">
+                {%- for value in option.values -%}
+                  <option value="{{ value | escape }}" {% if option.selected_value == value %}selected{% endif %}>{{ value }}</option>
+                {%- endfor -%}
+              </select>
+            {%- endif -%}
+          </fieldset>
+        {%- endfor -%}
+      {%- endunless -%}
+
+      <p class="ah-stock" data-stock {% unless current_variant.available %}hidden{% endunless %}>{{ 'sections.product.in_stock' | t }}</p>
+
+      <div class="ah-buy__row">
+        <div class="ah-qty">
+          <button type="button" data-qty-step="-1" aria-label="{{ 'sections.product.decrease' | t }}">−</button>
+          <label class="visually-hidden" for="Quantity">{{ 'sections.product.quantity' | t }}</label>
+          <input type="number" id="Quantity" name="quantity" value="1" min="1" data-qty-input>
+          <button type="button" data-qty-step="1" aria-label="{{ 'sections.product.increase' | t }}">+</button>
+        </div>
+        <button type="submit" class="ah-btn ah-btn--lg ah-btn--block" data-add-to-cart {% unless current_variant.available %}disabled{% endunless %}>
+          {%- if current_variant.available -%}{{ 'sections.product.add_to_cart' | t }}{%- else -%}{{ 'sections.product.sold_out' | t }}{%- endif -%}
+        </button>
+      </div>
+      {%- if section.settings.show_dynamic_checkout -%}
+        {{ form | payment_button }}
+      {%- endif -%}
+    {%- endform -%}
+
+    {%- if settings.social_whatsapp_number != blank -%}
+      {%- capture wa_text -%}{{ 'sections.product.whatsapp_message' | t: title: product.title }} {{ request.origin }}{{ product.url }}{%- endcapture -%}
+      <a class="ah-btn ah-btn--outline ah-btn--block" href="https://wa.me/{{ settings.social_whatsapp_number }}?text={{ wa_text | url_encode }}" target="_blank" rel="noopener noreferrer">
+        {%- render 'icon', name: 'chat' -%}{{ 'sections.product.ask_whatsapp' | t }}
+      </a>
+    {%- endif -%}
+
+    <div class="ah-perks">
+      <div class="ah-perk">{%- render 'icon', name: 'truck' -%}<span><strong>{{ 'sections.value_props.delivery_title' | t }}</strong> — {{ 'sections.product.delivery_estimate' | t }}</span></div>
+      <div class="ah-perk">{%- render 'icon', name: 'return' -%}<span><strong>{{ 'sections.value_props.returns_title' | t }}</strong> — {{ 'sections.value_props.returns_text' | t }}</span></div>
+      <div class="ah-perk">{%- render 'icon', name: 'shield' -%}<span><strong>{{ 'sections.value_props.authentic_title' | t }}</strong> — {{ 'sections.value_props.secure_text' | t }}</span></div>
+    </div>
+
+    <div class="ah-accordion">
+      {%- if product.description != blank -%}
+        <details open>
+          <summary>{{ 'sections.product.description' | t }}</summary>
+          <div class="ah-accordion__body rte">{{ product.description }}</div>
+        </details>
+      {%- endif -%}
+      <details>
+        <summary>{{ 'sections.product.shipping_returns' | t }}</summary>
+        <div class="ah-accordion__body rte">
+          <p>{{ 'sections.product.shipping_returns_text' | t }}</p>
+          <p>
+            {%- if shop.shipping_policy -%}<a href="{{ shop.shipping_policy.url }}">{{ shop.shipping_policy.title }}</a>{%- endif -%}
+            {%- if shop.refund_policy -%} · <a href="{{ shop.refund_policy.url }}">{{ shop.refund_policy.title }}</a>{%- endif -%}
+          </p>
+        </div>
+      </details>
+      {%- if current_variant.sku != blank -%}
+        <details>
+          <summary>{{ 'sections.product.details' | t }}</summary>
+          <div class="ah-accordion__body rte"><p>{{ 'sections.product.sku' | t }}: {{ current_variant.sku }}</p>{%- if product.type != blank -%}<p>{{ 'sections.product.category' | t }}: {{ product.type }}</p>{%- endif -%}</div>
+        </details>
+      {%- endif -%}
+    </div>
+  </div>
+</div>
+
+<div class="ah-sticky-atc" data-sticky-atc>
+  <div class="container ah-sticky-atc__inner">
+    <div class="ah-sticky-atc__media">
+      {%- if product.featured_media -%}{{ product.featured_media | image_url: width: 120 | image_tag: alt: '', loading: 'lazy' }}{%- endif -%}
+    </div>
+    <div class="ah-sticky-atc__info">
+      <span class="ah-sticky-atc__title">{{ product.title }}</span>
+      <span class="ah-sticky-atc__price" data-sticky-price>{{ current_variant.price | money_without_trailing_zeros }}</span>
+    </div>
+    <button type="button" class="ah-btn" data-sticky-add {% unless current_variant.available %}disabled{% endunless %}>
+      {%- if current_variant.available -%}{{ 'sections.product.add_to_cart' | t }}{%- else -%}{{ 'sections.product.sold_out' | t }}{%- endif -%}
+    </button>
+  </div>
+</div>
+
+<div class="ah-modal ah-modal--zoom" data-zoom-modal role="dialog" aria-modal="true" aria-label="{{ 'sections.product.zoom' | t }}">
+  <button type="button" class="ah-icon-btn ah-modal__close" aria-label="{{ 'general.header.close' | t }}">{%- render 'icon', name: 'close' -%}</button>
+  <img alt="{{ product.title | escape }}" width="2000" height="2000">
+</div>
+
+{%- if has_size -%}
+  <div class="ah-modal" id="SizeGuide" role="dialog" aria-modal="true" aria-labelledby="SizeGuideTitle">
+    <div class="ah-modal__panel">
+      <button type="button" class="ah-icon-btn ah-modal__close" data-modal-close aria-label="{{ 'general.header.close' | t }}">{%- render 'icon', name: 'close' -%}</button>
+      <h3 id="SizeGuideTitle">{{ 'sections.product.size_guide_heading' | t }}</h3>
+      <table class="ah-table">
+        <thead>
+          <tr><th>{{ 'sections.product.size_guide_col_size' | t }}</th><th>{{ 'sections.product.size_guide_col_chest' | t }}</th><th>{{ 'sections.product.size_guide_col_waist' | t }}</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>XS</td><td>82–86</td><td>66–70</td></tr>
+          <tr><td>S</td><td>87–91</td><td>71–75</td></tr>
+          <tr><td>M</td><td>92–97</td><td>76–81</td></tr>
+          <tr><td>L</td><td>98–104</td><td>82–89</td></tr>
+          <tr><td>XL</td><td>105–111</td><td>90–97</td></tr>
+          <tr><td>XXL</td><td>112–118</td><td>98–105</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:13px;color:var(--muted)">{{ 'sections.product.size_guide_note' | t }}</p>
+    </div>
+  </div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Product information",
+  "settings": [
+    { "type": "checkbox", "id": "show_dynamic_checkout", "label": "Show Buy-it-now / Apple Pay button", "default": true }
+  ]
+}
+{% endschema %}

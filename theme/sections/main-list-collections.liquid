@@ -1,0 +1,42 @@
+<div class="container">
+  {%- assign crumb = 'sections.list_collections.heading' | t -%}
+  {%- render 'breadcrumbs', current: crumb -%}
+  <div class="ah-page-head">
+    <h1 class="ah-page-head__title">{{ 'sections.list_collections.heading' | t }}</h1>
+    <p class="ah-page-head__desc">{{ 'sections.category_tiles.text' | t }}</p>
+  </div>
+  {%- paginate collections by 48 -%}
+    <div data-results style="padding-bottom:var(--section-gap)">
+      <ul class="ah-tiles" role="list" data-grid style="--cols: 5">
+        {%- for coll in collections -%}
+          {%- if coll.handle == 'frontpage' or coll.all_products_count == 0 -%}{%- continue -%}{%- endif -%}
+          {%- assign tile_image = coll.image | default: coll.products.first.featured_image -%}
+          <li>
+            <a href="{{ coll.url }}" class="ah-tile">
+              <span class="ah-tile__media">
+                {%- if tile_image -%}{{ tile_image | image_url: width: 500 | image_tag: loading: 'lazy', widths: '250,375,500', sizes: '(min-width: 1200px) 20vw, (min-width: 750px) 30vw, 48vw', alt: '' }}{%- endif -%}
+              </span>
+              <span class="ah-tile__body">
+                <span>
+                  <span class="ah-tile__name">{{ coll.title }}</span>
+                  <span class="ah-tile__count">{{ 'sections.department_tiles.products' | t: count: coll.all_products_count }}</span>
+                </span>
+                <span class="ah-tile__arrow" aria-hidden="true">{%- render 'icon', name: 'arrow' -%}</span>
+              </span>
+            </a>
+          </li>
+        {%- endfor -%}
+      </ul>
+      {%- if paginate.next -%}
+        <div class="ah-load-more" data-load-more data-next="{{ paginate.next.url }}">
+          <span></span>
+          <a href="{{ paginate.next.url }}" class="ah-btn ah-btn--outline">{{ 'sections.main_collection.load_more' | t }}</a>
+        </div>
+      {%- endif -%}
+    </div>
+  {%- endpaginate -%}
+</div>
+
+{% schema %}
+{ "name": "All collections", "settings": [] }
+{% endschema %}

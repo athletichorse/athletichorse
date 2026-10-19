@@ -1,0 +1,67 @@
+{%- comment -%}
+  Product card. Accepts: product (required), lazy (optional, default true)
+{%- endcomment -%}
+{%- liquid
+  assign on_sale = false
+  if product.compare_at_price > product.price
+    assign on_sale = true
+    assign pct_off = product.compare_at_price | minus: product.price | times: 100.0 | divided_by: product.compare_at_price | round
+  endif
+  assign is_new = false
+  assign published_s = product.published_at | date: '%s' | plus: 0
+  assign now_s = 'now' | date: '%s' | plus: 0
+  assign age = now_s | minus: published_s | divided_by: 86400
+  if age < 30
+    assign is_new = true
+  endif
+  assign loading = 'lazy'
+  if lazy == false
+    assign loading = 'eager'
+  endif
+  assign img_alt = product.featured_media.alt | default: product.title | escape
+  assign variant = product.selected_or_first_available_variant
+-%}
+<article class="ah-card">
+  <a href="{{ product.url }}" class="ah-card__media" tabindex="-1" aria-hidden="true">
+    {%- if product.featured_media -%}
+      {%- if product.media.size > 1 -%}
+        {{ product.media[1] | image_url: width: 600 | image_tag: loading: 'lazy', widths: '300,450,600', sizes: '(min-width: 1200px) 22vw, (min-width: 750px) 30vw, 48vw', alt: '', class: 'ah-card__img--alt' }}
+      {%- endif -%}
+      {{ product.featured_media | image_url: width: 600 | image_tag: loading: loading, widths: '300,450,600', sizes: '(min-width: 1200px) 22vw, (min-width: 750px) 30vw, 48vw', alt: img_alt, class: 'ah-card__img--main' }}
+    {%- else -%}
+      {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
+    {%- endif -%}
+  </a>
+
+  <div class="ah-card__badges">
+    {%- unless product.available -%}
+      <span class="ah-badge ah-badge--soldout">{{ 'sections.product.sold_out' | t }}</span>
+    {%- else -%}
+      {%- if on_sale -%}<span class="ah-badge ah-badge--sale">−{{ pct_off }}%</span>{%- endif -%}
+      {%- if is_new and on_sale == false -%}<span class="ah-badge ah-badge--new">{{ 'sections.product.new' | t }}</span>{%- endif -%}
+    {%- endunless -%}
+  </div>
+
+  {%- if product.available -%}
+    <div class="ah-card__quick">
+      {%- if product.has_only_default_variant -%}
+        {%- form 'product', product, data-quick-add: '' -%}
+          <input type="hidden" name="id" value="{{ variant.id }}">
+          <button type="submit" class="ah-card__quick-btn" aria-label="{{ 'sections.product.add_to_cart' | t }}: {{ product.title | escape }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+          </button>
+        {%- endform -%}
+      {%- else -%}
+        <a href="{{ product.url }}" class="ah-card__quick-btn" aria-label="{{ 'sections.product.choose_options' | t }}: {{ product.title | escape }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+        </a>
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+
+  <div class="ah-card__info">
+    {%- if product.type != blank -%}<span class="ah-card__type">{{ product.type }}</span>{%- endif -%}
+    <h3 class="ah-card__title"><a href="{{ product.url }}">{{ product.title }}</a></h3>
+    {%- render 'price', product: product -%}
+  </div>
+</article>

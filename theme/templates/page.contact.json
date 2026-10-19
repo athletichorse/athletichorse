@@ -1,0 +1,17 @@
+{
+  "sections": {
+    "contact-info": {
+      "type": "contact-info",
+      "settings": {
+        "whatsapp_number": "966573873497",
+        "whatsapp_display": "+966 57 387 3497",
+        "address": "Al Boghdadiyah Al Sharqiyah, Jeddah 22235, Saudi Arabia",
+        "maps_url": "https://maps.app.goo.gl/EbLC8EwSqxaGP3Hg8?g_st=ic",
+        "linktree_url": "https://linktr.ee/Alhisan"
+      }
+    }
+  },
+  "order": [
+    "contact-info"
+  ]
+}

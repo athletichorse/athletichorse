@@ -1,0 +1,92 @@
+<div class="container">
+  {%- assign crumb = 'sections.cart.title' | t -%}
+  {%- render 'breadcrumbs', current: crumb -%}
+  <div class="ah-page-head">
+    <h1 class="ah-page-head__title">{{ 'sections.cart.title' | t }}{% if cart.item_count > 0 %} <span style="color:var(--muted)">({{ cart.item_count }})</span>{% endif %}</h1>
+  </div>
+
+  {%- if cart.item_count > 0 -%}
+    {%- form 'cart', cart, class: 'ah-cart', data-cart-form: '' -%}
+      <div>
+        {%- liquid
+          assign threshold = settings.free_shipping_threshold | default: 0 | times: 100
+        -%}
+        {%- if threshold > 0 -%}
+          {%- assign remaining = threshold | minus: cart.total_price -%}
+          {%- assign pct = cart.total_price | times: 100 | divided_by: threshold | at_most: 100 -%}
+          <div class="ah-ship{% if remaining <= 0 %} is-done{% endif %}" style="border-radius:var(--radius)">
+            {%- if remaining > 0 -%}
+              {%- assign remaining_money = remaining | money_without_trailing_zeros -%}
+              {{ 'sections.cart.shipping_remaining' | t | replace: '[amount]', remaining_money }}
+            {%- else -%}
+              <strong>{{ 'sections.cart.shipping_done' | t }}</strong>
+            {%- endif -%}
+            <div class="ah-ship__bar"><span style="width: {{ pct }}%"></span></div>
+          </div>
+        {%- endif -%}
+
+        {%- for item in cart.items -%}
+          <div class="ah-line">
+            <a href="{{ item.url }}" class="ah-line__media">
+              {%- if item.image -%}{{ item.image | image_url: width: 240 | image_tag: alt: item.product.title, loading: 'lazy' }}{%- endif -%}
+            </a>
+            <div class="ah-line__info">
+              <a href="{{ item.url }}" class="ah-line__title">{{ item.product.title }}</a>
+              {%- unless item.product.has_only_default_variant -%}<span class="ah-line__variant">{{ item.variant.title }}</span>{%- endunless -%}
+              {%- for discount in item.line_level_discount_allocations -%}
+                <span class="ah-line__variant" style="color:var(--brand)">{{ discount.discount_application.title }} (−{{ discount.amount | money_without_trailing_zeros }})</span>
+              {%- endfor -%}
+              <div class="ah-line__row">
+                <div class="ah-qty ah-qty--sm">
+                  <button type="button" data-qty-step="-1" aria-label="{{ 'sections.product.decrease' | t }}">−</button>
+                  <input type="number" name="updates[]" value="{{ item.quantity }}" min="0" aria-label="{{ 'sections.cart.quantity' | t }}">
+                  <button type="button" data-qty-step="1" aria-label="{{ 'sections.product.increase' | t }}">+</button>
+                </div>
+                <span class="ah-line__price">
+                  {%- if item.original_line_price != item.final_line_price -%}<s class="ah-price__was">{{ item.original_line_price | money_without_trailing_zeros }}</s> {% endif -%}
+                  {{ item.final_line_price | money_without_trailing_zeros }}
+                </span>
+              </div>
+              <a href="{{ item.url_to_remove }}" class="ah-line__remove">{{ 'sections.cart.remove' | t }}</a>
+            </div>
+          </div>
+        {%- endfor -%}
+      </div>
+
+      <aside class="ah-summary">
+        <h2>{{ 'sections.cart.summary' | t }}</h2>
+        <div class="ah-totals">
+          <div class="ah-totals__row"><span>{{ 'sections.cart.subtotal' | t }}</span><span>{{ cart.items_subtotal_price | money_without_trailing_zeros }}</span></div>
+          {%- for discount in cart.cart_level_discount_applications -%}
+            <div class="ah-totals__row ah-totals__row--discount"><span>{{ discount.title }}</span><span>−{{ discount.total_allocated_amount | money_without_trailing_zeros }}</span></div>
+          {%- endfor -%}
+          <div class="ah-totals__row ah-totals__row--total"><span>{{ 'sections.cart.total' | t }}</span><span>{{ cart.total_price | money_without_trailing_zeros }}</span></div>
+        </div>
+        <p class="ah-pay-note">{{ 'sections.cart.taxes_note' | t }}</p>
+        <div>
+          <label class="ah-field" for="CartNote">
+            <span style="font-size:13px;font-weight:600;color:var(--ink)">{{ 'sections.cart.note' | t }}</span>
+            <textarea id="CartNote" name="note" class="ah-textarea" style="min-height:80px">{{ cart.note }}</textarea>
+          </label>
+        </div>
+        <button type="submit" name="checkout" class="ah-btn ah-btn--brand ah-btn--lg ah-btn--block">
+          {%- render 'icon', name: 'lock' -%}{{ 'sections.cart.checkout' | t }}
+        </button>
+        {%- if additional_checkout_buttons -%}
+          <div class="additional-checkout-buttons">{{ content_for_additional_checkout_buttons }}</div>
+        {%- endif -%}
+        <noscript><button type="submit" name="update" class="ah-btn ah-btn--outline ah-btn--block">{{ 'sections.cart.update' | t }}</button></noscript>
+      </aside>
+    {%- endform -%}
+  {%- else -%}
+    <div class="ah-empty">
+      <h2>{{ 'sections.cart.empty' | t }}</h2>
+      <p>{{ 'sections.cart.empty_text' | t }}</p>
+      <a href="{{ routes.all_products_collection_url }}" class="ah-btn ah-btn--lg">{{ 'sections.cart.continue_shopping' | t }}</a>
+    </div>
+  {%- endif -%}
+</div>
+
+{% schema %}
+{ "name": "Cart", "settings": [] }
+{% endschema %}

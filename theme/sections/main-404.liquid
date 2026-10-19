@@ -1,0 +1,16 @@
+<div class="container ah-404">
+  <b aria-hidden="true">4<span>0</span>4</b>
+  <h1 class="ah-h2">{{ 'sections.404.heading' | t }}</h1>
+  <p>{{ 'sections.404.text' | t }}</p>
+  <form action="{{ routes.search_url }}" method="get" role="search" class="ah-search">
+    <input type="hidden" name="type" value="product">
+    <label class="visually-hidden" for="NotFoundSearch">{{ 'general.header.search' | t }}</label>
+    <input id="NotFoundSearch" type="search" name="q" class="ah-search__input" placeholder="{{ 'general.search.placeholder' | t }}">
+    <button type="submit" class="ah-search__btn" aria-label="{{ 'general.header.search' | t }}">{%- render 'icon', name: 'arrow' -%}</button>
+  </form>
+  <a href="{{ routes.root_url }}" class="ah-btn">{{ 'sections.404.button' | t }}</a>
+</div>
+
+{% schema %}
+{ "name": "404", "settings": [] }
+{% endschema %}

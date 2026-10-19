@@ -1,0 +1,30 @@
+<section class="ah-newsletter">
+  <div class="container ah-newsletter__inner">
+    <div>
+      <h2>{% if section.settings.heading != blank %}{{ section.settings.heading }}{% else %}{{ 'general.newsletter.heading' | t }}{% endif %}</h2>
+      <p>{{ 'general.newsletter.text' | t }}</p>
+    </div>
+    {%- form 'customer', id: 'NewsletterForm' -%}
+      <input type="hidden" name="contact[tags]" value="newsletter">
+      <div class="ah-newsletter__form">
+        <label class="visually-hidden" for="NewsletterEmail">{{ 'general.newsletter.placeholder' | t }}</label>
+        <input type="email" name="contact[email]" id="NewsletterEmail" placeholder="{{ 'general.newsletter.placeholder' | t }}" autocomplete="email" required>
+        <button type="submit" class="ah-btn">{{ 'general.newsletter.button' | t }}</button>
+      </div>
+      {%- if form.posted_successfully? -%}
+        <p class="ah-newsletter__msg" role="status">{{ 'general.newsletter.success' | t }}</p>
+      {%- elsif form.errors -%}
+        <p class="ah-newsletter__msg" role="alert">{{ form.errors.translated_fields.email | capitalize }} {{ form.errors.messages.email }}</p>
+      {%- endif -%}
+    {%- endform -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Newsletter",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "info": "Leave blank to use the translated default." }
+  ]
+}
+{% endschema %}

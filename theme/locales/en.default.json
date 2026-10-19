@@ -1,0 +1,264 @@
+{
+  "general": {
+    "meta": {
+      "home_title": "Athletic Horse | Sports Equipment & Activewear Store in Saudi Arabia",
+      "home_description": "Shop authentic sports equipment & activewear at Athletic Horse (Alhisan Alriyadi): football, swimming, gym, padel, martial arts & more. Fast delivery across Saudi Arabia, easy 14-day returns, Mada & Apple Pay."
+    },
+    "announcement": {
+      "label": "Announcements",
+      "message": "Free delivery on orders over SAR 200 across Saudi Arabia",
+      "returns": "Easy 14-day returns · Pay with Mada, Visa or Apple Pay",
+      "business_inquiry": "Teams & bulk orders: +966 54 177 0519",
+      "returns_link": "Returns"
+    },
+    "header": {
+      "menu": "Menu",
+      "search": "Search",
+      "account": "Account",
+      "cart": "Cart",
+      "close": "Close",
+      "close_menu": "Close menu",
+      "language": "Language",
+      "primary_nav": "Main navigation",
+      "sports": "Sports",
+      "all_categories": "All categories",
+      "mega_promo": "Build your home gym"
+    },
+    "breadcrumb": {
+      "home": "Home",
+      "label": "Breadcrumb"
+    },
+    "footer": {
+      "shop": "Shop",
+      "help": "Help",
+      "about": "About us",
+      "contact": "Contact us",
+      "get_in_touch": "Get in touch",
+      "track_order": "Track your order",
+      "description": "Athletic Horse is Saudi Arabia's sports store for authentic equipment and activewear — from football and swimming to gym, padel and martial arts.",
+      "rights": "All rights reserved.",
+      "cr": "CR No.",
+      "vat": "VAT No.",
+      "payment": "Payment methods"
+    },
+    "newsletter": {
+      "heading": "Join the team",
+      "text": "Get new drops, team offers and exclusive discounts first.",
+      "placeholder": "Your email address",
+      "button": "Subscribe",
+      "success": "You're in! Thanks for subscribing."
+    },
+    "search": {
+      "placeholder": "Search football, goggles, dumbbells…",
+      "results_title": "Search results",
+      "results_for": "Results for “{{ terms }}”",
+      "no_results": "No results for “{{ terms }}”. Try a different word or browse the categories below.",
+      "results_count": {
+        "one": "{{ count }} product",
+        "other": "{{ count }} products"
+      },
+      "popular": "Popular categories"
+    },
+    "pagination": {
+      "next": "Next",
+      "previous": "Previous",
+      "page": "Page {{ number }}"
+    },
+    "a11y": {
+      "skip_to_content": "Skip to content"
+    },
+    "whatsapp": {
+      "label": "Chat with us on WhatsApp"
+    },
+    "policy": {
+      "contents": "On this page",
+      "nav_label": "Store policies",
+      "help_title": "Still have a question?",
+      "help_text": "Our team is happy to help on WhatsApp.",
+      "help_cta": "Chat on WhatsApp"
+    },
+    "password_page": {
+      "heading": "Opening soon",
+      "password": "Password",
+      "enter": "Enter"
+    }
+  },
+  "sections": {
+    "hero_banner": {
+      "eyebrow": "New season 2026",
+      "heading": "Gear up. Play harder.",
+      "text": "Authentic sports equipment and activewear for every game — delivered fast across Saudi Arabia.",
+      "cta_primary": "Shop new arrivals",
+      "cta_secondary": "Shop the sale"
+    },
+    "value_props": {
+      "delivery_title": "Fast delivery",
+      "delivery_text": "Across Saudi Arabia",
+      "authentic_title": "100% authentic",
+      "authentic_text": "Quality guaranteed",
+      "returns_title": "Easy returns",
+      "returns_text": "Within 14 days",
+      "secure_title": "Secure checkout",
+      "secure_text": "Mada, Visa, Apple Pay",
+      "support_title": "WhatsApp support",
+      "support_text": "Real people, fast replies",
+      "bnpl_title": "Pay later",
+      "bnpl_text": "Split your payment"
+    },
+    "category_strip": {
+      "heading": "Shop by sport",
+      "all": "All sports"
+    },
+    "category_tiles": {
+      "heading": "Shop by category",
+      "text": "Everything you need to train, compete and win.",
+      "all_categories": "All categories"
+    },
+    "department_tiles": {
+      "heading": "Shop by department",
+      "products": {
+        "one": "{{ count }} product",
+        "other": "{{ count }} products"
+      }
+    },
+    "featured_collection": {
+      "view_all": "View all",
+      "shop_now": "Shop now",
+      "you_might_also_like": "You may also like"
+    },
+    "story": {
+      "eyebrow": "Why Athletic Horse",
+      "heading": "Saudi Arabia's home of sport",
+      "text_html": "<p>Athletic Horse (Alhisan Alriyadi) is an online sports store built for athletes, teams and families across the Kingdom. We stock authentic football equipment, swimming goggles and swimwear, gym and home-workout gear, padel and tennis rackets, martial arts equipment, trophies and medals — all in one place.</p><p>Order online with secure payment by Mada, Visa or Apple Pay, get fast delivery to Riyadh, Jeddah, Dammam and every city in Saudi Arabia, and return within 14 days if it isn't right.</p>",
+      "stat_1": "sports categories",
+      "stat_2": "authentic products",
+      "stat_3_value": "24h",
+      "stat_3": "fast dispatch",
+      "cta": "Explore all sports"
+    },
+    "main_collection": {
+      "filter": "Filter",
+      "filters_title": "Filters",
+      "sort_by": "Sort by",
+      "sort_featured": "Featured",
+      "sort_best_selling": "Best selling",
+      "sort_newest": "Newest",
+      "sort_oldest": "Oldest",
+      "sort_title_asc": "Name: A–Z",
+      "sort_title_desc": "Name: Z–A",
+      "sort_price_asc": "Price: low to high",
+      "sort_price_desc": "Price: high to low",
+      "product_count_html": {
+        "one": "<strong>{{ count }}</strong> product",
+        "other": "<strong>{{ count }}</strong> products"
+      },
+      "showing_html": "Showing {{ shown }} of {{ total }} products",
+      "load_more": "Load more",
+      "on_sale": "Sale",
+      "min": "Min",
+      "max": "Max",
+      "apply": "Apply",
+      "reset": "Reset",
+      "show_results": "Show results",
+      "clear_all": "Clear all",
+      "no_products": "No products found",
+      "empty_state_text": "Try removing a filter or browse our other categories."
+    },
+    "product": {
+      "add_to_cart": "Add to cart",
+      "sold_out": "Sold out",
+      "unavailable": "Unavailable",
+      "choose_options": "Choose options",
+      "new": "New",
+      "from_price": "From {{ price }}",
+      "regular_price": "Regular price",
+      "quantity": "Quantity",
+      "increase": "Increase quantity",
+      "decrease": "Decrease quantity",
+      "in_stock": "In stock, ready to ship",
+      "low_stock": "Only [count] left — order soon",
+      "tax_included": "VAT included. Shipping calculated at checkout.",
+      "description": "Description",
+      "details": "Product details",
+      "sku": "SKU",
+      "category": "Category",
+      "shipping_returns": "Shipping & returns",
+      "shipping_returns_text": "Fast delivery to every city in Saudi Arabia. Free delivery on orders over SAR 200. Unused items can be returned within 14 days.",
+      "delivery_estimate": "Across Saudi Arabia",
+      "ask_whatsapp": "Ask about this product on WhatsApp",
+      "whatsapp_message": "Hi! I have a question about: {{ title }}",
+      "zoom": "Zoom",
+      "view_image": "View image {{ number }}",
+      "size_guide": "Size guide",
+      "size_guide_heading": "Size guide",
+      "size_guide_col_size": "Size",
+      "size_guide_col_chest": "Chest (cm)",
+      "size_guide_col_waist": "Waist (cm)",
+      "size_guide_note": "Measurements are approximate. For the best fit, compare with a similar item you already own."
+    },
+    "cart": {
+      "title": "Your cart",
+      "summary": "Order summary",
+      "empty": "Your cart is empty",
+      "empty_text": "Looks like you haven't added anything yet.",
+      "continue_shopping": "Continue shopping",
+      "view_cart": "View cart",
+      "checkout": "Secure checkout",
+      "subtotal": "Subtotal",
+      "total": "Total",
+      "remove": "Remove",
+      "quantity": "Quantity",
+      "update": "Update cart",
+      "note": "Order note (optional)",
+      "taxes_note": "VAT included · Shipping calculated at checkout",
+      "coupon_placeholder": "Discount code",
+      "apply": "Apply",
+      "empty_coupon": "Please enter a discount code",
+      "shipping_remaining": "You're [amount] away from free delivery",
+      "shipping_done": "You've unlocked free delivery!"
+    },
+    "404": {
+      "heading": "Page not found",
+      "text": "The page you're looking for has moved or doesn't exist. Try a search instead.",
+      "button": "Back to home"
+    },
+    "list_collections": {
+      "heading": "All categories"
+    },
+    "contact": {
+      "heading": "Contact us",
+      "text": "Questions about an order, a product or a team order? We're here to help.",
+      "form_heading": "Send us a message",
+      "whatsapp": "WhatsApp",
+      "phone_label": "Call us",
+      "visit": "Visit our store",
+      "email": "Email",
+      "hours_label": "Working hours",
+      "follow": "Follow us",
+      "name": "Name",
+      "phone": "Phone (optional)",
+      "message": "Message",
+      "submit": "Send message",
+      "form_success": "Thanks for reaching out! We'll get back to you soon.",
+      "form_error": "Something went wrong. Please check your details and try again."
+    },
+    "about": {
+      "eyebrow": "Our story",
+      "heading": "Built for every athlete",
+      "intro": "Athletic Horse (Alhisan Alriyadi) is Saudi Arabia's trusted destination for authentic sporting goods — from football to the gym to water sports — with fast delivery across the Kingdom.",
+      "mission_heading": "Our mission",
+      "mission_text": "We believe every player deserves gear they can trust. That's why we hand-pick authentic equipment for schools, clubs, teams and families, keep prices fair, and deliver fast to every city in Saudi Arabia.",
+      "since_label": "Founded",
+      "location_value": "KSA",
+      "location_label": "Proudly Saudi",
+      "gear_heading": "Shop our gear",
+      "gear_text": "Explore our full range of sporting goods, from apparel to equipment.",
+      "gear_shirt": "Shirts",
+      "gear_shorts": "Shorts",
+      "gear_backpack": "Backpacks",
+      "gear_medal": "Medals",
+      "gear_trophy": "Trophies",
+      "gear_flag": "Flags"
+    }
+  }
+}

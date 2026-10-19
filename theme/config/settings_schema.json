@@ -1,0 +1,81 @@
+[
+  {
+    "name": "theme_info",
+    "theme_name": "Athletic Horse",
+    "theme_version": "2.0.0",
+    "theme_author": "Alhisan Alriyadi",
+    "theme_documentation_url": "https://athletic-horse.com",
+    "theme_support_email": "info@athletic-horse.com"
+  },
+  {
+    "name": "Logo & favicon",
+    "settings": [
+      { "type": "image_picker", "id": "logo", "label": "Logo" },
+      { "type": "range", "id": "logo_width", "label": "Logo width", "min": 100, "max": 260, "step": 10, "unit": "px", "default": 180 },
+      { "type": "image_picker", "id": "favicon", "label": "Favicon", "info": "Square PNG, at least 180×180px." },
+      { "type": "image_picker", "id": "share_image", "label": "Social sharing image", "info": "Shown when links to the store are shared on WhatsApp, X, Facebook… 1200×630px." }
+    ]
+  },
+  {
+    "name": "Colors",
+    "settings": [
+      { "type": "header", "content": "Brand" },
+      { "type": "color", "id": "color_accent", "label": "Brand green", "default": "#14532D" },
+      { "type": "color", "id": "color_accent_dark", "label": "Brand green (dark)", "default": "#0F3D22" },
+      { "type": "color", "id": "color_accent_soft", "label": "Brand green (tint)", "default": "#E7F0EA" },
+      { "type": "color", "id": "color_highlight", "label": "Highlight (neon lime)", "default": "#B6F23A", "info": "Used on dark backgrounds: hero buttons, badges, cart count." },
+      { "type": "color", "id": "color_dark", "label": "Dark surfaces", "default": "#0B0F0C", "info": "Announcement bar, footer, editorial blocks." },
+      { "type": "color", "id": "color_sale", "label": "Sale", "default": "#D61F45" },
+      { "type": "header", "content": "Neutrals" },
+      { "type": "color", "id": "color_background", "label": "Background", "default": "#FFFFFF" },
+      { "type": "color", "id": "color_background_alt", "label": "Background (alt sections)", "default": "#F3F5F4" },
+      { "type": "color", "id": "color_ink", "label": "Headings", "default": "#111614" },
+      { "type": "color", "id": "color_ink_soft", "label": "Body text", "default": "#3D4641" },
+      { "type": "color", "id": "color_border", "label": "Borders", "default": "#E3E7E4" }
+    ]
+  },
+  {
+    "name": "Typography",
+    "settings": [
+      { "type": "paragraph", "content": "English: Archivo (headings) + Inter (text). Arabic: Readex Pro. All fonts are self-hosted in the theme for speed — no Google Fonts requests." }
+    ]
+  },
+  {
+    "name": "Layout",
+    "settings": [
+      { "type": "range", "id": "page_width", "label": "Page width", "min": 1200, "max": 1600, "step": 20, "unit": "px", "default": 1440 }
+    ]
+  },
+  {
+    "name": "Store information",
+    "settings": [
+      { "type": "text", "id": "store_phone", "label": "Phone", "default": "+966 54 177 0519" },
+      { "type": "text", "id": "store_email", "label": "Email", "default": "info@athletic-horse.com" },
+      { "type": "textarea", "id": "store_address", "label": "Address" },
+      { "type": "text", "id": "store_hours", "label": "Opening hours", "info": "e.g. Sat–Thu, 10:00 AM – 10:00 PM. Shown in the footer and contact page when filled in." },
+      { "type": "header", "content": "Saudi e-commerce compliance" },
+      { "type": "text", "id": "cr_number", "label": "Commercial Registration (CR) number", "info": "Shown in the footer. Required for Saudi online stores." },
+      { "type": "text", "id": "vat_number", "label": "VAT registration number", "info": "Shown in the footer and in structured data." },
+      { "type": "range", "id": "return_days", "label": "Return window", "min": 3, "max": 60, "step": 1, "unit": "d", "default": 14 }
+    ]
+  },
+  {
+    "name": "Cart",
+    "settings": [
+      { "type": "number", "id": "free_shipping_threshold", "label": "Free shipping threshold (SAR)", "default": 200, "info": "Shows a progress bar in the cart. Set to 0 to hide." }
+    ]
+  },
+  {
+    "name": "Social media",
+    "settings": [
+      { "type": "text", "id": "social_instagram_link", "label": "Instagram" },
+      { "type": "text", "id": "social_facebook_link", "label": "Facebook" },
+      { "type": "text", "id": "social_x_link", "label": "X (Twitter)" },
+      { "type": "text", "id": "social_tiktok_link", "label": "TikTok" },
+      { "type": "text", "id": "social_snapchat_link", "label": "Snapchat" },
+      { "type": "text", "id": "social_whatsapp_number", "label": "WhatsApp number", "info": "Digits only with country code, e.g. 966541770519" },
+      { "type": "checkbox", "id": "show_whatsapp_button", "label": "Show floating WhatsApp button", "default": true },
+      { "type": "url", "id": "social_linktree_link", "label": "Linktree / general social link" }
+    ]
+  }
+]

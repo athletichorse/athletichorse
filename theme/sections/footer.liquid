@@ -1,0 +1,90 @@
+{%- liquid
+  assign main_menu = linklists[section.settings.shop_menu]
+  assign dept_paths = '/collections/sale,/collections/men,/collections/women,/collections/kids' | split: ','
+-%}
+
+<footer class="ah-footer">
+  <div class="container">
+    <div class="ah-footer__top">
+      <div class="ah-footer__brand">
+        {%- render 'logo' -%}
+        <p>{% if section.settings.description != blank %}{{ section.settings.description }}{% else %}{{ 'general.footer.description' | t }}{% endif %}</p>
+        {%- render 'social-links', class: 'social-row' -%}
+      </div>
+
+      <details class="ah-footer__col" open>
+        <summary><h2 class="ah-footer__title">{{ 'general.footer.shop' | t }}</h2></summary>
+        <ul role="list">
+          {%- for link in main_menu.links -%}
+            {%- for path in dept_paths -%}
+              {%- if link.url == path -%}<li><a href="{{ link.url }}">{{ link.title }}</a></li>{%- endif -%}
+            {%- endfor -%}
+          {%- endfor -%}
+          <li><a href="{{ routes.collections_url }}">{{ 'general.header.all_categories' | t }}</a></li>
+          {%- if section.settings.about_page != blank -%}
+            <li><a href="{{ section.settings.about_page }}">{{ 'general.footer.about' | t }}</a></li>
+          {%- endif -%}
+        </ul>
+      </details>
+
+      <details class="ah-footer__col" open>
+        <summary><h2 class="ah-footer__title">{{ 'general.footer.help' | t }}</h2></summary>
+        <ul role="list">
+          {%- for policy in shop.policies -%}
+            <li><a href="{{ policy.url }}">{{ policy.title }}</a></li>
+          {%- endfor -%}
+          <li><a href="{{ routes.root_url }}pages/contact">{{ 'general.footer.contact' | t }}</a></li>
+          <li><a href="{{ routes.account_url }}">{{ 'general.footer.track_order' | t }}</a></li>
+        </ul>
+      </details>
+
+      <details class="ah-footer__col" open>
+        <summary><h2 class="ah-footer__title">{{ 'general.footer.get_in_touch' | t }}</h2></summary>
+        <ul role="list" class="ah-footer__contact">
+          {%- if settings.social_whatsapp_number != blank -%}
+            <li>{%- render 'icon', name: 'chat' -%}<a href="https://wa.me/{{ settings.social_whatsapp_number }}" target="_blank" rel="noopener noreferrer">{{ 'general.whatsapp.label' | t }}</a></li>
+          {%- endif -%}
+          {%- if settings.store_phone != blank -%}
+            <li>{%- render 'icon', name: 'phone' -%}<a href="tel:{{ settings.store_phone | remove: ' ' }}" dir="ltr">{{ settings.store_phone }}</a></li>
+          {%- endif -%}
+          {%- if settings.store_email != blank -%}
+            <li>{%- render 'icon', name: 'mail' -%}<a href="mailto:{{ settings.store_email }}">{{ settings.store_email }}</a></li>
+          {%- endif -%}
+          {%- if settings.store_address != blank -%}
+            <li>{%- render 'icon', name: 'pin' -%}<span>{{ settings.store_address }}</span></li>
+          {%- endif -%}
+          {%- if settings.store_hours != blank -%}
+            <li>{%- render 'icon', name: 'clock' -%}<span>{{ settings.store_hours }}</span></li>
+          {%- endif -%}
+        </ul>
+      </details>
+    </div>
+
+    <div class="ah-footer__bottom">
+      <div class="ah-footer__legal">
+        <span>&copy; {{ 'now' | date: '%Y' }} {{ shop.name }}. {{ 'general.footer.rights' | t }}</span>
+        {%- if settings.cr_number != blank -%}<span>{{ 'general.footer.cr' | t }}: {{ settings.cr_number }}</span>{%- endif -%}
+        {%- if settings.vat_number != blank -%}<span>{{ 'general.footer.vat' | t }}: {{ settings.vat_number }}</span>{%- endif -%}
+      </div>
+      {%- if section.settings.show_payment_icons -%}
+        <ul class="payment-icons" role="list" aria-label="{{ 'general.footer.payment' | t }}">
+          {%- for type in shop.enabled_payment_types -%}
+            <li>{{ type | payment_type_svg_tag: class: 'payment-icon' }}</li>
+          {%- endfor -%}
+        </ul>
+      {%- endif -%}
+    </div>
+  </div>
+</footer>
+
+{% schema %}
+{
+  "name": "Footer",
+  "settings": [
+    { "type": "textarea", "id": "description", "label": "Store description", "info": "Leave blank to use the translated default." },
+    { "type": "link_list", "id": "shop_menu", "label": "Menu for Shop links", "default": "main-menu" },
+    { "type": "url", "id": "about_page", "label": "About page" },
+    { "type": "checkbox", "id": "show_payment_icons", "label": "Show payment icons", "default": true }
+  ]
+}
+{% endschema %}

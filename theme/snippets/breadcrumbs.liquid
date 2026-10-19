@@ -1,0 +1,28 @@
+{%- comment -%}
+  Breadcrumbs + BreadcrumbList structured data.
+  Accepts: parent_title / parent_url (optional), current (required)
+{%- endcomment -%}
+<nav class="ah-crumbs" aria-label="{{ 'general.breadcrumb.label' | t }}">
+  <a href="{{ routes.root_url }}">{{ 'general.breadcrumb.home' | t }}</a>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 6 6 6-6 6"/></svg>
+  {%- if parent_url != blank -%}
+    <a href="{{ parent_url }}">{{ parent_title }}</a>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 6 6 6-6 6"/></svg>
+  {%- endif -%}
+  <span aria-current="page">{{ current }}</span>
+</nav>
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": {{ 'general.breadcrumb.home' | t | json }}, "item": {{ request.origin | append: routes.root_url | json }} }
+      {%- if parent_url != blank -%}
+        ,{ "@type": "ListItem", "position": 2, "name": {{ parent_title | json }}, "item": {{ request.origin | append: parent_url | json }} }
+        ,{ "@type": "ListItem", "position": 3, "name": {{ current | json }} }
+      {%- else -%}
+        ,{ "@type": "ListItem", "position": 2, "name": {{ current | json }} }
+      {%- endif -%}
+    ]
+  }
+</script>

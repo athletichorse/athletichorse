@@ -1,0 +1,155 @@
+{%- liquid
+  assign per_page = section.settings.per_page
+  assign has_filters = false
+  if section.settings.enable_filtering and collection.filters.size > 0
+    assign has_filters = true
+  endif
+  assign active_count = 0
+  for filter in collection.filters
+    assign active_count = active_count | plus: filter.active_values.size
+    if filter.type == 'price_range'
+      if filter.min_value.value != nil or filter.max_value.value != nil
+        assign active_count = active_count | plus: 1
+      endif
+    endif
+  endfor
+-%}
+
+{%- paginate collection.products by per_page -%}
+<div class="container ah-collection{% if has_filters %} ah-collection--filters{% endif %}">
+  {%- if has_filters -%}
+    <div class="drawer-overlay" data-facets-overlay></div>
+    <aside class="ah-facets" data-facets aria-label="{{ 'sections.main_collection.filters_title' | t }}">
+      <div class="ah-facets__head">
+        <h2>{{ 'sections.main_collection.filters_title' | t }}</h2>
+        <button type="button" class="ah-icon-btn" data-facets-close aria-label="{{ 'general.header.close' | t }}">{%- render 'icon', name: 'close' -%}</button>
+      </div>
+      <form class="ah-facets__form" action="{{ collection.url }}" method="get" id="FacetsForm">
+        {%- if collection.sort_by != blank -%}<input type="hidden" name="sort_by" value="{{ collection.sort_by }}">{%- endif -%}
+        <div class="ah-facets__body">
+          {%- for filter in collection.filters -%}
+            <details class="ah-facet" {% if forloop.index <= 3 or filter.active_values.size > 0 %}open{% endif %}>
+              <summary>{{ filter.label }}</summary>
+              {%- case filter.type -%}
+                {%- when 'price_range' -%}
+                  <div class="ah-price-range">
+                    <label class="visually-hidden" for="Min-{{ filter.param_name }}">{{ 'sections.main_collection.min' | t }}</label>
+                    <input class="ah-input" type="number" inputmode="decimal" id="Min-{{ filter.param_name }}" name="{{ filter.min_value.param_name }}" value="{{ filter.min_value.value | money_without_currency | remove: ',' }}" placeholder="{{ 'sections.main_collection.min' | t }}" min="0">
+                    <label class="visually-hidden" for="Max-{{ filter.param_name }}">{{ 'sections.main_collection.max' | t }}</label>
+                    <input class="ah-input" type="number" inputmode="decimal" id="Max-{{ filter.param_name }}" name="{{ filter.max_value.param_name }}" value="{{ filter.max_value.value | money_without_currency | remove: ',' }}" placeholder="{{ filter.range_max | money_without_currency | remove: ',' }}" min="0">
+                    <button type="submit" class="ah-btn ah-btn--outline" style="grid-column:1/-1;min-height:40px">{{ 'sections.main_collection.apply' | t }}</button>
+                  </div>
+                {%- else -%}
+                  <div class="ah-facet__list">
+                    {%- for value in filter.values -%}
+                      <label class="ah-check{% if value.count == 0 and value.active == false %} is-disabled{% endif %}">
+                        <input type="checkbox" name="{{ value.param_name }}" value="{{ value.value }}" {% if value.active %}checked{% endif %} {% if value.count == 0 and value.active == false %}disabled{% endif %}>
+                        <span>{{ value.label }}</span>
+                        <span class="ah-check__count">{{ value.count }}</span>
+                      </label>
+                    {%- endfor -%}
+                  </div>
+              {%- endcase -%}
+            </details>
+          {%- endfor -%}
+        </div>
+        <div class="ah-facets__foot">
+          <a href="{{ collection.url }}{% if collection.sort_by != blank %}?sort_by={{ collection.sort_by }}{% endif %}" class="ah-btn ah-btn--outline">{{ 'sections.main_collection.reset' | t }}</a>
+          <button type="submit" class="ah-btn">{{ 'sections.main_collection.show_results' | t }}</button>
+        </div>
+      </form>
+    </aside>
+  {%- endif -%}
+
+  <div data-results>
+    <div class="ah-toolbar">
+      <div class="ah-toolbar__count">{{ 'sections.main_collection.product_count_html' | t: count: collection.products_count }}</div>
+      <div class="ah-toolbar__end">
+        {%- if has_filters -%}
+          <button type="button" class="ah-filter-toggle" data-facets-open>
+            {%- render 'icon', name: 'filter' -%}
+            {{ 'sections.main_collection.filter' | t }}{% if active_count > 0 %} ({{ active_count }}){% endif %}
+          </button>
+        {%- endif -%}
+        <label class="visually-hidden" for="SortBy">{{ 'sections.main_collection.sort_by' | t }}</label>
+        <select id="SortBy" class="ah-select" data-sort>
+          {%- assign current_sort = collection.sort_by | default: collection.default_sort_by -%}
+          {%- for option in collection.sort_options -%}
+            <option value="{{ option.value }}" {% if option.value == current_sort %}selected{% endif %}>
+              {%- case option.value -%}
+                {%- when 'manual' -%}{{ 'sections.main_collection.sort_featured' | t }}
+                {%- when 'best-selling' -%}{{ 'sections.main_collection.sort_best_selling' | t }}
+                {%- when 'title-ascending' -%}{{ 'sections.main_collection.sort_title_asc' | t }}
+                {%- when 'title-descending' -%}{{ 'sections.main_collection.sort_title_desc' | t }}
+                {%- when 'price-ascending' -%}{{ 'sections.main_collection.sort_price_asc' | t }}
+                {%- when 'price-descending' -%}{{ 'sections.main_collection.sort_price_desc' | t }}
+                {%- when 'created-descending' -%}{{ 'sections.main_collection.sort_newest' | t }}
+                {%- when 'created-ascending' -%}{{ 'sections.main_collection.sort_oldest' | t }}
+                {%- else -%}{{ option.name }}
+              {%- endcase -%}
+            </option>
+          {%- endfor -%}
+        </select>
+      </div>
+    </div>
+
+    {%- if active_count > 0 -%}
+      <div class="ah-active-filters">
+        {%- for filter in collection.filters -%}
+          {%- for value in filter.active_values -%}
+            <a class="ah-chip" href="{{ value.url_to_remove }}">{{ value.label }} {%- render 'icon', name: 'close' -%}</a>
+          {%- endfor -%}
+          {%- if filter.type == 'price_range' -%}
+            {%- if filter.min_value.value != nil or filter.max_value.value != nil -%}
+              <a class="ah-chip" href="{{ filter.url_to_remove }}">{{ filter.min_value.value | default: 0 | money_without_trailing_zeros }} – {{ filter.max_value.value | default: filter.range_max | money_without_trailing_zeros }} {%- render 'icon', name: 'close' -%}</a>
+            {%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+        <a class="ah-chip ah-chip--clear" href="{{ collection.url }}{% if collection.sort_by != blank %}?sort_by={{ collection.sort_by }}{% endif %}">{{ 'sections.main_collection.clear_all' | t }}</a>
+      </div>
+    {%- endif -%}
+
+    {%- if collection.products.size > 0 -%}
+      <ul class="ah-grid" role="list" data-grid style="--grid-cols: {% if has_filters %}3{% else %}4{% endif %}">
+        {%- for product in collection.products -%}
+          {%- liquid
+            assign lazy_img = true
+            if forloop.index <= 4 and paginate.current_page == 1
+              assign lazy_img = false
+            endif
+          -%}
+          <li>{%- render 'product-card', product: product, lazy: lazy_img -%}</li>
+        {%- endfor -%}
+      </ul>
+
+      {%- if paginate.pages > 1 -%}
+        {%- assign shown = paginate.current_offset | plus: collection.products.size -%}
+        {%- assign pct = shown | times: 100 | divided_by: paginate.items -%}
+        <div class="ah-load-more" data-load-more data-total="{{ paginate.items }}" data-next="{% if paginate.next %}{{ paginate.next.url }}{% endif %}">
+          <span>{{ 'sections.main_collection.showing_html' | t: shown: shown, total: paginate.items }}</span>
+          <div class="ah-progress" aria-hidden="true"><span style="width: {{ pct }}%"></span></div>
+          {%- if paginate.next -%}
+            <a href="{{ paginate.next.url }}" class="ah-btn ah-btn--outline">{{ 'sections.main_collection.load_more' | t }}</a>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+    {%- else -%}
+      <div class="ah-empty">
+        <h2>{{ 'sections.main_collection.no_products' | t }}</h2>
+        <p>{{ 'sections.main_collection.empty_state_text' | t }}</p>
+        <a href="{{ routes.collections_url }}" class="ah-btn">{{ 'general.header.all_categories' | t }}</a>
+      </div>
+    {%- endif -%}
+  </div>
+</div>
+{%- endpaginate -%}
+
+{% schema %}
+{
+  "name": "Collection products",
+  "settings": [
+    { "type": "range", "id": "per_page", "label": "Products per page", "min": 12, "max": 48, "step": 4, "default": 24 },
+    { "type": "checkbox", "id": "enable_filtering", "label": "Enable filters", "default": true, "info": "Configure filters in Shopify admin → Search & Discovery app." }
+  ]
+}
+{% endschema %}
