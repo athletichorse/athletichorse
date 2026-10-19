@@ -114,7 +114,7 @@
     add: function (body) {
       return fetch(root + 'cart/add.js', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body)
-      }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; return j; }); });
+      }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw j; document.dispatchEvent(new CustomEvent('cart:added')); return j; }); });
     },
     change: function (key, quantity) {
       return fetch(root + 'cart/change.js', {
@@ -796,6 +796,67 @@
     }
   }
 
+  /* ---------- Attribution: "Came from" survey + automatic first-touch source ---------- */
+  function detectSource() {
+    var params = new URLSearchParams(window.location.search);
+    var utm = params.get('utm_source');
+    var ref = document.referrer ? new URL(document.referrer).hostname.replace(/^www\./, '') : '';
+    if (ref === window.location.hostname.replace(/^www\./, '')) ref = '';
+    var map = [[/chatgpt|openai/, 'ChatGPT'], [/perplexity/, 'Perplexity'], [/gemini|bard/, 'Gemini'], [/copilot|bing/, 'Bing / Copilot'],
+      [/google/, 'Google'], [/instagram/, 'Instagram'], [/tiktok/, 'TikTok'], [/snapchat/, 'Snapchat'], [/facebook|fb\./, 'Facebook'],
+      [/whatsapp|wa\.me/, 'WhatsApp'], [/(^|\.)t\.co$|twitter|x\.com/, 'X'], [/youtube/, 'YouTube']];
+    var probe = (utm || ref || '').toLowerCase();
+    if (!probe) return null;
+    for (var i = 0; i < map.length; i++) if (map[i][0].test(probe)) return map[i][1];
+    return utm || ref;
+  }
+
+  function saveAttributes(attrs) {
+    return fetch(root + 'cart/update.js', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ attributes: attrs })
+    }).catch(function () {});
+  }
+
+  function initAttribution() {
+    var KEY = 'ah_first_touch';
+    var stored = null;
+    try { stored = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+    var src = detectSource();
+    if (!stored && src) {
+      stored = { source: src, landing: window.location.pathname, at: new Date().toISOString().slice(0, 10) };
+      try { localStorage.setItem(KEY, JSON.stringify(stored)); } catch (e) {}
+    }
+    var pushed = false;
+    function pushAuto() {
+      if (pushed || !stored) return;
+      pushed = true;
+      saveAttributes({ 'Auto source': stored.source, 'Landing page': stored.landing, 'First visit': stored.at });
+    }
+    document.addEventListener('cart:added', pushAuto);
+    if (stored && (window.location.pathname.indexOf('/cart') > -1)) pushAuto();
+
+    document.addEventListener('change', function (e) {
+      var input = e.target.closest('[data-came-from] input');
+      if (!input) return;
+      $$('[data-came-from] input[value="' + input.value.replace(/"/g, '\\"') + '"]').forEach(function (i) { i.checked = true; });
+      $$('[data-came-from-error]').forEach(function (el) { el.hidden = true; });
+      $$('[data-came-from]').forEach(function (el) { el.classList.remove('is-invalid'); });
+      saveAttributes({ 'Came from': input.value });
+      pushAuto();
+    });
+
+    document.addEventListener('click', function (e) {
+      var go = e.target.closest('[data-checkout]');
+      if (!go) return;
+      var box = go.parentNode.querySelector('[data-came-from]') || $('[data-came-from]');
+      if (!box || $('input:checked', box)) return;
+      e.preventDefault();
+      box.classList.remove('is-invalid'); void box.offsetWidth; box.classList.add('is-invalid');
+      var err = $('[data-came-from-error]', box); if (err) err.hidden = false;
+      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, true);
+  }
+
   /* ---------- Policies: table of contents + related policy nav ---------- */
   function initPolicy() {
     var container = $('.shopify-policy__container');
@@ -865,6 +926,7 @@
     initRecommendations();
     initFbt();
     initMotion();
+    initAttribution();
     initProduct();
     initModals();
     initCartPage();

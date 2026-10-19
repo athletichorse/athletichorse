@@ -1493,6 +1493,7 @@ html[dir="rtl"] .ah-ab-hero__tile--1 { inset: 0 0 12% 18%; }
 .ah-marquee { overflow: hidden; background: var(--lime); color: var(--dark); padding-block: 14px; border-block: 1px solid rgb(0 0 0 / 6%); }
 .ah-marquee__track { display: flex; gap: 22px; width: max-content; font-weight: 800; font-size: clamp(18px, 2.2vw, 26px); text-transform: uppercase; white-space: nowrap; animation: ah-marquee 40s linear infinite; }
 html[lang="ar"] .ah-marquee__track { text-transform: none; }
+.ah-marquee__track span { unicode-bidi: plaintext; }
 html[dir="rtl"] .ah-marquee__track { animation-direction: reverse; }
 .ah-marquee__dot { color: var(--brand); font-size: .6em; align-self: center; }
 @keyframes ah-marquee { to { transform: translateX(-50%); } }
@@ -1556,3 +1557,18 @@ html[dir="rtl"] .ah-ab-sport:hover .ah-ab-sport__label svg { translate: -4px 0; 
 .ah-ab-social__btn--snap { background: #FFFC00; border-color: #FFFC00; color: #111; min-height: 56px; padding: 0 28px; font-size: 16px; }
 .ah-ab-social__btn--tiktok { background: #111; border-color: #111; color: #fff; min-height: 56px; padding: 0 28px; font-size: 16px; box-shadow: -3px -3px 0 #25F4EE, 3px 3px 0 #FE2C55; }
 .ah-word { margin-inline-end: .22em; } .ah-word:last-child { margin-inline-end: 0; }
+
+/* ---------- "Came from" survey ---------- */
+.ah-camefrom { border: 0; padding: 0; margin: 4px 0 10px; }
+.ah-camefrom legend { font-size: 13.5px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+.ah-camefrom__req { color: var(--sale); }
+.ah-camefrom__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ah-camefrom__chip { position: relative; cursor: pointer; }
+.ah-camefrom__chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.ah-camefrom__chip span { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border-radius: var(--pill); border: 1.5px solid var(--line); background: #fff; font-size: 13px; font-weight: 500; color: var(--ink-2); transition: all .15s var(--ease); }
+.ah-camefrom__chip:hover span { border-color: var(--ink); }
+.ah-camefrom__chip input:checked + span { background: var(--brand); border-color: var(--brand); color: #fff; }
+.ah-camefrom__chip input:focus-visible + span { outline: 2px solid var(--brand); outline-offset: 2px; }
+.ah-camefrom__error { margin-top: 8px; font-size: 13px; color: var(--sale); font-weight: 600; }
+.ah-camefrom.is-invalid .ah-camefrom__chips { animation: ah-shake .4s; }
+@keyframes ah-shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }

@@ -59,9 +59,9 @@
   </div>
 </section>
 
-<div class="ah-marquee" aria-hidden="true">
+<div class="ah-marquee" aria-hidden="true" dir="ltr">
   <div class="ah-marquee__track">
-    {%- assign sports = 'sections.about.marquee' | t | split: ',' -%}
+    {%- assign sports = 'sections.about.marquee' | t | split: '|' -%}
     {%- for n in (1..2) -%}
       {%- for s in sports -%}<span>{{ s | strip }}</span><span class="ah-marquee__dot">●</span>{%- endfor -%}
     {%- endfor -%}

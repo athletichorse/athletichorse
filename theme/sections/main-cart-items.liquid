@@ -69,7 +69,8 @@
             <textarea id="CartNote" name="note" class="ah-textarea" style="min-height:80px">{{ cart.note }}</textarea>
           </label>
         </div>
-        <button type="submit" name="checkout" class="ah-btn ah-btn--brand ah-btn--lg ah-btn--block">
+        {%- render 'came-from', id_prefix: 'CartCameFrom' -%}
+        <button type="submit" name="checkout" class="ah-btn ah-btn--brand ah-btn--lg ah-btn--block" data-checkout>
           {%- render 'icon', name: 'lock' -%}{{ 'sections.cart.checkout' | t }}
         </button>
         {%- if additional_checkout_buttons -%}
