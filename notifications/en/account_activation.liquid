@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Activate your {{ shop.name }} account</title>
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; padding:0; background:#F4F6F5; }
+  a { color:#14532D; }
+  @media (max-width: 620px) { .ah-card { border-radius:0 !important; } .ah-pad { padding:24px 20px !important; } }
+</style>
+</head>
+<body dir="ltr" style="margin:0;padding:0;background:#F4F6F5">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F5"><tr><td align="center" style="padding:24px 8px">
+<table role="presentation" class="ah-card" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:18px;overflow:hidden">
+  <tr><td style="background:#ffffff;padding:22px 28px;text-align:center">
+    {% if shop.email_logo_url %}<img src="{{ shop.email_logo_url }}" alt="{{ shop.name }}" width="{{ shop.email_logo_width | default: 170 }}" style="max-width:210px;height:auto">{% else %}<span style="font-size:22px;font-weight:700;color:#14532D">{{ shop.name }}</span>{% endif %}
+  </td></tr>
+  <tr><td style="height:5px;line-height:5px;background:#14532D">&nbsp;</td></tr>
+  <tr><td style="height:3px;line-height:3px;background:#B6F23A">&nbsp;</td></tr>
+  <tr><td class="ah-pad" style="padding:32px 36px;text-align:left;font-family:'Readex Pro', Arial, Helvetica, sans-serif;color:#0B0F0C">
+<h1 style="margin:0 0 12px;font-size:26px;line-height:1.25;font-weight:700;color:#0B0F0C">Activate your account</h1><p style="margin:0;font-size:15px;line-height:1.7;color:#2B332E">{% if custom_message != blank %}{{ custom_message }}{% else %}Create your password to track orders and check out faster.{% endif %}</p><table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 8px"><tr><td style="border-radius:999px;background:#14532D">
+<a href="{{ customer.account_activation_url }}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:999px">Activate account</a></td></tr></table>
+  </td></tr>
+  <tr><td style="padding:22px 28px;background:#F3F8EE;text-align:center;font-family:'Readex Pro', Arial, Helvetica, sans-serif">
+    <p style="margin:0 0 10px;font-size:14px;color:#0B0F0C">Questions? We reply fast on WhatsApp.</p>
+    <a href="https://wa.me/966541770519" style="display:inline-block;padding:10px 20px;border-radius:999px;background:#1FA855;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none">Chat on WhatsApp</a>
+  </td></tr>
+  <tr><td style="padding:22px 28px 26px;text-align:center;font-family:'Readex Pro', Arial, Helvetica, sans-serif">
+    <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#0B0F0C">Follow us</p>
+    <a href="https://www.snapchat.com/@athletic_horse" style="display:inline-block;margin:0 4px 8px;padding:8px 14px;border-radius:999px;background:#FFFC00;color:#111111;border:1px solid #E6EAE7;font-size:13px;font-weight:700;text-decoration:none">Snapchat</a><a href="https://www.tiktok.com/@athletic_horse" style="display:inline-block;margin:0 4px 8px;padding:8px 14px;border-radius:999px;background:#111111;color:#FFFFFF;border:1px solid #E6EAE7;font-size:13px;font-weight:700;text-decoration:none">TikTok</a><a href="https://www.instagram.com/athletic_horseksa" style="display:inline-block;margin:0 4px 8px;padding:8px 14px;border-radius:999px;background:#FFFFFF;color:#0B0F0C;border:1px solid #E6EAE7;font-size:13px;font-weight:700;text-decoration:none">Instagram</a><a href="https://wa.me/966541770519" style="display:inline-block;margin:0 4px 8px;padding:8px 14px;border-radius:999px;background:#FFFFFF;color:#0B0F0C;border:1px solid #E6EAE7;font-size:13px;font-weight:700;text-decoration:none">WhatsApp</a>
+    <p style="margin:14px 0 4px;font-size:12px;color:#5B6660">Easy returns within 3 days of delivery.</p>
+    <p style="margin:0 0 4px;font-size:12px;color:#5B6660">شركة الحصان الرياضي · CR 7053046608 · VAT 314498395700003</p>
+    <p style="margin:0;font-size:12px;color:#5B6660">Al Boghdadiyah Al Sharqiyah, Jeddah, Saudi Arabia · <a href="{{ shop.url }}" style="color:#14532D">{{ shop.url | remove: 'https://' }}</a></p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body>
+</html>
