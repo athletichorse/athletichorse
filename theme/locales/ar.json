@@ -145,7 +145,7 @@
       "cta": "اكتشف كل الرياضات"
     },
     "main_collection": {
-      "filter": "فلترة",
+      "filter": "تصفية",
       "filters_title": "الفلاتر",
       "sort_by": "ترتيب حسب",
       "sort_featured": "المميزة",
@@ -181,6 +181,7 @@
       "sold_out": "نفدت الكمية",
       "unavailable": "غير متوفر",
       "choose_options": "اختر الخيارات",
+      "view_details": "عرض التفاصيل الكاملة",
       "new": "جديد",
       "regular_price": "السعر الأصلي",
       "quantity": "الكمية",

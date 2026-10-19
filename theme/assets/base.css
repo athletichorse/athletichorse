@@ -1275,3 +1275,59 @@ html[lang="ar"] :is(h1, h2, h3, .ah-section__title, .ah-bento__title, .ah-dept__
 
 /* Coloured bands (sale / deals) keep full spacing around their neighbours */
 .shopify-section:has(> .ah-section--sale, > .ah-section--deals) + .shopify-section > .ah-section { padding-top: var(--section-gap) !important; }
+
+/* ---------- Listing grids: 2 per row on mobile, 6 per row on desktop ---------- */
+.ah-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 12px; }
+@media (min-width: 750px) { .ah-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 14px; } }
+@media (min-width: 990px) { .ah-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1200px) { .ah-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 32px 16px; } }
+@media (min-width: 1200px) {
+  .ah-grid .ah-card__title { font-size: 14px; }
+  .ah-grid .ah-price { font-size: 14.5px; }
+  .ah-grid .ah-card__quick-btn { width: 38px; height: 38px; }
+}
+.ah-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 750px) { .ah-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 990px) { .ah-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1200px) { .ah-tiles { grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr)); } }
+
+/* Filters open as a drawer at every width so the grid keeps its full width */
+@media (min-width: 990px) {
+  .ah-collection--filters { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .ah-filter-toggle { display: inline-flex; }
+  .ah-facets { position: fixed; inset-block: 0; inset-inline-start: 0; top: 0; z-index: 201; width: min(380px, 90vw); max-height: none; transform: translateX(-100%) !important; }
+  html[dir="rtl"] .ah-facets { transform: translateX(100%) !important; }
+  .ah-facets.is-open { transform: none !important; }
+  .ah-facets__head { padding: 12px 12px 12px 20px; }
+  .ah-facets__head .ah-icon-btn { display: grid; }
+  .ah-facets__body { padding: 4px 20px 20px; }
+  .ah-facets__foot { display: grid; }
+}
+
+/* Quick add is always visible on product thumbnails */
+.ah-card__quick, .ah-card:hover .ah-card__quick { opacity: 1 !important; transform: none !important; }
+.ah-card__quick-btn { background: var(--brand); color: #fff; border-color: var(--brand); }
+.ah-card__quick-btn:hover { background: var(--dark); color: var(--lime); border-color: var(--dark); }
+.ah-card__quick-btn.is-loading { opacity: .6; }
+
+/* Infinite scroll */
+.ah-load-more.is-loading .ah-btn { opacity: .6; pointer-events: none; }
+.ah-load-more__sentinel { height: 1px; }
+
+/* Quick view (option picker) */
+.ah-qv { position: fixed; inset: 0; z-index: 300; background: rgba(10, 25, 15, .45); display: none; align-items: flex-end; justify-content: center; }
+.ah-qv.is-open { display: flex; }
+.ah-qv__panel { position: relative; width: 100%; max-height: 88vh; overflow-y: auto; background: #fff; border-radius: 18px 18px 0 0; padding: 22px 20px 24px; display: grid; gap: 16px; animation: ah-qv-up .25s var(--ease); }
+@media (min-width: 750px) { .ah-qv { align-items: center; } .ah-qv__panel { width: min(520px, 92vw); border-radius: 18px; padding: 28px; } }
+@keyframes ah-qv-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.ah-qv__close { position: absolute; top: 10px; inset-inline-end: 10px; }
+.ah-qv [data-qv-body] { display: grid; gap: 16px; }
+.ah-qv__head { display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: center; padding-inline-end: 36px; }
+.ah-qv__media { aspect-ratio: 1; background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+.ah-qv__media img { width: 100%; height: 100%; object-fit: contain; padding: 8%; mix-blend-mode: multiply; }
+.ah-qv__title { font-size: 16px; font-weight: 600; line-height: 1.35; margin-bottom: 6px; }
+.ah-qv__opt { border: 0; padding: 0; margin: 0; }
+.ah-qv__opt legend { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+.ah-qv__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ah-qv .ah-chip-opt.is-selected { color: #fff; }
+.ah-qv__link { text-align: center; font-size: 14px; color: var(--muted); text-decoration: underline; }

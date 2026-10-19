@@ -54,6 +54,7 @@
       { "type": "textarea", "id": "store_address", "label": "Address" },
       { "type": "text", "id": "store_hours", "label": "Opening hours", "info": "e.g. Sat–Thu, 10:00 AM – 10:00 PM. Shown in the footer and contact page when filled in." },
       { "type": "header", "content": "Saudi e-commerce compliance" },
+      { "type": "text", "id": "legal_name", "label": "Legal company name", "default": "شركة الحصان الرياضي", "info": "Shown in the footer and in structured data." },
       { "type": "text", "id": "cr_number", "label": "Commercial Registration (CR) number", "info": "Shown in the footer. Required for Saudi online stores." },
       { "type": "text", "id": "vat_number", "label": "VAT registration number", "info": "Shown in the footer and in structured data." },
       { "type": "range", "id": "return_days", "label": "Return window", "min": 3, "max": 60, "step": 1, "unit": "d", "default": 3 }

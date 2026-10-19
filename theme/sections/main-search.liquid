@@ -19,12 +19,17 @@
   </div>
 
   {%- if search.performed and search.results_count > 0 -%}
-    {%- paginate search.results by 24 -%}
+    {%- paginate search.results by 36 -%}
       <div data-results style="padding-bottom:var(--section-gap)">
         <ul class="ah-grid" role="list" data-grid>
           {%- for item in search.results -%}
-            {%- if item.object_type == 'product' -%}
+            {%- if item.object_type == 'product' and item.available -%}
               <li>{%- render 'product-card', product: item -%}</li>
+            {%- endif -%}
+          {%- endfor -%}
+          {%- for item in search.results -%}
+            {%- if item.object_type == 'product' and item.available == false -%}
+              <li data-soldout{% if paginate.next %} hidden{% endif %}>{%- render 'product-card', product: item -%}</li>
             {%- endif -%}
           {%- endfor -%}
         </ul>

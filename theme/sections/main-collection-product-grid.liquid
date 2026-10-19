@@ -111,15 +111,22 @@
     {%- endif -%}
 
     {%- if collection.products.size > 0 -%}
-      <ul class="ah-grid" role="list" data-grid style="--grid-cols: {% if has_filters %}3{% else %}4{% endif %}">
+      {%- comment -%} In-stock first, sold out last. Sold-out items of a page that has more pages after it
+        are held back (hidden) and the infinite scroll appends them after the last page. {%- endcomment -%}
+      <ul class="ah-grid" role="list" data-grid>
         {%- for product in collection.products -%}
+          {%- unless product.available -%}{%- continue -%}{%- endunless -%}
           {%- liquid
             assign lazy_img = true
-            if forloop.index <= 4 and paginate.current_page == 1
+            if forloop.index <= 6 and paginate.current_page == 1
               assign lazy_img = false
             endif
           -%}
           <li>{%- render 'product-card', product: product, lazy: lazy_img -%}</li>
+        {%- endfor -%}
+        {%- for product in collection.products -%}
+          {%- if product.available -%}{%- continue -%}{%- endif -%}
+          <li data-soldout{% if paginate.next %} hidden{% endif %}>{%- render 'product-card', product: product -%}</li>
         {%- endfor -%}
       </ul>
 
@@ -149,7 +156,7 @@
 {
   "name": "Collection products",
   "settings": [
-    { "type": "range", "id": "per_page", "label": "Products per page", "min": 12, "max": 48, "step": 4, "default": 24 },
+    { "type": "range", "id": "per_page", "label": "Products per page", "min": 12, "max": 60, "step": 6, "default": 36 },
     { "type": "checkbox", "id": "enable_filtering", "label": "Enable filters", "default": true, "info": "Configure filters in Shopify admin → Search & Discovery app." }
   ]
 }

@@ -53,16 +53,16 @@
           </button>
         {%- endform -%}
       {%- else -%}
-        <a href="{{ product.url }}" class="ah-card__quick-btn" aria-label="{{ 'sections.product.choose_options' | t }}: {{ product.title | escape }}">
+        <button type="button" class="ah-card__quick-btn" data-quick-view="{{ product.url }}" aria-haspopup="dialog" aria-label="{{ 'sections.product.choose_options' | t }}: {{ product.title | escape }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
-        </a>
+        </button>
       {%- endif -%}
     </div>
   {%- endif -%}
   </div>
 
   <div class="ah-card__info">
-    {%- if product.type != blank -%}<span class="ah-card__type">{{ product.type }}</span>{%- endif -%}
+    {%- if product.type != blank and request.locale.iso_code == 'en' -%}<span class="ah-card__type">{{ product.type }}</span>{%- endif -%}
     <h3 class="ah-card__title"><a href="{{ product.url }}">{{ product.title }}</a></h3>
     {%- render 'price', product: product -%}
   </div>

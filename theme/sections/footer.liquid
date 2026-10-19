@@ -62,6 +62,7 @@
     <div class="ah-footer__bottom">
       <div class="ah-footer__legal">
         <span>&copy; {{ 'now' | date: '%Y' }} {{ shop.name }}. {{ 'general.footer.rights' | t }}</span>
+        {%- if settings.legal_name != blank -%}<span lang="ar">{{ settings.legal_name }}</span>{%- endif -%}
         {%- if settings.cr_number != blank -%}<span>{{ 'general.footer.cr' | t }}: {{ settings.cr_number }}</span>{%- endif -%}
         {%- if settings.vat_number != blank -%}<span>{{ 'general.footer.vat' | t }}: {{ settings.vat_number }}</span>{%- endif -%}
       </div>

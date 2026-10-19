@@ -5,11 +5,11 @@
     <h1 class="ah-page-head__title">{{ 'sections.list_collections.heading' | t }}</h1>
     <p class="ah-page-head__desc">{{ 'sections.category_tiles.text' | t }}</p>
   </div>
-  {%- paginate collections by 48 -%}
+  {%- paginate collections by 250 -%}
     <div data-results style="padding-bottom:var(--section-gap)">
-      <ul class="ah-tiles" role="list" data-grid style="--cols: 5">
+      <ul class="ah-tiles" role="list" data-grid style="--cols: 6">
         {%- for coll in collections -%}
-          {%- if coll.handle == 'frontpage' or coll.all_products_count == 0 -%}{%- continue -%}{%- endif -%}
+          {%- if coll.handle == 'frontpage' or coll.all_products_count == 0 or coll.products_count == 0 -%}{%- continue -%}{%- endif -%}
           {%- assign tile_image = coll.image | default: coll.products.first.featured_image -%}
           <li>
             <a href="{{ coll.url }}" class="ah-tile">

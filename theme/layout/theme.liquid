@@ -147,6 +147,8 @@
       "logo": {% if settings.logo %}{{ settings.logo | image_url: width: 600 | prepend: 'https:' | json }}{% else %}null{% endif %},
       {%- if settings.store_email != blank %}"email": {{ settings.store_email | json }},{% endif %}
       {%- if settings.store_phone != blank %}"telephone": {{ settings.store_phone | json }},{% endif %}
+      {%- if settings.legal_name != blank %}"legalName": {{ settings.legal_name | json }},{% endif %}
+      {%- if settings.cr_number != blank %}"identifier": { "@type": "PropertyValue", "propertyID": "CR", "value": {{ settings.cr_number | json }} },{% endif %}
       {%- if settings.vat_number != blank %}"vatID": {{ settings.vat_number | json }},{% endif %}
       "areaServed": { "@type": "Country", "name": "Saudi Arabia" },
       "currenciesAccepted": "SAR",
@@ -166,7 +168,7 @@
   {{ content_for_header }}
 
   {%- capture riyal_svg -%}{%- render 'riyal' -%}{%- endcapture -%}
-  <script>window.themeMoneyFormat = {{ shop.money_format | json }}; window.themeRiyal = {{ riyal_svg | strip | json }};</script>
+  <script>window.themeMoneyFormat = {{ shop.money_format | json }}; window.themeRiyal = {{ riyal_svg | strip | json }}; window.themeStrings = { add: {{ 'sections.product.add_to_cart' | t | json }}, soldOut: {{ 'sections.product.sold_out' | t | json }}, unavailable: {{ 'sections.product.unavailable' | t | json }}, details: {{ 'sections.product.view_details' | t | json }}, close: {{ 'general.header.close' | t | json }} };</script>
   <script src="{{ 'app.js' | asset_url }}" defer></script>
 </head>
 <body class="template-{{ template.name | handleize }}{% if template.suffix %} template-{{ template.name | handleize }}--{{ template.suffix | handleize }}{% endif %}">
