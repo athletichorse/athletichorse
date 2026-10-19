@@ -1,0 +1,73 @@
+{%- comment -%}
+  "You may also like". Renders products from the product's most specific category on page load,
+  then swaps in Shopify's related-product recommendations when they are available.
+{%- endcomment -%}
+{%- liquid
+  assign limit = section.settings.limit
+  assign broad = 'all-products-newest,all,frontpage,sale,men,women,kids,water-sports,racket-equipment,gym-equipment,taekwondo-martial-arts-equipment,training-accessories'
+-%}
+{%- if recommendations.performed -%}
+  {%- if recommendations.products_count > 0 -%}
+    <ul class="ah-rail__track" data-rail-track data-recs-items role="list">
+      {%- for item in recommendations.products limit: limit -%}
+        <li>{%- render 'product-card', product: item -%}</li>
+      {%- endfor -%}
+    </ul>
+  {%- endif -%}
+{%- else -%}
+  {%- liquid
+    assign best = nil
+    for c in product.collections
+      if broad contains c.handle or c.products_count < 2
+        continue
+      endif
+      if best == nil or c.products_count < best.products_count
+        assign best = c
+      endif
+    endfor
+    if best == nil
+      for c in product.collections
+        unless c.handle == 'all-products-newest' or c.handle == 'all' or c.handle == 'frontpage'
+          assign best = c
+          break
+        endunless
+      endfor
+    endif
+  -%}
+  <section class="ah-section ah-section--surface ah-recs" data-recs data-url="{{ routes.product_recommendations_url }}?section_id={{ section.id }}&product_id={{ product.id }}&limit={{ limit }}&intent=related">
+    <div class="container" data-rail>
+      <div class="ah-section__head">
+        <div><h2 class="ah-section__title">{{ 'sections.product.you_may_also_like' | t }}</h2></div>
+        <div class="ah-section__head-end">
+          {%- if best -%}<a href="{{ best.url }}" class="ah-link-arrow">{{ 'sections.featured_collection.view_all' | t }}</a>{%- endif -%}
+          <div class="ah-rail__nav">
+            <button type="button" class="ah-rail__btn" data-rail-prev aria-label="{{ 'general.pagination.previous' | t }}">{%- render 'icon', name: 'chevron' -%}</button>
+            <button type="button" class="ah-rail__btn" data-rail-next aria-label="{{ 'general.pagination.next' | t }}">{%- render 'icon', name: 'chevron' -%}</button>
+          </div>
+        </div>
+      </div>
+      <div class="ah-rail" data-recs-rail>
+        <ul class="ah-rail__track" data-rail-track data-recs-items role="list">
+          {%- if best -%}
+            {%- assign shown = 0 -%}
+            {%- for item in best.products limit: 24 -%}
+              {%- if item.id == product.id or item.available == false -%}{%- continue -%}{%- endif -%}
+              <li>{%- render 'product-card', product: item -%}</li>
+              {%- assign shown = shown | plus: 1 -%}
+              {%- if shown >= limit -%}{%- break -%}{%- endif -%}
+            {%- endfor -%}
+          {%- endif -%}
+        </ul>
+      </div>
+    </div>
+  </section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "You may also like",
+  "settings": [
+    { "type": "range", "id": "limit", "label": "Products to show", "min": 4, "max": 12, "step": 1, "default": 10 }
+  ]
+}
+{% endschema %}

@@ -9,6 +9,13 @@
   {%- when 'gray', 'grey', 'رمادي' -%}#9a9a9a
   {%- when 'dark gray', 'dark grey', 'charcoal', 'رمادي غامق', 'رمادي داكن' -%}#3f3f3f
   {%- when 'navy', 'navy blue', 'كحلي', 'أزرق كحلي' -%}#1c2b4a
+  {%- when 'dark blue', 'أزرق غامق', 'أزرق داكن' -%}#1f3f8f
+  {%- when 'off white', 'أوف وايت', 'أبيض مطفي' -%}#f3efe6
+  {%- when 'light pink', 'وردي فاتح' -%}#f6c1d2
+  {%- when 'bronze', 'برونزي' -%}#a86b32
+  {%- when 'black grey', 'black gray', 'أسود رمادي' -%}linear-gradient(135deg, #111 50%, #9a9a9a 50%)
+  {%- when 'baby blue & black', 'أزرق فاتح وأسود' -%}linear-gradient(135deg, #7fb8e6 50%, #111 50%)
+  {%- when 'red blur', 'أحمر مموه' -%}radial-gradient(circle, #e0403b 30%, #f39a96 100%)
   {%- when 'blue', 'أزرق' -%}#2f6fd1
   {%- when 'light blue', 'sky blue', 'baby blue', 'أزرق فاتح', 'أزرق سماوي', 'أزرق بيبي' -%}#7fb8e6
   {%- when 'red', 'أحمر' -%}#c0392b
@@ -27,5 +34,5 @@
   {%- when 'gold', 'ذهبي' -%}#c9a94a
   {%- when 'silver', 'فضي' -%}#c4c4c4
   {%- when 'multicolor', 'multi', 'multi color', 'متعدد الألوان', 'ملون' -%}linear-gradient(135deg, #e0403b 0%, #f0c419 33%, #2f6fd1 66%, #2f7d3c 100%)
-  {%- else -%}#b9b9b9
+  {%- else -%}
 {%- endcase -%}

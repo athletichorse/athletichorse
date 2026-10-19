@@ -89,8 +89,17 @@
     }
   </script>
 
-  <div class="ah-gallery">
-    <div class="ah-gallery__main">
+  {%- liquid
+    assign main_media = current_variant.featured_media | default: product.featured_media
+    assign image_count = 0
+    for media in product.media
+      if media.media_type == 'image'
+        assign image_count = image_count | plus: 1
+      endif
+    endfor
+  -%}
+  <div class="ah-gallery{% if image_count > 1 %} ah-gallery--multi{% endif %}" data-gallery>
+    <div class="ah-gallery__stage">
       <div class="ah-card__badges">
         {%- unless product.available -%}
           <span class="ah-badge ah-badge--soldout">{{ 'sections.product.sold_out' | t }}</span>
@@ -98,34 +107,55 @@
           {%- if product.compare_at_price > product.price -%}<span class="ah-badge ah-badge--sale">{{ 'sections.main_collection.on_sale' | t }}</span>{%- endif -%}
         {%- endunless -%}
       </div>
-      {%- assign main_media = current_variant.featured_media | default: product.featured_media -%}
-      {%- if main_media -%}
-        {%- liquid
-          assign main_alt = main_media.alt | default: product.title
-          assign zoom_src = main_media | image_url: width: 2000
-        -%}
-        {{ main_media | image_url: width: 1200 | image_tag:
-          widths: '450,600,800,1000,1200',
-          sizes: '(min-width: 990px) 50vw, 100vw',
-          alt: main_alt,
-          loading: 'eager',
-          fetchpriority: 'high',
-          data-main-image: '',
-          data-zoom: zoom_src
-        }}
-        <button type="button" class="ah-gallery__zoom" data-zoom-open>{%- render 'icon', name: 'zoom' -%}{{ 'sections.product.zoom' | t }}</button>
+      {%- if image_count > 0 -%}
+        <div class="ah-gallery__track" data-gallery-track tabindex="0" aria-label="{{ product.title | escape }}">
+          {%- assign slide = 0 -%}
+          {%- for media in product.media -%}
+            {%- if media.media_type == 'image' -%}
+              {%- liquid
+                assign slide = slide | plus: 1
+                assign media_alt = media.alt | default: product.title
+                assign zoom_src = media | image_url: width: 2000
+                assign img_loading = 'lazy'
+                assign img_priority = 'auto'
+                if slide == 1
+                  assign img_loading = 'eager'
+                  assign img_priority = 'high'
+                endif
+              -%}
+              <div class="ah-gallery__slide" data-slide data-media-id="{{ media.id }}">
+                {{ media | image_url: width: 1200 | image_tag:
+                  widths: '450,600,800,1000,1200',
+                  sizes: '(min-width: 990px) 50vw, 100vw',
+                  alt: media_alt,
+                  loading: img_loading,
+                  fetchpriority: img_priority,
+                  data-zoom: zoom_src
+                }}
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+        {%- if image_count > 1 -%}
+          <button type="button" class="ah-gallery__arrow ah-gallery__arrow--prev" data-gallery-prev aria-label="{{ 'sections.product.prev_image' | t }}">{%- render 'icon', name: 'arrow' -%}</button>
+          <button type="button" class="ah-gallery__arrow ah-gallery__arrow--next" data-gallery-next aria-label="{{ 'sections.product.next_image' | t }}">{%- render 'icon', name: 'arrow' -%}</button>
+          <span class="ah-gallery__count" aria-live="polite"><span data-gallery-index>1</span> / {{ image_count }}</span>
+        {%- endif -%}
+        <button type="button" class="ah-gallery__zoom" data-zoom-open aria-label="{{ 'sections.product.zoom' | t }}">{%- render 'icon', name: 'zoom' -%}</button>
       {%- else -%}
         {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
       {%- endif -%}
     </div>
 
-    {%- if product.media.size > 1 -%}
-      <div class="ah-gallery__thumbs" role="list">
-        {%- for media in product.media limit: 10 -%}
+    {%- if image_count > 1 -%}
+      <div class="ah-gallery__thumbs">
+        {%- assign slide = 0 -%}
+        {%- for media in product.media -%}
           {%- if media.media_type == 'image' -%}
-            <button type="button" role="listitem" class="ah-gallery__thumb{% if media.id == main_media.id %} is-active{% endif %}" data-thumb data-media-id="{{ media.id }}" data-src="{{ media | image_url: width: 1200 }}" aria-label="{{ 'sections.product.view_image' | t: number: forloop.index }}">
-              {{ media | image_url: width: 160 | image_tag: loading: 'lazy', alt: '' }}
+            <button type="button" class="ah-gallery__thumb{% if slide == 0 %} is-active{% endif %}" data-thumb="{{ slide }}" data-media-id="{{ media.id }}" aria-label="{{ 'sections.product.view_image' | t: number: forloop.index }}">
+              {{ media | image_url: width: 160 | image_tag: loading: 'lazy', alt: '', width: 80, height: 80 }}
             </button>
+            {%- assign slide = slide | plus: 1 -%}
           {%- endif -%}
         {%- endfor -%}
       </div>
@@ -152,23 +182,39 @@
             assign is_size = false
             if option_down == 'color' or option_down == 'colour' or option.name == 'اللون'
               assign is_color = true
-            elsif option_down == 'size' or option.name == 'المقاس' or option.name == 'القياس'
+            elsif option_down contains 'size' or option.name contains 'مقاس' or option.name contains 'قياس'
               assign is_size = true
-              assign has_size = true
             endif
+            if is_size
+              for value in option.values
+                assign v_up = value | upcase | strip
+                if v_up == 'S' or v_up == 'M' or v_up == 'L' or v_up contains 'XL' or v_up contains 'SMALL' or v_up contains 'MEDIUM' or v_up contains 'LARGE' or value contains 'صغير' or value contains 'وسط' or value contains 'كبير'
+                  assign has_size = true
+                endif
+              endfor
+            endif
+            assign option_position = forloop.index
           -%}
           <fieldset class="ah-option" data-option-index="{{ forloop.index0 }}">
-            <div class="ah-option__head">
-              <legend class="ah-option__label">{{ option.name }}: <span data-selected-label="{{ forloop.index0 }}">{{ option.selected_value }}</span></legend>
-              {%- if is_size -%}
-                <button type="button" class="ah-text-btn" data-modal-open="SizeGuide">{{ 'sections.product.size_guide' | t }}</button>
-              {%- endif -%}
-            </div>
+            <legend class="ah-option__label">{{ option.name }}: <span data-selected-label="{{ forloop.index0 }}">{{ option.selected_value }}</span></legend>
             {%- if is_color -%}
               <div class="ah-option__values">
                 {%- for value in option.values -%}
-                  <button type="button" role="radio" aria-checked="{% if option.selected_value == value %}true{% else %}false{% endif %}" class="ah-swatch{% if option.selected_value == value %} is-selected{% endif %}" data-value="{{ value | escape }}" aria-label="{{ value | escape }}" title="{{ value | escape }}">
-                    <span style="background: {% render 'swatch-color', value: value %};"></span>
+                  {%- capture swatch_bg -%}{%- render 'swatch-color', value: value -%}{%- endcapture -%}
+                  {%- assign swatch_bg = swatch_bg | strip -%}
+                  {%- assign swatch_img = nil -%}
+                  {%- if swatch_bg == blank -%}
+                    {%- for variant in product.variants -%}
+                      {%- assign v_opt = variant.options[option_position | minus: 1] -%}
+                      {%- if v_opt == value and variant.featured_media -%}{%- assign swatch_img = variant.featured_media -%}{%- break -%}{%- endif -%}
+                    {%- endfor -%}
+                  {%- endif -%}
+                  <button type="button" role="radio" aria-checked="{% if option.selected_value == value %}true{% else %}false{% endif %}" class="ah-swatch{% if option.selected_value == value %} is-selected{% endif %}{% if swatch_img %} ah-swatch--img{% endif %}" data-value="{{ value | escape }}" aria-label="{{ value | escape }}" title="{{ value | escape }}">
+                    {%- if swatch_img -%}
+                      <span>{{ swatch_img | image_url: width: 96 | image_tag: loading: 'lazy', alt: '', width: 48, height: 48 }}</span>
+                    {%- else -%}
+                      <span style="background: {{ swatch_bg | default: '#b9b9b9' }};"></span>
+                    {%- endif -%}
                   </button>
                 {%- endfor -%}
               </div>
@@ -185,6 +231,9 @@
                 {%- endfor -%}
               </select>
             {%- endif -%}
+            {%- if is_size and has_size -%}
+              <button type="button" class="ah-size-link" data-modal-open="SizeGuide">{%- render 'icon', name: 'ruler' -%}{{ 'sections.product.size_guide' | t }}</button>
+            {%- endif -%}
           </fieldset>
         {%- endfor -%}
       {%- endunless -%}
@@ -198,21 +247,20 @@
           <input type="number" id="Quantity" name="quantity" value="1" min="1" data-qty-input>
           <button type="button" data-qty-step="1" aria-label="{{ 'sections.product.increase' | t }}">+</button>
         </div>
-        <button type="submit" class="ah-btn ah-btn--lg ah-btn--block" data-add-to-cart {% unless current_variant.available %}disabled{% endunless %}>
+        <button type="submit" class="ah-btn ah-btn--block ah-buy__add" data-add-to-cart {% unless current_variant.available %}disabled{% endunless %}>
           {%- if current_variant.available -%}{{ 'sections.product.add_to_cart' | t }}{%- else -%}{{ 'sections.product.sold_out' | t }}{%- endif -%}
         </button>
+        {%- if settings.social_whatsapp_number != blank -%}
+          {%- capture wa_text -%}{{ 'sections.product.whatsapp_message' | t: title: product.title }} {{ request.origin }}{{ product.url }}{%- endcapture -%}
+          <a class="ah-buy__wa" href="https://wa.me/{{ settings.social_whatsapp_number }}?text={{ wa_text | url_encode }}" target="_blank" rel="noopener noreferrer" aria-label="{{ 'sections.product.ask_whatsapp' | t }}" title="{{ 'sections.product.ask_whatsapp' | t }}">
+            {%- render 'icon', name: 'whatsapp' -%}
+          </a>
+        {%- endif -%}
       </div>
       {%- if section.settings.show_dynamic_checkout -%}
-        {{ form | payment_button }}
+        <div class="ah-buy__now">{{ form | payment_button }}</div>
       {%- endif -%}
     {%- endform -%}
-
-    {%- if settings.social_whatsapp_number != blank -%}
-      {%- capture wa_text -%}{{ 'sections.product.whatsapp_message' | t: title: product.title }} {{ request.origin }}{{ product.url }}{%- endcapture -%}
-      <a class="ah-btn ah-btn--outline ah-btn--block" href="https://wa.me/{{ settings.social_whatsapp_number }}?text={{ wa_text | url_encode }}" target="_blank" rel="noopener noreferrer">
-        {%- render 'icon', name: 'chat' -%}{{ 'sections.product.ask_whatsapp' | t }}
-      </a>
-    {%- endif -%}
 
     <div class="ah-perks">
       <div class="ah-perk">{%- render 'icon', name: 'truck' -%}<span><strong>{{ 'sections.value_props.delivery_title' | t }}</strong> — {{ 'sections.product.delivery_estimate' | t }}</span></div>
@@ -270,26 +318,7 @@
 </div>
 
 {%- if has_size -%}
-  <div class="ah-modal" id="SizeGuide" role="dialog" aria-modal="true" aria-labelledby="SizeGuideTitle">
-    <div class="ah-modal__panel">
-      <button type="button" class="ah-icon-btn ah-modal__close" data-modal-close aria-label="{{ 'general.header.close' | t }}">{%- render 'icon', name: 'close' -%}</button>
-      <h3 id="SizeGuideTitle">{{ 'sections.product.size_guide_heading' | t }}</h3>
-      <table class="ah-table">
-        <thead>
-          <tr><th>{{ 'sections.product.size_guide_col_size' | t }}</th><th>{{ 'sections.product.size_guide_col_chest' | t }}</th><th>{{ 'sections.product.size_guide_col_waist' | t }}</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>XS</td><td>82–86</td><td>66–70</td></tr>
-          <tr><td>S</td><td>87–91</td><td>71–75</td></tr>
-          <tr><td>M</td><td>92–97</td><td>76–81</td></tr>
-          <tr><td>L</td><td>98–104</td><td>82–89</td></tr>
-          <tr><td>XL</td><td>105–111</td><td>90–97</td></tr>
-          <tr><td>XXL</td><td>112–118</td><td>98–105</td></tr>
-        </tbody>
-      </table>
-      <p style="font-size:13px;color:var(--muted)">{{ 'sections.product.size_guide_note' | t }}</p>
-    </div>
-  </div>
+  {%- render 'size-guide', product: product -%}
 {%- endif -%}
 
 {% schema %}

@@ -1,0 +1,45 @@
+{%- comment -%}
+  Frequently bought together. Add-ons come from the product's `custom.frequently_bought_together`
+  metafield; without one, the page asks Shopify for complementary products, then falls back to the
+  lowest-priced related products. Renders only the add-on list when served by the recommendations API.
+{%- endcomment -%}
+{%- if recommendations.performed -%}
+  <div data-fbt-items>
+    {%- if recommendations.products_count > 0 -%}
+      {%- assign picks = recommendations.products | where: 'available', true -%}
+      {%- if recommendations.intent == 'related' -%}{%- assign picks = picks | sort: 'price' -%}{%- endif -%}
+      {%- for item in picks limit: 2 -%}{%- render 'fbt-item', item: item -%}{%- endfor -%}
+    {%- endif -%}
+  </div>
+{%- elsif product.available -%}
+  {%- assign manual = product.metafields.custom.frequently_bought_together.value -%}
+  <section class="ah-section ah-fbt-section"{% unless manual %} data-fbt-url="{{ routes.product_recommendations_url }}?section_id={{ section.id }}&product_id={{ product.id }}&limit=6"{% endunless %} data-fbt hidden>
+    <div class="container">
+      <div class="ah-fbt">
+        <h2 class="ah-fbt__title">{{ 'sections.product.fbt_title' | t }}</h2>
+        <div class="ah-fbt__body">
+          <div class="ah-fbt__list">
+            {%- render 'fbt-item', item: product, current: true -%}
+            <div class="ah-fbt__adds" data-fbt-items>
+              {%- if manual -%}
+                {%- assign shown = 0 -%}
+                {%- for item in manual -%}
+                  {%- if item.available and shown < 2 -%}{%- render 'fbt-item', item: item -%}{%- assign shown = shown | plus: 1 -%}{%- endif -%}
+                {%- endfor -%}
+              {%- endif -%}
+            </div>
+          </div>
+          <div class="ah-fbt__summary">
+            <span class="ah-fbt__label">{{ 'sections.product.fbt_total' | t }}</span>
+            <span class="ah-fbt__total" data-fbt-total></span>
+            <button type="button" class="ah-btn ah-btn--block" data-fbt-add data-str-all="{{ 'sections.product.fbt_add_all' | t | escape }}" data-str-some="{{ 'sections.product.fbt_add_selected' | t | escape }}">{{ 'sections.product.fbt_add_all' | t }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{%- endif -%}
+
+{% schema %}
+{ "name": "Frequently bought together", "settings": [] }
+{% endschema %}
