@@ -284,6 +284,18 @@
     });
   }
 
+  /* ---------- Card hover image: only fetched on first hover (saves a second image per card) ---------- */
+  function initCardHover() {
+    document.addEventListener('mouseover', function (e) {
+      var card = e.target.closest && e.target.closest('.ah-card');
+      if (!card || card.classList.contains('is-alt')) return;
+      var img = $('.ah-card__img--alt', card);
+      if (!img) return;
+      var ready = function () { card.classList.add('is-alt'); };
+      if (img.complete && img.naturalWidth) ready(); else img.addEventListener('load', ready, { once: true });
+    });
+  }
+
   /* ---------- Quick view: pick options for multi-variant products from the card ---------- */
   function initQuickView() {
     var str = window.themeStrings || {};
@@ -922,6 +934,7 @@
     initRails();
     initCartDrawer();
     initQuickAdd();
+    initCardHover();
     initQuickView();
     initRecommendations();
     initFbt();

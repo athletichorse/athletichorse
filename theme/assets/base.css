@@ -520,12 +520,11 @@ html[dir="rtl"] .ah-rail__btn[data-rail-prev] svg { transform: none; }
 .ah-card { position: relative; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .ah-card__media { position: relative; display: block; aspect-ratio: 1; border-radius: var(--radius); overflow: hidden; background: var(--surface); }
 .ah-card__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 8%; mix-blend-mode: multiply; transition: opacity .35s var(--ease), transform .6s var(--ease); }
-.ah-card__media .ah-card__img--alt { opacity: 0; }
+.ah-card__media .ah-card__img--alt { display: none; }
 @media (hover: hover) {
   .ah-card:hover .ah-card__media img { transform: scale(1.04); }
-  .ah-card:hover .ah-card__img--alt { opacity: 1; }
-  .ah-card:hover .ah-card__img--alt + .ah-card__img--main,
-  .ah-card:hover .ah-card__media:has(.ah-card__img--alt) .ah-card__img--main { opacity: 0; }
+  .ah-card:hover .ah-card__img--alt { display: block; }
+  .ah-card.is-alt:hover .ah-card__img--main { opacity: 0; }
 }
 .ah-card__badges { position: absolute; top: 10px; inset-inline-start: 10px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; z-index: 1; }
 .ah-badge { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: 4px; font-size: 11.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; background: #fff; color: var(--ink); }
