@@ -2,62 +2,82 @@
   "sections": {
     "about-us": {
       "type": "about-us",
+      "settings": {
+        "image": "shopify://shop_images/photo-1528162841823-9e55a8cc2f58.jpg",
+        "image_2": "shopify://shop_images/photo-1530549387789-4c1017266635.jpg",
+        "image_3": "shopify://shop_images/photo-1571019613454-1cb2f99b2d8b.jpg",
+        "image_story": "shopify://shop_images/photo-1622659097509-4d56de14539e.jpg",
+        "google_rating": "5.0",
+        "maps_url": "https://share.google/B3QeRfIAdghP2ynlt"
+      },
       "blocks": {
-        "gear-1": {
-          "type": "gear_item",
+        "s0": {
+          "type": "sport",
           "settings": {
-            "icon": "shirt",
-            "collection": "shirts"
+            "collection": "football-equipment",
+            "label": ""
           }
         },
-        "gear-2": {
-          "type": "gear_item",
+        "s1": {
+          "type": "sport",
           "settings": {
-            "icon": "shorts",
-            "collection": "men-shorts"
+            "collection": "water-sports",
+            "label": ""
           }
         },
-        "gear-3": {
-          "type": "gear_item",
+        "s2": {
+          "type": "sport",
           "settings": {
-            "icon": "backpack",
-            "collection": "bags-backpacks"
+            "collection": "gym-equipment",
+            "label": ""
           }
         },
-        "gear-4": {
-          "type": "gear_item",
+        "s3": {
+          "type": "sport",
           "settings": {
-            "icon": "medal",
-            "collection": "trophy-cups-medals"
+            "collection": "taekwondo-martial-arts-equipment",
+            "label": ""
           }
         },
-        "gear-5": {
-          "type": "gear_item",
+        "s4": {
+          "type": "sport",
           "settings": {
-            "icon": "trophy",
-            "collection": "trophy-cups-medals"
+            "collection": "racket-equipment",
+            "label": ""
           }
         },
-        "gear-6": {
-          "type": "gear_item",
+        "s5": {
+          "type": "sport",
           "settings": {
-            "icon": "flag",
-            "collection": "flags"
+            "collection": "basketball-equipment",
+            "label": ""
+          }
+        },
+        "s6": {
+          "type": "sport",
+          "settings": {
+            "collection": "kids",
+            "label": ""
+          }
+        },
+        "s7": {
+          "type": "sport",
+          "settings": {
+            "collection": "women",
+            "label": ""
           }
         }
       },
       "block_order": [
-        "gear-1",
-        "gear-2",
-        "gear-3",
-        "gear-4",
-        "gear-5",
-        "gear-6"
-      ],
-      "settings": {
-        "image": "shopify://shop_images/photo-1528162841823-9e55a8cc2f58.jpg",
-        "image_2": "shopify://shop_images/photo-1622659097509-4d56de14539e.jpg"
-      }
+        "s0",
+        "s1",
+        "s2",
+        "s3",
+        "s4",
+        "s5",
+        "s6",
+        "s7"
+      ]
     }
   },
   "order": [

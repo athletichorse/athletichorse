@@ -746,6 +746,56 @@
     }).catch(function () {});
   }
 
+  /* ---------- Scroll animations: reveal, count-up numbers, light parallax ---------- */
+  function initMotion() {
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var reveals = $$('[data-reveal]'), counters = $$('[data-count]'), layers = $$('[data-parallax]');
+    if (!reveals.length && !counters.length) return;
+    if (reduce || !('IntersectionObserver' in window)) return;
+    document.documentElement.classList.add('ah-anim');
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        en.target.classList.add('is-in');
+        io.unobserve(en.target);
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+    reveals.forEach(function (el) { io.observe(el); });
+
+    var fmt = function (n, dec) { return dec ? n.toFixed(dec) : Math.round(n).toLocaleString('en-US'); };
+    var cio = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        cio.unobserve(en.target);
+        var el = en.target, end = parseFloat(el.dataset.count) || 0, dec = parseInt(el.dataset.decimals || '0', 10);
+        var t0 = performance.now(), dur = 1600;
+        (function tick(now) {
+          var p = Math.min(1, (now - t0) / dur), eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = fmt(end * eased, dec);
+          if (p < 1) requestAnimationFrame(tick);
+        })(t0);
+      });
+    }, { threshold: 0.5 });
+    counters.forEach(function (el) { el.textContent = fmt(0, parseInt(el.dataset.decimals || '0', 10)); cio.observe(el); });
+
+    if (layers.length && window.matchMedia('(min-width: 750px)').matches) {
+      var ticking = false;
+      var move = function () {
+        var vh = window.innerHeight;
+        layers.forEach(function (el) {
+          var r = el.getBoundingClientRect();
+          if (r.bottom < 0 || r.top > vh) return;
+          var shift = (r.top + r.height / 2 - vh / 2) * parseFloat(el.dataset.parallax || '0.05');
+          el.style.transform = 'translate3d(0,' + (-shift).toFixed(1) + 'px,0)';
+        });
+        ticking = false;
+      };
+      window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(move); } }, { passive: true });
+      move();
+    }
+  }
+
   /* ---------- Policies: table of contents + related policy nav ---------- */
   function initPolicy() {
     var container = $('.shopify-policy__container');
@@ -814,6 +864,7 @@
     initQuickView();
     initRecommendations();
     initFbt();
+    initMotion();
     initProduct();
     initModals();
     initCartPage();
