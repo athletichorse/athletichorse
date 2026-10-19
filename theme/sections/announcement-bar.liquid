@@ -12,6 +12,7 @@
     assign msg_3 = 'general.announcement.returns' | t
   endif
 -%}
+{%- capture riyal -%}{%- render 'riyal' -%}{%- endcapture -%}
 <div class="ah-announce" role="region" aria-label="{{ 'general.announcement.label' | t }}">
   <div class="container ah-announce__inner">
     <div class="ah-announce__side">
@@ -21,13 +22,13 @@
     </div>
     <div class="ah-announce__track" aria-live="polite">
       <p class="ah-announce__msg is-active" data-announce-msg>
-        {%- if section.settings.link != blank -%}<a href="{{ section.settings.link }}">{{ msg_1 }}</a>{%- else -%}{{ msg_1 }}{%- endif -%}
+        {%- if section.settings.link != blank -%}<a href="{{ section.settings.link }}">{{ msg_1 | replace: '[riyal]', riyal }}</a>{%- else -%}{{ msg_1 | replace: '[riyal]', riyal }}{%- endif -%}
       </p>
       <p class="ah-announce__msg" data-announce-msg>{{ msg_3 }}</p>
       <p class="ah-announce__msg" data-announce-msg>{{ msg_2 }}</p>
     </div>
     <div class="ah-announce__side">
-      <a href="{{ routes.root_url }}pages/contact">{{ 'general.footer.contact' | t }}</a>
+      <a href="{{ pages.contact.url | default: '/pages/contact' }}">{{ 'general.footer.contact' | t }}</a>
       {%- if shop.policies.size > 0 -%}
         <a href="{{ shop.refund_policy.url | default: shop.policies.first.url }}">{{ 'general.announcement.returns_link' | t }}</a>
       {%- endif -%}

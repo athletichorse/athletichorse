@@ -2,12 +2,12 @@
   "general": {
     "meta": {
       "home_title": "Athletic Horse | Sports Equipment & Activewear Store in Saudi Arabia",
-      "home_description": "Shop authentic sports equipment & activewear at Athletic Horse (Alhisan Alriyadi): football, swimming, gym, padel, martial arts & more. Fast delivery across Saudi Arabia, easy 14-day returns, Mada & Apple Pay."
+      "home_description": "Shop authentic sports equipment & activewear at Athletic Horse (Alhisan Alriyadi): football, swimming, gym, padel, martial arts & more. Fast delivery across Saudi Arabia, cash on delivery and returns within 3 days."
     },
     "announcement": {
       "label": "Announcements",
-      "message": "Free delivery on orders over SAR 200 across Saudi Arabia",
-      "returns": "Easy 14-day returns · Pay with Mada, Visa or Apple Pay",
+      "message": "Delivery to every city in Saudi Arabia · Cash on delivery",
+      "returns": "Cash on delivery across Saudi Arabia · Returns within 3 days",
       "business_inquiry": "Teams & bulk orders: +966 54 177 0519",
       "returns_link": "Returns"
     },
@@ -97,9 +97,9 @@
       "authentic_title": "100% authentic",
       "authentic_text": "Quality guaranteed",
       "returns_title": "Easy returns",
-      "returns_text": "Within 14 days",
-      "secure_title": "Secure checkout",
-      "secure_text": "Mada, Visa, Apple Pay",
+      "returns_text": "Within 3 days of delivery",
+      "secure_title": "Cash on delivery",
+      "secure_text": "Pay when your order arrives",
       "support_title": "WhatsApp support",
       "support_text": "Real people, fast replies",
       "bnpl_title": "Pay later",
@@ -129,7 +129,7 @@
     "story": {
       "eyebrow": "Why Athletic Horse",
       "heading": "Saudi Arabia's home of sport",
-      "text_html": "<p>Athletic Horse (Alhisan Alriyadi) is an online sports store built for athletes, teams and families across the Kingdom. We stock authentic football equipment, swimming goggles and swimwear, gym and home-workout gear, padel and tennis rackets, martial arts equipment, trophies and medals — all in one place.</p><p>Order online with secure payment by Mada, Visa or Apple Pay, get fast delivery to Riyadh, Jeddah, Dammam and every city in Saudi Arabia, and return within 14 days if it isn't right.</p>",
+      "text_html": "<p>Athletic Horse (Alhisan Alriyadi) is an online sports store built for athletes, teams and families across the Kingdom. We stock authentic football equipment, swimming goggles and swimwear, gym and home-workout gear, padel and tennis rackets, martial arts equipment, trophies and medals — all in one place.</p><p>Order online and pay cash on delivery, get fast delivery to Riyadh, Jeddah, Dammam and every city in Saudi Arabia, and return unused items within 3 days if they aren't right.</p>",
       "stat_1": "sports categories",
       "stat_2": "authentic products",
       "stat_3_value": "24h",
@@ -170,7 +170,6 @@
       "unavailable": "Unavailable",
       "choose_options": "Choose options",
       "new": "New",
-      "from_price": "From {{ price }}",
       "regular_price": "Regular price",
       "quantity": "Quantity",
       "increase": "Increase quantity",
@@ -183,7 +182,7 @@
       "sku": "SKU",
       "category": "Category",
       "shipping_returns": "Shipping & returns",
-      "shipping_returns_text": "Fast delivery to every city in Saudi Arabia. Free delivery on orders over SAR 200. Unused items can be returned within 14 days.",
+      "shipping_returns_text": "Delivery to every city in Saudi Arabia. Shipping cost is shown at checkout. Pay cash on delivery. Unused items can be returned within 3 days of delivery.",
       "delivery_estimate": "Across Saudi Arabia",
       "ask_whatsapp": "Ask about this product on WhatsApp",
       "whatsapp_message": "Hi! I have a question about: {{ title }}",
@@ -194,7 +193,10 @@
       "size_guide_col_size": "Size",
       "size_guide_col_chest": "Chest (cm)",
       "size_guide_col_waist": "Waist (cm)",
-      "size_guide_note": "Measurements are approximate. For the best fit, compare with a similar item you already own."
+      "size_guide_note": "Measurements are approximate. For the best fit, compare with a similar item you already own.",
+      "you_save_html": "Save {{ amount }} ({{ percent }}% OFF)",
+      "percent_off": "{{ percent }}% OFF",
+      "from_price_html": "From {{ price }}"
     },
     "cart": {
       "title": "Your cart",
@@ -203,14 +205,14 @@
       "empty_text": "Looks like you haven't added anything yet.",
       "continue_shopping": "Continue shopping",
       "view_cart": "View cart",
-      "checkout": "Secure checkout",
+      "checkout": "Checkout",
       "subtotal": "Subtotal",
       "total": "Total",
       "remove": "Remove",
       "quantity": "Quantity",
       "update": "Update cart",
       "note": "Order note (optional)",
-      "taxes_note": "VAT included · Shipping calculated at checkout",
+      "taxes_note": "VAT included · Pay cash on delivery",
       "coupon_placeholder": "Discount code",
       "apply": "Apply",
       "empty_coupon": "Please enter a discount code",
@@ -259,6 +261,32 @@
       "gear_medal": "Medals",
       "gear_trophy": "Trophies",
       "gear_flag": "Flags"
+    },
+    "product_rail": {
+      "new_arrivals": "New arrivals",
+      "best_sellers": "Best sellers",
+      "sale": "On sale now",
+      "swimming": "Swimming essentials"
+    },
+    "ticker": {
+      "cod": "Cash on delivery",
+      "free_delivery": "Delivery across Saudi Arabia",
+      "returns": "Returns within 3 days",
+      "authentic": "100% authentic gear",
+      "teams": "Team & bulk orders welcome"
+    },
+    "price_tiles": {
+      "heading": "Shop by price",
+      "text": "Great gear for every budget.",
+      "under": "Under",
+      "currency": "SAR"
+    },
+    "sport_cards": {
+      "heading": "Most popular sports"
+    },
+    "sale_rail": {
+      "flag": "Sale",
+      "save_up_to": "Save up to {{ percent }}% — limited stock"
     }
   }
 }

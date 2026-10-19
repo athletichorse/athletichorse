@@ -3,7 +3,7 @@
     "logo": "shopify://shop_images/alhisan-alriyadi-logo-transparent.png",
     "logo_width": 180,
     "favicon": "shopify://shop_images/alhisan-alriyadi-emblem.png",
-    "share_image": "shopify://shop_images/hero-new-collection.png",
+    "share_image": "shopify://shop_images/photo-1646504458774-dbad0e941c14.jpg",
     "color_background": "#FFFFFF",
     "color_background_alt": "#F3F5F4",
     "color_ink": "#111614",
@@ -21,8 +21,8 @@
     "store_address": "Al Boghdadiyah Al Sharqiyah, Jeddah 22235, Saudi Arabia",
     "cr_number": "",
     "vat_number": "",
-    "return_days": 14,
-    "free_shipping_threshold": 200,
+    "return_days": 3,
+    "free_shipping_threshold": 0,
     "social_instagram_link": "https://www.instagram.com/athletic_horseksa",
     "social_facebook_link": "https://www.facebook.com/share/1BPrXjSdpZ/",
     "social_x_link": "",
@@ -32,16 +32,22 @@
     "show_whatsapp_button": true,
     "social_linktree_link": "https://linktr.ee/Alhisan",
     "sections": {
-      "announcement-bar": { "type": "announcement-bar", "settings": {} },
+      "announcement-bar": {
+        "type": "announcement-bar",
+        "settings": {}
+      },
       "header": {
         "type": "header",
         "settings": {
           "menu": "main-menu",
-          "mega_image": "shopify://shop_images/hero-gym.png",
+          "mega_image": "shopify://shop_images/photo-1758448756350-3d0eec02ba37.jpg",
           "mega_link": "/collections/gym-equipment"
         }
       },
-      "newsletter": { "type": "newsletter", "settings": {} },
+      "newsletter": {
+        "type": "newsletter",
+        "settings": {}
+      },
       "footer": {
         "type": "footer",
         "settings": {

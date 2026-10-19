@@ -59,7 +59,9 @@
   data-str-sold-out="{{ 'sections.product.sold_out' | t | escape }}"
   data-str-unavailable="{{ 'sections.product.unavailable' | t | escape }}"
   data-str-in-stock="{{ 'sections.product.in_stock' | t | escape }}"
-  data-str-low-stock="{{ 'sections.product.low_stock' | t | escape }}">
+  data-str-low-stock="{{ 'sections.product.low_stock' | t | escape }}"
+  data-str-save="{{ 'sections.product.you_save_html' | t: amount: '[amount]', percent: '[percent]' | escape }}"
+  data-str-off="{{ 'sections.product.percent_off' | t: percent: '[percent]' | escape }}">
   {%- comment -%}
     Built by hand rather than `{{ product | json }}`: the drop-to-json output omits
     inventory_quantity / inventory_policy, which the stock cap and low-stock note need.
@@ -136,12 +138,7 @@
       <h1 class="ah-pinfo__title">{{ product.title }}</h1>
     </div>
 
-    <div class="ah-price{% if current_variant.compare_at_price > current_variant.price %} ah-price--sale{% endif %}" data-price>
-      <span class="ah-price__now">{{ current_variant.price | money_without_trailing_zeros }}</span>
-      {%- if current_variant.compare_at_price > current_variant.price -%}
-        <s class="ah-price__was">{{ current_variant.compare_at_price | money_without_trailing_zeros }}</s>
-      {%- endif -%}
-    </div>
+    {%- render 'price', product: product, variant: current_variant, show_off: true, data_attr: true -%}
     <p class="ah-pinfo__tax">{{ 'sections.product.tax_included' | t }}</p>
 
     {%- form 'product', product, data-product-form: '', class: 'ah-buy' -%}
@@ -220,7 +217,8 @@
     <div class="ah-perks">
       <div class="ah-perk">{%- render 'icon', name: 'truck' -%}<span><strong>{{ 'sections.value_props.delivery_title' | t }}</strong> — {{ 'sections.product.delivery_estimate' | t }}</span></div>
       <div class="ah-perk">{%- render 'icon', name: 'return' -%}<span><strong>{{ 'sections.value_props.returns_title' | t }}</strong> — {{ 'sections.value_props.returns_text' | t }}</span></div>
-      <div class="ah-perk">{%- render 'icon', name: 'shield' -%}<span><strong>{{ 'sections.value_props.authentic_title' | t }}</strong> — {{ 'sections.value_props.secure_text' | t }}</span></div>
+      <div class="ah-perk">{%- render 'icon', name: 'cash' -%}<span><strong>{{ 'sections.value_props.secure_title' | t }}</strong> — {{ 'sections.value_props.secure_text' | t }}</span></div>
+      <div class="ah-perk">{%- render 'icon', name: 'shield' -%}<span><strong>{{ 'sections.value_props.authentic_title' | t }}</strong> — {{ 'sections.value_props.authentic_text' | t }}</span></div>
     </div>
 
     <div class="ah-accordion">
@@ -233,7 +231,8 @@
       <details>
         <summary>{{ 'sections.product.shipping_returns' | t }}</summary>
         <div class="ah-accordion__body rte">
-          <p>{{ 'sections.product.shipping_returns_text' | t }}</p>
+          {%- capture riyal -%}{%- render 'riyal' -%}{%- endcapture -%}
+          <p>{{ 'sections.product.shipping_returns_text' | t | replace: '[riyal]', riyal }}</p>
           <p>
             {%- if shop.shipping_policy -%}<a href="{{ shop.shipping_policy.url }}">{{ shop.shipping_policy.title }}</a>{%- endif -%}
             {%- if shop.refund_policy -%} · <a href="{{ shop.refund_policy.url }}">{{ shop.refund_policy.title }}</a>{%- endif -%}
@@ -257,7 +256,7 @@
     </div>
     <div class="ah-sticky-atc__info">
       <span class="ah-sticky-atc__title">{{ product.title }}</span>
-      <span class="ah-sticky-atc__price" data-sticky-price>{{ current_variant.price | money_without_trailing_zeros }}</span>
+      <span class="ah-sticky-atc__price" data-sticky-price>{%- render 'money', cents: current_variant.price -%}</span>
     </div>
     <button type="button" class="ah-btn" data-sticky-add {% unless current_variant.available %}disabled{% endunless %}>
       {%- if current_variant.available -%}{{ 'sections.product.add_to_cart' | t }}{%- else -%}{{ 'sections.product.sold_out' | t }}{%- endif -%}
@@ -297,7 +296,7 @@
 {
   "name": "Product information",
   "settings": [
-    { "type": "checkbox", "id": "show_dynamic_checkout", "label": "Show Buy-it-now / Apple Pay button", "default": true }
+    { "type": "checkbox", "id": "show_dynamic_checkout", "label": "Show Buy it now button", "default": true }
   ]
 }
 {% endschema %}

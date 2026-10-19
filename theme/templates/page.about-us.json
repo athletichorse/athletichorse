@@ -3,19 +3,64 @@
     "about-us": {
       "type": "about-us",
       "blocks": {
-        "gear-1": { "type": "gear_item", "settings": { "icon": "shirt", "collection": "shirts" } },
-        "gear-2": { "type": "gear_item", "settings": { "icon": "shorts", "collection": "men-shorts" } },
-        "gear-3": { "type": "gear_item", "settings": { "icon": "backpack", "collection": "bags-backpacks" } },
-        "gear-4": { "type": "gear_item", "settings": { "icon": "medal", "collection": "trophy-cups-medals" } },
-        "gear-5": { "type": "gear_item", "settings": { "icon": "trophy", "collection": "trophy-cups-medals" } },
-        "gear-6": { "type": "gear_item", "settings": { "icon": "flag", "collection": "flags" } }
+        "gear-1": {
+          "type": "gear_item",
+          "settings": {
+            "icon": "shirt",
+            "collection": "shirts"
+          }
+        },
+        "gear-2": {
+          "type": "gear_item",
+          "settings": {
+            "icon": "shorts",
+            "collection": "men-shorts"
+          }
+        },
+        "gear-3": {
+          "type": "gear_item",
+          "settings": {
+            "icon": "backpack",
+            "collection": "bags-backpacks"
+          }
+        },
+        "gear-4": {
+          "type": "gear_item",
+          "settings": {
+            "icon": "medal",
+            "collection": "trophy-cups-medals"
+          }
+        },
+        "gear-5": {
+          "type": "gear_item",
+          "settings": {
+            "icon": "trophy",
+            "collection": "trophy-cups-medals"
+          }
+        },
+        "gear-6": {
+          "type": "gear_item",
+          "settings": {
+            "icon": "flag",
+            "collection": "flags"
+          }
+        }
       },
-      "block_order": ["gear-1", "gear-2", "gear-3", "gear-4", "gear-5", "gear-6"],
+      "block_order": [
+        "gear-1",
+        "gear-2",
+        "gear-3",
+        "gear-4",
+        "gear-5",
+        "gear-6"
+      ],
       "settings": {
-        "image": "shopify://shop_images/hero-football.png",
-        "image_2": "shopify://shop_images/hero-new-collection.png"
+        "image": "shopify://shop_images/photo-1528162841823-9e55a8cc2f58.jpg",
+        "image_2": "shopify://shop_images/photo-1622659097509-4d56de14539e.jpg"
       }
     }
   },
-  "order": ["about-us"]
+  "order": [
+    "about-us"
+  ]
 }

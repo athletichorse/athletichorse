@@ -33,10 +33,10 @@
 }
 
 @media (min-width: 750px) {
-  :root { --gutter: 24px; --section-gap: 72px; }
+  :root { --gutter: 24px; --section-gap: 56px; }
 }
 @media (min-width: 1200px) {
-  :root { --gutter: 40px; --section-gap: 96px; --header-h: 76px; }
+  :root { --gutter: 40px; --section-gap: 72px; --header-h: 76px; }
 }
 
 html[lang="ar"] {
@@ -191,7 +191,9 @@ html[dir="rtl"] .ah-select { background-position: left 14px center; }
 .ah-section--surface { background: var(--surface); }
 .ah-section--dark { background: var(--dark); color: #C9D1CC; }
 .ah-section--dark :is(h1, h2, h3, .ah-section__title) { color: #fff; }
-.ah-section + .ah-section:not(.ah-section--surface, .ah-section--dark) { padding-top: 0; }
+/* Shopify wraps every section in its own div, so collapse the doubled gap between two plain-white sections via :has() */
+.shopify-section:has(> .ah-section:not(.ah-section--surface, .ah-section--dark, .ah-section--sale, .ah-section--deals)) + .shopify-section > .ah-section:not(.ah-section--surface, .ah-section--dark, .ah-section--sale, .ah-section--deals) { padding-top: 0; }
+.ah-section--surface :is(.ah-card__media, .ah-tile__media, .ah-gallery__thumb) { background: #fff; }
 
 .ah-section__head {
   display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
@@ -563,7 +565,8 @@ html[lang="ar"] .ah-card__type { text-transform: none; letter-spacing: 0; }
 .ah-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 @media (min-width: 750px) { .ah-tiles { grid-template-columns: repeat(3, 1fr); gap: 16px; } }
 @media (min-width: 1200px) { .ah-tiles { grid-template-columns: repeat(var(--cols, 6), 1fr); } }
-.ah-tile { position: relative; display: grid; grid-template-rows: auto 1fr; border-radius: var(--radius); overflow: hidden; background: var(--surface); transition: transform .3s var(--ease), box-shadow .3s var(--ease); }
+.ah-tiles > li { display: flex; }
+.ah-tile { position: relative; width: 100%; display: grid; grid-template-rows: auto 1fr; border-radius: var(--radius); overflow: hidden; background: var(--surface); transition: transform .3s var(--ease), box-shadow .3s var(--ease); }
 .ah-tile:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
 .ah-tile__media { aspect-ratio: 1; overflow: hidden; display: grid; place-items: center; }
 .ah-tile__media img { width: 100%; height: 100%; object-fit: contain; padding: 12%; mix-blend-mode: multiply; transition: transform .6s var(--ease); }
@@ -583,6 +586,7 @@ html[lang="ar"] .ah-card__type { text-transform: none; letter-spacing: 0; }
 @media (min-width: 990px) { .ah-story { grid-template-columns: 1fr 1fr; gap: 64px; } }
 .ah-story__copy { display: grid; gap: 18px; justify-items: start; }
 .ah-story__copy p { color: var(--ink-2); max-width: 60ch; }
+.ah-story__text p + p { margin-top: 12px; }
 .ah-section--dark .ah-story__copy p { color: #C9D1CC; }
 .ah-story__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; margin-top: 8px; }
 .ah-stat { padding: 18px 16px; border-radius: var(--radius); background: rgb(255 255 255 / 6%); border: 1px solid rgb(255 255 255 / 10%); }
@@ -953,3 +957,321 @@ html[lang="ar"] .ah-about-hero h1 { font-stretch: 100%; text-transform: none; fo
 .placeholder-svg { width: 100%; height: 100%; background: var(--surface); fill: #C8D0CB; }
 .shopify-challenge__container { padding-block: 80px; }
 .logo { display: inline-flex; align-items: center; font-family: var(--ff-display); font-weight: 900; font-size: 22px; color: var(--ink); }
+
+
+/* ==========================================================================
+   Homepage v2 — energy pass (bento hero, ticker, photo circles, price tiles,
+   sport cards, deals rail). Patterns from Decathlon KSA / Sun & Sand Sports.
+   ========================================================================== */
+.ah-btn--sm { min-height: 40px; padding: 0 18px; font-size: 12.5px; }
+
+/* Bento hero */
+.ah-bento-wrap { padding-block: 12px 0; }
+@media (min-width: 990px) { .ah-bento-wrap { padding-top: 20px; } }
+.ah-bento { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (min-width: 990px) { .ah-bento { grid-template-columns: 1.75fr 1fr; grid-template-rows: 1fr 1fr; gap: 12px; height: min(640px, calc(100vh - 170px)); min-height: 520px; } }
+.ah-bento__item { position: relative; isolation: isolate; display: flex; align-items: flex-end; overflow: hidden; border-radius: var(--radius-lg); background: var(--dark); color: #fff; min-height: 200px; }
+.ah-bento__item--lead { grid-column: 1 / -1; min-height: 440px; }
+@media (min-width: 990px) { .ah-bento__item--lead { grid-column: 1; grid-row: 1 / span 2; min-height: 0; } }
+.ah-bento__item img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; transition: transform .8s var(--ease); }
+.ah-bento__item:hover img { transform: scale(1.04); }
+.ah-bento__item::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(0deg, rgb(4 8 5 / 85%) 0%, rgb(4 8 5 / 25%) 50%, rgb(4 8 5 / 0%) 75%); }
+.ah-bento__item--lead::after { background: linear-gradient(0deg, rgb(4 8 5 / 88%) 0%, rgb(4 8 5 / 35%) 55%, rgb(4 8 5 / 5%) 100%); }
+@media (min-width: 990px) {
+  .ah-bento__item--lead::after { background: linear-gradient(90deg, rgb(4 8 5 / 88%) 0%, rgb(4 8 5 / 45%) 45%, rgb(4 8 5 / 0%) 75%); }
+  html[dir="rtl"] .ah-bento__item--lead::after { background: linear-gradient(270deg, rgb(4 8 5 / 88%) 0%, rgb(4 8 5 / 45%) 45%, rgb(4 8 5 / 0%) 75%); }
+  .ah-bento__item--lead { align-items: center; }
+}
+.ah-bento__body { display: grid; gap: 10px; justify-items: start; padding: 16px; }
+.ah-bento__item--lead .ah-bento__body { gap: 16px; padding: 24px; max-width: 640px; }
+@media (min-width: 990px) { .ah-bento__item--lead .ah-bento__body { padding: 56px; } .ah-bento__body { padding: 24px; } }
+.ah-bento__tag { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 4px; background: var(--lime); color: var(--dark); font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+html[lang="ar"] .ah-bento__tag { letter-spacing: 0; font-size: 12.5px; }
+.ah-bento__title { font-family: var(--ff-display); font-weight: 900; font-stretch: 72%; text-transform: uppercase; line-height: .95; letter-spacing: -.01em; color: #fff; font-size: clamp(22px, 2.4vw, 34px); }
+.ah-bento__item--lead .ah-bento__title { font-size: clamp(44px, 7vw, 96px); line-height: .9; }
+html[lang="ar"] .ah-bento__title { font-stretch: 100%; text-transform: none; font-weight: 700; line-height: 1.25; }
+html[lang="ar"] .ah-bento__item--lead .ah-bento__title { font-size: clamp(34px, 5vw, 64px); line-height: 1.2; }
+.ah-bento__text { color: #D7DEDA; font-size: clamp(14px, 1.3vw, 17px); max-width: 44ch; }
+
+/* Promo ticker */
+.ah-ticker { overflow: hidden; margin-top: 12px; border-block: 1px solid rgb(0 0 0 / 6%); }
+.ah-ticker--lime { background: var(--lime); color: var(--dark); }
+.ah-ticker--brand { background: var(--brand); color: #fff; }
+.ah-ticker--dark { background: var(--dark); color: var(--lime); }
+.ah-ticker__track { display: flex; width: max-content; animation: ah-marquee 32s linear infinite; }
+html[dir="rtl"] .ah-ticker__track { animation-name: ah-marquee-rtl; }
+.ah-ticker:hover .ah-ticker__track { animation-play-state: paused; }
+.ah-ticker__list { display: flex; flex-shrink: 0; }
+.ah-ticker__item { display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; font-weight: 800; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+html[lang="ar"] .ah-ticker__item { letter-spacing: 0; font-size: 15px; text-transform: none; }
+.ah-ticker__item svg { width: 22px; height: 22px; stroke-width: 2; }
+.ah-ticker__item::after { content: "✦"; margin-inline-start: 28px; opacity: .5; }
+@keyframes ah-marquee { to { transform: translateX(-50%); } }
+@keyframes ah-marquee-rtl { to { transform: translateX(50%); } }
+@media (prefers-reduced-motion: reduce) { .ah-ticker__track { animation: none; } }
+
+/* Shop-by-sport photo circles */
+.ah-sports { grid-auto-columns: 100px; }
+.ah-sports__icon { width: 96px; height: 96px; }
+.ah-sports__icon--photo { overflow: hidden; border: 0; padding: 10px; }
+.ah-sports__icon--photo img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; transition: transform .35s var(--ease); }
+.ah-sports__item:hover .ah-sports__icon--photo { background: inherit; transform: translateY(-3px); box-shadow: 0 10px 22px -12px rgb(11 15 12 / 45%); }
+.ah-sports__item:hover .ah-sports__icon--photo img { transform: scale(1.08); }
+.ah-tint-0 { background: radial-gradient(circle at 30% 25%, #EAFBC4, #CDEF83); }
+.ah-tint-1 { background: radial-gradient(circle at 30% 25%, #E2F1E7, #B9DCC6); }
+.ah-tint-2 { background: radial-gradient(circle at 30% 25%, #F2F7E3, #DDEBB8); }
+.ah-tint-3 { background: radial-gradient(circle at 30% 25%, #E6F0EA, #C9E2D3); }
+.ah-sports__item:not(.ah-sports__item--sale) .ah-sports__icon:not(.ah-sports__icon--photo) { background: var(--dark); color: var(--lime); }
+.ah-sports__item--sale .ah-sports__icon { background: var(--sale); color: #fff; }
+.ah-sports__label { font-weight: 700; }
+
+/* Shop by price */
+.ah-prices { display: grid; grid-auto-flow: column; grid-auto-columns: 42%; gap: 10px; overflow-x: auto; scrollbar-width: none; margin-inline: calc(var(--gutter) * -1); padding-inline: var(--gutter); }
+.ah-prices::-webkit-scrollbar { display: none; }
+@media (min-width: 750px) { .ah-prices { grid-auto-flow: initial; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin: 0; padding: 0; gap: 14px; } }
+.ah-price-tile { position: relative; display: grid; align-content: center; justify-items: center; gap: 2px; aspect-ratio: 4/5; border-radius: var(--radius-lg); overflow: hidden; text-align: center; transition: transform .25s var(--ease), box-shadow .25s var(--ease); }
+@media (min-width: 750px) { .ah-price-tile { aspect-ratio: 1; } }
+.ah-price-tile::before { content: ""; position: absolute; inset: auto -30% -40% auto; width: 80%; aspect-ratio: 1; border-radius: 50%; background: rgb(255 255 255 / 12%); }
+.ah-price-tile:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+.ah-price-tile--1 { background: var(--brand); color: #fff; }
+.ah-price-tile--2 { background: var(--lime); color: var(--dark); }
+.ah-price-tile--0 { background: var(--dark); color: var(--lime); }
+.ah-price-tile__under { font-size: 13px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+html[lang="ar"] .ah-price-tile__under { letter-spacing: 0; font-size: 16px; }
+.ah-price-tile__amount { font-family: var(--font-display); font-weight: 900; font-stretch: 70%; font-size: clamp(56px, 7vw, 88px); line-height: .9; }
+.ah-price-tile__cur { font-size: 14px; font-weight: 700; opacity: .85; }
+
+/* Popular sports photo cards */
+.ah-sportcards { display: grid; grid-auto-flow: column; grid-auto-columns: 42%; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; margin-inline: calc(var(--gutter) * -1); padding-inline: var(--gutter); }
+.ah-sportcards::-webkit-scrollbar { display: none; }
+.ah-sportcards > li { scroll-snap-align: start; }
+@media (min-width: 750px) { .ah-sportcards { grid-auto-columns: calc((100% - 42px) / 4); gap: 14px; } }
+@media (min-width: 990px) { .ah-sportcards { grid-auto-columns: calc((100% - 70px) / 6); margin: 0; padding: 0; } }
+.ah-sportcard { position: relative; display: flex; align-items: flex-end; aspect-ratio: 3/4; border-radius: var(--radius); overflow: hidden; background: var(--dark); isolation: isolate; }
+.ah-sportcard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; transition: transform .7s var(--ease); }
+.ah-sportcard::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(0deg, rgb(0 0 0 / 70%), transparent 55%); }
+.ah-sportcard:hover img { transform: scale(1.07); }
+.ah-sportcard__label { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; padding: 14px; color: #fff; font-family: var(--ff-display); font-weight: 800; font-stretch: 80%; font-size: 19px; text-transform: uppercase; line-height: 1.1; }
+html[lang="ar"] .ah-sportcard__label { font-stretch: 100%; text-transform: none; font-weight: 700; font-size: 17px; }
+.ah-sportcard__label::after { content: ""; flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; background: var(--lime) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230B0F0C' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E") center / 16px no-repeat; }
+html[dir="rtl"] .ah-sportcard__label::after { transform: scaleX(-1); }
+
+/* Deals rail on dark */
+.ah-section--deals { background: radial-gradient(120% 140% at 100% 0%, #173E28 0%, var(--dark) 55%); }
+.ah-section--deals .ah-section__title { color: var(--lime); }
+.ah-section--deals .ah-link-arrow { color: #fff; }
+.ah-section--deals .ah-card__media { background: #fff; }
+.ah-section--deals .ah-card__title, .ah-section--deals .ah-price { color: #fff; }
+.ah-section--deals .ah-card__type, .ah-section--deals .ah-price__was { color: #9AA59F; }
+.ah-section--deals .ah-price--sale .ah-price__now { color: var(--lime); }
+.ah-section--deals .ah-rail__btn { background: transparent; border-color: rgb(255 255 255 / 25%); color: #fff; }
+
+/* Price colour: brand green makes prices pop (SSS pattern) */
+.ah-price__now { color: var(--brand); }
+.ah-price--sale .ah-price__now { color: var(--sale); }
+
+/* ==========================================================================
+   Light theme pass — bright, daylight look. No dark surfaces: brand green
+   for primary actions, white / light-green for sections, white label cards
+   on photography instead of heavy dark scrims.
+   ========================================================================== */
+:root { --tint: #EEF6E9; --tint-2: #E3F3D2; }
+
+/* Buttons: brand green primary */
+.ah-btn { --btn-bg: var(--brand); --btn-bd: var(--brand); }
+.ah-btn:hover { --btn-bg: var(--brand-dark); --btn-bd: var(--brand-dark); }
+.ah-btn--highlight { --btn-bg: var(--lime); --btn-fg: var(--ink); --btn-bd: var(--lime); }
+.ah-btn--highlight:hover { --btn-bg: var(--brand); --btn-fg: #fff; --btn-bd: var(--brand); }
+.ah-btn--outline { --btn-bg: #fff; --btn-fg: var(--brand); --btn-bd: var(--brand); }
+.ah-btn--outline:hover { --btn-bg: var(--brand); --btn-fg: #fff; --btn-bd: var(--brand); }
+
+/* Announcement: brand green, not black */
+.ah-announce { background: var(--brand); color: #fff; }
+.ah-announce__side { color: #D8EBDD; }
+.ah-announce__msg strong { color: var(--lime); }
+
+/* Light sections replace dark ones */
+.ah-section--dark { background: var(--tint); color: var(--ink-2); }
+.ah-section--dark :is(h1, h2, h3, .ah-section__title) { color: var(--ink); }
+.ah-section--dark .ah-story__copy p { color: var(--ink-2); }
+.ah-section--dark .ah-eyebrow--light { color: var(--brand); }
+.ah-stat { background: #fff; border-color: var(--line); }
+.ah-stat b { color: var(--brand) !important; }
+.ah-section--deals { background: linear-gradient(135deg, var(--tint-2) 0%, var(--tint) 60%, #fff 100%); }
+.ah-section--deals .ah-section__title { color: var(--brand); }
+.ah-section--deals .ah-link-arrow { color: var(--ink); }
+.ah-section--deals .ah-card__title, .ah-section--deals .ah-price { color: var(--ink); }
+.ah-section--deals .ah-card__type, .ah-section--deals .ah-price__was { color: var(--muted); }
+.ah-section--deals .ah-price--sale .ah-price__now { color: var(--sale); }
+.ah-section--deals .ah-rail__btn { background: #fff; border-color: var(--line); color: var(--ink); }
+
+/* White label cards on photography */
+.ah-bento__item, .ah-dept, .ah-sportcard, .ah-promo { background: var(--tint); }
+.ah-bento__item::after, .ah-bento__item--lead::after, .ah-dept::after, .ah-sportcard::after, .ah-promo::after { display: none; }
+@media (min-width: 990px) { html[dir="rtl"] .ah-bento__item--lead::after { display: none; } }
+.ah-bento__body {
+  margin: 12px; padding: 14px 16px; border-radius: var(--radius);
+  background: rgb(255 255 255 / 94%); box-shadow: 0 12px 30px -14px rgb(11 15 12 / 35%);
+  backdrop-filter: blur(6px); color: var(--ink);
+}
+.ah-bento__item--lead .ah-bento__body { margin: 16px; padding: 22px; }
+@media (min-width: 990px) {
+  .ah-bento__item--lead { align-items: flex-end; }
+  .ah-bento__item--lead .ah-bento__body { margin: 32px; padding: 32px 36px; max-width: 560px; }
+  .ah-bento__body { margin: 16px; padding: 16px 18px; }
+}
+.ah-bento__title, .ah-bento__item--lead .ah-bento__title { color: var(--ink); }
+.ah-bento__item--lead .ah-bento__title { font-size: clamp(36px, 5vw, 68px); }
+html[lang="ar"] .ah-bento__item--lead .ah-bento__title { font-size: clamp(30px, 4vw, 52px); }
+.ah-bento__text { color: var(--ink-2); }
+.ah-bento__tag { background: var(--lime); color: var(--ink); }
+.ah-bento__item:not(.ah-bento__item--lead) .ah-btn { --btn-bg: var(--brand); --btn-fg: #fff; --btn-bd: var(--brand); }
+
+.ah-dept__body { inset: auto 12px 12px 12px; padding: 14px 16px; border-radius: var(--radius); background: rgb(255 255 255 / 95%); color: var(--ink); align-items: center; }
+.ah-dept__name { color: var(--ink); font-size: clamp(22px, 2.2vw, 30px); }
+.ah-dept__count { color: var(--muted); margin-top: 2px; }
+.ah-dept__arrow { background: var(--brand); color: #fff; width: 42px; height: 42px; }
+.ah-dept:hover .ah-dept__arrow { background: var(--lime); color: var(--ink); }
+
+.ah-sportcard__label { margin: 10px; width: calc(100% - 20px); padding: 10px 12px; border-radius: var(--radius-sm); background: rgb(255 255 255 / 95%); color: var(--ink); font-size: 16px; }
+html[lang="ar"] .ah-sportcard__label { font-size: 15px; }
+
+.ah-promo__body { margin: 16px; border-radius: var(--radius); background: rgb(255 255 255 / 94%); }
+.ah-promo__title { color: var(--ink); }
+.ah-promo__text { color: var(--ink-2); }
+
+/* Shop-by-sport icon fallbacks + price tiles: no black */
+.ah-sports__item:not(.ah-sports__item--sale) .ah-sports__icon:not(.ah-sports__icon--photo) { background: var(--brand); color: #fff; }
+.ah-sports__item:hover .ah-sports__icon:not(.ah-sports__icon--photo) { background: var(--lime); color: var(--ink); }
+.ah-price-tile--0 { background: var(--tint-2); color: var(--brand); }
+.ah-tile--all { background: var(--brand); }
+.ah-tile--all .ah-tile__icon { background: var(--lime); color: var(--ink); }
+
+/* Ticker on lime reads as energetic, not dark */
+.ah-ticker--dark { background: var(--brand); color: #fff; }
+
+/* Footer: light */
+.ah-footer { background: var(--surface); color: var(--ink-2); border-top: 4px solid var(--brand); }
+.ah-footer a:hover { color: var(--brand); }
+.ah-footer__brand .logo img { filter: none; }
+.ah-footer__title { color: var(--ink); }
+.ah-footer .social-row a { background: #fff; border-color: var(--line); color: var(--ink); }
+.ah-footer .social-row a:hover { background: var(--brand); border-color: var(--brand); color: #fff; }
+.ah-footer__contact svg { color: var(--brand); }
+.ah-footer__bottom { border-top-color: var(--line); color: var(--muted); }
+@media (max-width: 989px) {
+  .ah-footer__col { border-bottom-color: var(--line); }
+  .ah-footer__col summary::after { color: var(--ink); }
+}
+
+/* Mega menu promo, about hero, legal help box, password page: light */
+.ah-mega__promo-text { background: none; inset: auto 12px 12px 12px; padding: 14px 16px; border-radius: var(--radius-sm); background-color: rgb(255 255 255 / 95%); color: var(--ink); }
+.ah-mega__promo-text .ah-link-arrow { color: var(--brand); }
+.ah-about-hero { background: var(--tint); color: var(--ink-2); }
+.ah-about-hero img { opacity: 1; }
+.ah-about-hero .container { position: relative; margin-block: clamp(32px, 6vw, 80px); padding-block: clamp(28px, 4vw, 48px); max-width: min(720px, calc(100% - 2 * var(--gutter))); margin-inline-start: max(var(--gutter), calc((100vw - var(--container-max, 1440px)) / 2 + var(--gutter))); border-radius: var(--radius-lg); background: rgb(255 255 255 / 95%); }
+.ah-about-hero h1 { color: var(--ink); }
+.ah-about-hero .ah-eyebrow--light { color: var(--brand); }
+.ah-legal__help { background: var(--tint); color: var(--ink-2); border: 1px solid #D5E9C4; }
+.ah-legal__help strong { color: var(--ink); }
+.ah-pw { background: var(--tint); color: var(--ink-2); }
+.ah-pw .logo img { filter: none; }
+.ah-pw h1 { color: var(--ink); }
+
+/* Quick add + misc accents */
+.ah-card__quick-btn:hover { background: var(--brand); color: #fff; border-color: var(--brand); }
+.ah-sports__item:hover .ah-sports__icon:not(.ah-sports__icon--photo) { transform: translateY(-3px); }
+.ah-nav__link::after { background: var(--brand); }
+.ah-lang__btn:hover, .ah-chip-opt:hover { border-color: var(--brand); }
+.ah-chip-opt.is-selected { background: var(--brand); border-color: var(--brand); }
+.ah-toc a.is-active { border-color: var(--brand); }
+.lang-toggle button[aria-pressed="true"] { background: var(--brand); }
+.cart-count { background: var(--lime); color: var(--ink); }
+.ah-badge--soldout { background: #6B746F; }
+.skip-link { background: var(--brand); }
+
+/* Card: badges + quick add are positioned against the image, not the whole card */
+.ah-card__top { position: relative; }
+.ah-card__top .ah-card__quick-btn { opacity: 1; }
+
+/* Compact lead card so the photo carries the banner */
+@media (min-width: 990px) {
+  .ah-bento__item--lead .ah-bento__body { margin: 28px; padding: 24px 28px; max-width: 470px; gap: 12px; }
+  .ah-bento__item--lead .ah-bento__title { font-size: clamp(34px, 3.6vw, 54px); }
+  .ah-bento__item--lead .ah-bento__text { font-size: 15px; }
+}
+
+/* Newsletter: bright lime band instead of a heavy green block */
+.ah-newsletter { background: linear-gradient(120deg, var(--lime) 0%, #D7F77F 100%); color: var(--ink-2); }
+.ah-newsletter::before { background: radial-gradient(circle, rgb(255 255 255 / 55%), transparent 70%); }
+.ah-newsletter h2 { color: var(--ink); }
+.ah-newsletter__form { box-shadow: 0 10px 28px -16px rgb(20 83 45 / 60%); }
+.ah-newsletter__msg { color: var(--brand); }
+
+/* Riyal symbol */
+.ah-money { display: inline-flex; align-items: baseline; gap: .22em; white-space: nowrap; direction: ltr; unicode-bidi: isolate; }
+html[dir="rtl"] .ah-money { direction: rtl; }
+.ah-sar { display: inline-block; width: .82em; height: .9em; flex-shrink: 0; transform: translateY(.08em); }
+.ah-price-tile__cur .ah-sar { width: 26px; height: 28px; }
+
+/* Sale pricing: before / after / you save */
+.ah-price--sale .ah-price__now { color: var(--sale); font-weight: 800; }
+.ah-price__was { color: var(--muted); }
+.ah-price__off { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border-radius: 4px; background: var(--sale); color: #fff; font-size: 12px; }
+.ah-save { flex-basis: 100%; display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 700; color: var(--sale); }
+.ah-save .ah-money { font-weight: 800; }
+.ah-pinfo .ah-save { font-size: 15px; margin-top: 2px; }
+.ah-pinfo .ah-price__off { height: 26px; font-size: 13.5px; }
+
+/* Red sale section */
+.ah-section--sale { position: relative; overflow: hidden; background: linear-gradient(120deg, #D61F45 0%, #E8344F 55%, #F04D3A 100%); color: #fff; }
+.ah-section--sale::before { content: ""; position: absolute; inset: -40% -10% auto auto; width: 520px; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgb(255 255 255 / 18%), transparent 70%); pointer-events: none; }
+.ah-section--sale .ah-section__title { color: #fff; font-size: clamp(30px, 4vw, 52px); }
+.ah-section--sale .ah-sale-sub { color: #FFE3E8; font-weight: 600; font-size: 16px; }
+.ah-section--sale .ah-link-arrow { color: #fff; }
+.ah-section--sale .ah-rail__btn { background: rgb(255 255 255 / 15%); border-color: rgb(255 255 255 / 45%); color: #fff; }
+.ah-section--sale .ah-rail__btn:hover:not([disabled]) { background: #fff; color: var(--sale); }
+.ah-section--sale .ah-card { background: #fff; border-radius: var(--radius); padding: 8px 8px 14px; box-shadow: 0 14px 30px -18px rgb(80 0 15 / 60%); }
+.ah-section--sale .ah-card__media { background: var(--surface); }
+.ah-section--sale .ah-card__info { padding-inline: 6px; }
+.ah-sale-flag { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; margin-bottom: 10px; border-radius: var(--pill); background: #fff; color: var(--sale); font-weight: 800; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
+html[lang="ar"] .ah-sale-flag { letter-spacing: 0; font-size: 14px; }
+.ah-sale-flag svg { width: 18px; height: 18px; }
+.ah-ticker__text { display: inline-flex; align-items: center; gap: .3em; }
+.ah-ticker__text .ah-sar, .ah-announce .ah-sar { width: .9em; height: .95em; }
+.ah-announce__msg .ah-sar { vertical-align: -0.1em; }
+
+/* Sale card treatment (per reference): big red "% OFF" badge top corner, was → now, green "Save" line */
+.ah-card__badges:has(.ah-badge--off) { inset-inline-start: auto; inset-inline-end: 10px; align-items: flex-end; }
+.ah-badge--off { height: 30px; padding: 0 12px; border-radius: 6px; font-size: 13.5px; font-weight: 900; letter-spacing: .02em; box-shadow: 0 6px 14px -6px rgb(214 31 69 / 70%); }
+.ah-price--sale { gap: 2px 10px; }
+.ah-price--sale .ah-price__was { order: 0; font-size: .92em; }
+.ah-price--sale .ah-price__now { order: 1; }
+.ah-price__off { order: 2; }
+.ah-save { order: 3; color: var(--brand); }
+.ah-section--sale .ah-save { color: var(--brand); }
+
+/* Single typeface: Readex Pro everywhere. Its max weight is 700 and it has no width axis,
+   so normalise the heavier/condensed display settings used above. */
+:root { --ff-display: var(--font-display); --ff-body: var(--font-body); }
+body, h1, h2, h3, h4, h5, h6, button, input, select, textarea { font-family: var(--font-body); }
+:is(h1, h2, h3, h4, h5, h6, .ah-section__title, .ah-bento__title, .ah-dept__name, .ah-promo__title, .ah-page-head__title, .ah-hero__heading, .ah-about-hero h1, .shopify-policy__title h1, .ah-sportcard__label, .ah-price-tile__amount, .ah-stat b, .ah-404 b) { font-weight: 700; font-stretch: normal; letter-spacing: -.02em; }
+html[lang="ar"] :is(h1, h2, h3, .ah-section__title, .ah-bento__title, .ah-dept__name, .ah-page-head__title) { letter-spacing: 0; }
+.ah-section__title { font-size: clamp(22px, 2.6vw, 34px); }
+.ah-bento__item--lead .ah-bento__title { font-size: clamp(30px, 3.4vw, 50px); line-height: 1.05; }
+.ah-bento__title { font-size: clamp(19px, 2vw, 28px); line-height: 1.1; }
+.ah-dept__name { font-size: clamp(20px, 2vw, 26px); }
+.ah-price-tile__amount { font-size: clamp(44px, 5.4vw, 72px); letter-spacing: -.04em; line-height: 1; }
+.ah-page-head__title, .shopify-policy__title h1 { font-size: clamp(28px, 4vw, 48px); }
+.ah-section--sale .ah-section__title { font-size: clamp(28px, 3.4vw, 44px); }
+.ah-btn, .ah-badge, .ah-ticker__item, .ah-eyebrow, .ah-footer__title, .ah-mega__title, .ah-sale-flag, .ah-bento__tag { font-weight: 600; }
+.ah-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+.ah-btn--block { white-space: normal; text-align: center; }
+
+/* Header: desktop search pill only on wide screens (the generic .ah-search rule above overrides the earlier hide) */
+.ah-header__actions .ah-search--desktop { display: none; }
+@media (min-width: 1200px) { .ah-header__actions .ah-search--desktop { display: flex; } }
+.ah-header__logo { min-width: 0; }
+
+/* Coloured bands (sale / deals) keep full spacing around their neighbours */
+.shopify-section:has(> .ah-section--sale, > .ah-section--deals) + .shopify-section > .ah-section { padding-top: var(--section-gap) !important; }

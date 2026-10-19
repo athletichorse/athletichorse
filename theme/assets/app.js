@@ -7,22 +7,12 @@
   var root = window.Shopify && Shopify.routes && Shopify.routes.root ? Shopify.routes.root : '/';
   var isRTL = document.documentElement.dir === 'rtl';
 
+  // Prices render as "<riyal symbol> 1,234" to match the Liquid `money` snippet
   function formatMoney(cents) {
-    var format = window.themeMoneyFormat || '{{amount}} SR';
-    var value = (cents / 100);
-    function fmt(n, decimals, thousands, dec) {
-      var parts = n.toFixed(decimals).split('.');
-      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, thousands);
-      return parts.join(dec);
-    }
-    return format.replace(/\{\{\s*(\w+)\s*\}\}/, function (_, key) {
-      switch (key) {
-        case 'amount_no_decimals': return fmt(value, 0, ',', '.');
-        case 'amount_with_comma_separator': return fmt(value, 2, '.', ',');
-        case 'amount_no_decimals_with_comma_separator': return fmt(value, 0, '.', ',');
-        default: return fmt(value, value % 1 === 0 ? 0 : 2, ',', '.');
-      }
-    });
+    var value = cents / 100;
+    var parts = value.toFixed(value % 1 === 0 ? 0 : 2).split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return '<span class="ah-money">' + (window.themeRiyal || 'SAR ') + '<span class="ah-money__num">' + parts.join('.') + '</span></span>';
   }
 
   function escapeHtml(str) {
@@ -336,7 +326,8 @@
     function priceHtml(v) {
       if (v.compare_at_price && v.compare_at_price > v.price) {
         var off = Math.round((1 - v.price / v.compare_at_price) * 100);
-        return '<span class="ah-price__now">' + formatMoney(v.price) + '</span><s class="ah-price__was">' + formatMoney(v.compare_at_price) + '</s><span class="ah-price__off">−' + off + '%</span>';
+        var save = (s.strSave || '').replace('[amount]', formatMoney(v.compare_at_price - v.price)).replace('[percent]', off);
+        return '<s class="ah-price__was">' + formatMoney(v.compare_at_price) + '</s><span class="ah-price__now">' + formatMoney(v.price) + '</span><span class="ah-price__off">' + (s.strOff || '[percent]%').replace('[percent]', off) + '</span><span class="ah-save">' + save + '</span>';
       }
       return '<span class="ah-price__now">' + formatMoney(v.price) + '</span>';
     }
@@ -356,7 +347,7 @@
       addBtn.disabled = !v.available;
       addBtn.textContent = v.available ? s.strAdd : s.strSoldOut;
       $$('[data-sticky-add]').forEach(function (b) { b.disabled = !v.available; b.textContent = addBtn.textContent; });
-      $$('[data-sticky-price]').forEach(function (p) { p.textContent = formatMoney(v.price); });
+      $$('[data-sticky-price]').forEach(function (p) { p.innerHTML = formatMoney(v.price); });
 
       var capped = v.inventory_management === 'shopify' && v.inventory_policy === 'deny';
       if (qtyInput) {

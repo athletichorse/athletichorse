@@ -1,6 +1,6 @@
 {%- liquid
   assign main_menu = linklists[section.settings.shop_menu]
-  assign dept_paths = '/collections/sale,/collections/men,/collections/women,/collections/kids' | split: ','
+  assign dept_handles = 'sale,men,women,kids' | split: ','
 -%}
 
 <footer class="ah-footer">
@@ -16,9 +16,8 @@
         <summary><h2 class="ah-footer__title">{{ 'general.footer.shop' | t }}</h2></summary>
         <ul role="list">
           {%- for link in main_menu.links -%}
-            {%- for path in dept_paths -%}
-              {%- if link.url == path -%}<li><a href="{{ link.url }}">{{ link.title }}</a></li>{%- endif -%}
-            {%- endfor -%}
+            {%- assign link_handle = '' -%}{%- if link.url contains '/collections/' -%}{%- assign link_handle = link.url | split: '?' | first | split: '/collections/' | last -%}{%- endif -%}
+            {%- if dept_handles contains link_handle -%}<li><a href="{{ link.url }}">{{ link.title }}</a></li>{%- endif -%}
           {%- endfor -%}
           <li><a href="{{ routes.collections_url }}">{{ 'general.header.all_categories' | t }}</a></li>
           {%- if section.settings.about_page != blank -%}
@@ -33,7 +32,7 @@
           {%- for policy in shop.policies -%}
             <li><a href="{{ policy.url }}">{{ policy.title }}</a></li>
           {%- endfor -%}
-          <li><a href="{{ routes.root_url }}pages/contact">{{ 'general.footer.contact' | t }}</a></li>
+          <li><a href="{{ pages.contact.url | default: '/pages/contact' }}">{{ 'general.footer.contact' | t }}</a></li>
           <li><a href="{{ routes.account_url }}">{{ 'general.footer.track_order' | t }}</a></li>
         </ul>
       </details>

@@ -1,5 +1,6 @@
 {%- comment -%}
-  Price. Accepts: product (required), variant (optional), show_off (optional bool)
+  Price block. Accepts: product (required), variant (optional), show_off (optional bool),
+  show_save (optional bool, default true), data_attr (optional bool — marks it for JS variant updates)
 {%- endcomment -%}
 {%- liquid
   assign target = variant | default: product
@@ -11,20 +12,25 @@
   assign on_sale = false
   if compare > price
     assign on_sale = true
+    assign saving = compare | minus: price
+    assign off = saving | times: 100.0 | divided_by: compare | round
   endif
 -%}
 <div class="ah-price{% if on_sale %} ah-price--sale{% endif %}"{% if data_attr %} data-price{% endif %}>
+  {%- if on_sale -%}
+    <s class="ah-price__was"><span class="visually-hidden">{{ 'sections.product.regular_price' | t }}</span>{%- render 'money', cents: compare -%}</s>
+  {%- endif -%}
   {%- if variant == blank and product.price_varies -%}
-    {%- assign min_price = product.price_min | money_without_trailing_zeros -%}
-    <span class="ah-price__now">{{ 'sections.product.from_price' | t: price: min_price }}</span>
+    {%- capture min_price -%}{%- render 'money', cents: product.price_min -%}{%- endcapture -%}
+    <span class="ah-price__now">{{ 'sections.product.from_price_html' | t: price: min_price }}</span>
   {%- else -%}
-    <span class="ah-price__now">{{ price | money_without_trailing_zeros }}</span>
+    <span class="ah-price__now">{%- render 'money', cents: price -%}</span>
   {%- endif -%}
   {%- if on_sale -%}
-    <s class="ah-price__was"><span class="visually-hidden">{{ 'sections.product.regular_price' | t }}</span>{{ compare | money_without_trailing_zeros }}</s>
-    {%- if show_off -%}
-      {%- assign off = compare | minus: price | times: 100.0 | divided_by: compare | round -%}
-      <span class="ah-price__off">−{{ off }}%</span>
-    {%- endif -%}
+    {%- if show_off -%}<span class="ah-price__off">{{ 'sections.product.percent_off' | t: percent: off }}</span>{%- endif -%}
+    {%- unless show_save == false -%}
+      {%- capture save_amount -%}{%- render 'money', cents: saving -%}{%- endcapture -%}
+      <span class="ah-save">{{ 'sections.product.you_save_html' | t: amount: save_amount, percent: off }}</span>
+    {%- endunless -%}
   {%- endif -%}
 </div>

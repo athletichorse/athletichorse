@@ -1,7 +1,7 @@
 {%- liquid
-  assign banner_image = collection.image
-  if section.settings.show_image == false
-    assign banner_image = blank
+  assign banner_image = nil
+  if section.settings.show_image and collection.image
+    assign banner_image = collection.image
   endif
 -%}
 <div class="container">

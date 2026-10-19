@@ -1,0 +1,51 @@
+<section class="ah-section ah-section--tight">
+  <div class="container" data-rail>
+    <div class="ah-section__head">
+      <div>
+        <h2 class="ah-section__title">{% if section.settings.heading != blank %}{{ section.settings.heading }}{% else %}{{ 'sections.sport_cards.heading' | t }}{% endif %}</h2>
+      </div>
+      <div class="ah-section__head-end">
+        <div class="ah-rail__nav">
+          <button type="button" class="ah-rail__btn" data-rail-prev aria-label="{{ 'general.pagination.previous' | t }}">{%- render 'icon', name: 'chevron' -%}</button>
+          <button type="button" class="ah-rail__btn" data-rail-next aria-label="{{ 'general.pagination.next' | t }}">{%- render 'icon', name: 'chevron' -%}</button>
+        </div>
+      </div>
+    </div>
+    <ul class="ah-sportcards" role="list" data-rail-track>
+      {%- for block in section.blocks -%}
+        {%- assign coll = block.settings.collection -%}
+        {%- assign card_image = block.settings.image | default: coll.image -%}
+        <li {{ block.shopify_attributes }}>
+          <a href="{{ coll.url | default: routes.collections_url }}" class="ah-sportcard">
+            {%- if card_image -%}
+              {{ card_image | image_url: width: 600 | image_tag: loading: 'lazy', widths: '300,450,600', sizes: '(min-width: 990px) 17vw, 42vw', alt: '' }}
+            {%- endif -%}
+            <span class="ah-sportcard__label">{{ block.settings.label | default: coll.title }}</span>
+          </a>
+        </li>
+      {%- endfor -%}
+    </ul>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Popular sports",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "info": "Leave blank to use the translated default." }
+  ],
+  "blocks": [
+    {
+      "type": "sport",
+      "name": "Sport",
+      "settings": [
+        { "type": "collection", "id": "collection", "label": "Collection" },
+        { "type": "image_picker", "id": "image", "label": "Image", "info": "Portrait action photo." },
+        { "type": "text", "id": "label", "label": "Label", "info": "Leave blank to use the collection title." }
+      ]
+    }
+  ],
+  "max_blocks": 12,
+  "presets": [{ "name": "Popular sports", "blocks": [{ "type": "sport" }, { "type": "sport" }, { "type": "sport" }] }]
+}
+{% endschema %}

@@ -56,13 +56,13 @@
       { "type": "header", "content": "Saudi e-commerce compliance" },
       { "type": "text", "id": "cr_number", "label": "Commercial Registration (CR) number", "info": "Shown in the footer. Required for Saudi online stores." },
       { "type": "text", "id": "vat_number", "label": "VAT registration number", "info": "Shown in the footer and in structured data." },
-      { "type": "range", "id": "return_days", "label": "Return window", "min": 3, "max": 60, "step": 1, "unit": "d", "default": 14 }
+      { "type": "range", "id": "return_days", "label": "Return window", "min": 3, "max": 60, "step": 1, "unit": "d", "default": 3 }
     ]
   },
   {
     "name": "Cart",
     "settings": [
-      { "type": "number", "id": "free_shipping_threshold", "label": "Free shipping threshold (SAR)", "default": 200, "info": "Shows a progress bar in the cart. Set to 0 to hide." }
+      { "type": "number", "id": "free_shipping_threshold", "label": "Free shipping threshold (SAR)", "default": 0, "info": "Shows a progress bar in the cart. Set to 0 to hide." }
     ]
   },
   {

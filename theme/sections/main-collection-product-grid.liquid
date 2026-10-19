@@ -101,7 +101,8 @@
           {%- endfor -%}
           {%- if filter.type == 'price_range' -%}
             {%- if filter.min_value.value != nil or filter.max_value.value != nil -%}
-              <a class="ah-chip" href="{{ filter.url_to_remove }}">{{ filter.min_value.value | default: 0 | money_without_trailing_zeros }} – {{ filter.max_value.value | default: filter.range_max | money_without_trailing_zeros }} {%- render 'icon', name: 'close' -%}</a>
+              {%- assign chip_min = filter.min_value.value | default: 0 -%}{%- assign chip_max = filter.max_value.value | default: filter.range_max -%}
+              <a class="ah-chip" href="{{ filter.url_to_remove }}">{%- render 'money', cents: chip_min -%} – {%- render 'money', cents: chip_max -%} {%- render 'icon', name: 'close' -%}</a>
             {%- endif -%}
           {%- endif -%}
         {%- endfor -%}

@@ -16,7 +16,7 @@
           {%- assign pct = cart.total_price | times: 100 | divided_by: threshold | at_most: 100 -%}
           <div class="ah-ship{% if remaining <= 0 %} is-done{% endif %}" style="border-radius:var(--radius)">
             {%- if remaining > 0 -%}
-              {%- assign remaining_money = remaining | money_without_trailing_zeros -%}
+              {%- capture remaining_money -%}{%- render 'money', cents: remaining -%}{%- endcapture -%}
               {{ 'sections.cart.shipping_remaining' | t | replace: '[amount]', remaining_money }}
             {%- else -%}
               <strong>{{ 'sections.cart.shipping_done' | t }}</strong>
@@ -34,7 +34,7 @@
               <a href="{{ item.url }}" class="ah-line__title">{{ item.product.title }}</a>
               {%- unless item.product.has_only_default_variant -%}<span class="ah-line__variant">{{ item.variant.title }}</span>{%- endunless -%}
               {%- for discount in item.line_level_discount_allocations -%}
-                <span class="ah-line__variant" style="color:var(--brand)">{{ discount.discount_application.title }} (−{{ discount.amount | money_without_trailing_zeros }})</span>
+                <span class="ah-line__variant" style="color:var(--brand)">{{ discount.discount_application.title }} (−{%- render 'money', cents: discount.amount -%})</span>
               {%- endfor -%}
               <div class="ah-line__row">
                 <div class="ah-qty ah-qty--sm">
@@ -43,8 +43,8 @@
                   <button type="button" data-qty-step="1" aria-label="{{ 'sections.product.increase' | t }}">+</button>
                 </div>
                 <span class="ah-line__price">
-                  {%- if item.original_line_price != item.final_line_price -%}<s class="ah-price__was">{{ item.original_line_price | money_without_trailing_zeros }}</s> {% endif -%}
-                  {{ item.final_line_price | money_without_trailing_zeros }}
+                  {%- if item.original_line_price != item.final_line_price -%}<s class="ah-price__was">{%- render 'money', cents: item.original_line_price -%}</s> {% endif -%}
+                  {%- render 'money', cents: item.final_line_price -%}
                 </span>
               </div>
               <a href="{{ item.url_to_remove }}" class="ah-line__remove">{{ 'sections.cart.remove' | t }}</a>
@@ -56,11 +56,11 @@
       <aside class="ah-summary">
         <h2>{{ 'sections.cart.summary' | t }}</h2>
         <div class="ah-totals">
-          <div class="ah-totals__row"><span>{{ 'sections.cart.subtotal' | t }}</span><span>{{ cart.items_subtotal_price | money_without_trailing_zeros }}</span></div>
+          <div class="ah-totals__row"><span>{{ 'sections.cart.subtotal' | t }}</span><span>{%- render 'money', cents: cart.items_subtotal_price -%}</span></div>
           {%- for discount in cart.cart_level_discount_applications -%}
-            <div class="ah-totals__row ah-totals__row--discount"><span>{{ discount.title }}</span><span>−{{ discount.total_allocated_amount | money_without_trailing_zeros }}</span></div>
+            <div class="ah-totals__row ah-totals__row--discount"><span>{{ discount.title }}</span><span>−{%- render 'money', cents: discount.total_allocated_amount -%}</span></div>
           {%- endfor -%}
-          <div class="ah-totals__row ah-totals__row--total"><span>{{ 'sections.cart.total' | t }}</span><span>{{ cart.total_price | money_without_trailing_zeros }}</span></div>
+          <div class="ah-totals__row ah-totals__row--total"><span>{{ 'sections.cart.total' | t }}</span><span>{%- render 'money', cents: cart.total_price -%}</span></div>
         </div>
         <p class="ah-pay-note">{{ 'sections.cart.taxes_note' | t }}</p>
         <div>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0B0F0C">
+  <meta name="theme-color" content="{{ settings.color_accent }}">
   <link rel="canonical" href="{{ canonical_url }}">
 
   {%- liquid
@@ -71,30 +71,13 @@
     <link rel="apple-touch-icon" href="{{ settings.favicon | image_url: width: 180, height: 180 }}">
   {%- endif -%}
 
-  {%- comment -%} Self-hosted fonts: same origin as the store, no third-party round trips. Preload only what this language needs above the fold. {%- endcomment -%}
+  {%- comment -%} Self-hosted Readex Pro (Latin + Arabic): same origin, no third-party round trips. {%- endcomment -%}
   {%- if is_ar -%}
     {{ 'readex-arabic.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
-  {%- else -%}
-    {{ 'archivo-latin.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
-    {{ 'inter-latin.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
   {%- endif -%}
+  {{ 'readex-latin.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
 
   <style>
-    @font-face {
-      font-family: "Archivo";
-      src: url("{{ 'archivo-latin.woff2' | asset_url }}") format("woff2");
-      font-weight: 100 900;
-      font-stretch: 62% 125%;
-      font-style: normal;
-      font-display: swap;
-    }
-    @font-face {
-      font-family: "Inter";
-      src: url("{{ 'inter-latin.woff2' | asset_url }}") format("woff2");
-      font-weight: 100 900;
-      font-style: normal;
-      font-display: swap;
-    }
     @font-face {
       font-family: "Readex Pro";
       src: url("{{ 'readex-arabic.woff2' | asset_url }}") format("woff2");
@@ -124,9 +107,10 @@
       --color-highlight: {{ settings.color_highlight | default: '#B6F23A' }};
       --color-sale: {{ settings.color_sale | default: '#D61F45' }};
       --color-dark: {{ settings.color_dark | default: '#0B0F0C' }};
-      --font-display: "Archivo", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      --font-ar: "Readex Pro", "Segoe UI", Tahoma, sans-serif;
+      /* One typeface across the whole store, in both English and Arabic */
+      --font-display: "Readex Pro", "Segoe UI", Tahoma, system-ui, sans-serif;
+      --font-body: "Readex Pro", "Segoe UI", Tahoma, system-ui, sans-serif;
+      --font-ar: "Readex Pro", "Segoe UI", Tahoma, system-ui, sans-serif;
       --container-max: {{ settings.page_width }}px;
     }
   </style>
@@ -134,6 +118,7 @@
   {{ 'base.css' | asset_url | stylesheet_tag: preload: true }}
 
   {%- if template.name == 'index' -%}
+    {%- capture search_url_template -%}{{ request.origin }}{{ routes.search_url }}?q={search_term_string}{%- endcapture -%}
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -145,7 +130,7 @@
           "@type": "SearchAction",
           "target": {
             "@type": "EntryPoint",
-            "urlTemplate": {{ request.origin | append: routes.search_url | append: '?q={search_term_string}' | json }}
+            "urlTemplate": {{ search_url_template | json }}
           },
           "query-input": "required name=search_term_string"
         }
@@ -180,7 +165,8 @@
 
   {{ content_for_header }}
 
-  <script>window.themeMoneyFormat = {{ shop.money_format | json }};</script>
+  {%- capture riyal_svg -%}{%- render 'riyal' -%}{%- endcapture -%}
+  <script>window.themeMoneyFormat = {{ shop.money_format | json }}; window.themeRiyal = {{ riyal_svg | strip | json }};</script>
   <script src="{{ 'app.js' | asset_url }}" defer></script>
 </head>
 <body class="template-{{ template.name | handleize }}{% if template.suffix %} template-{{ template.name | handleize }}--{{ template.suffix | handleize }}{% endif %}">

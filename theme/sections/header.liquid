@@ -1,6 +1,6 @@
 {%- liquid
   assign main_menu = linklists[section.settings.menu]
-  assign dept_paths = '/collections/sale,/collections/men,/collections/women,/collections/kids' | split: ','
+  assign dept_handles = 'sale,men,women,kids' | split: ','
 -%}
 
 <div class="drawer-overlay" data-overlay></div>
@@ -18,12 +18,11 @@
         {%- comment -%} Departments first (Sale / Men / Women / Kids), in menu order {%- endcomment -%}
         {%- for link in main_menu.links -%}
           {%- assign is_dept = false -%}
-          {%- for path in dept_paths -%}
-            {%- if link.url == path -%}{%- assign is_dept = true -%}{%- endif -%}
-          {%- endfor -%}
+          {%- assign link_handle = '' -%}{%- if link.url contains '/collections/' -%}{%- assign link_handle = link.url | split: '?' | first | split: '/collections/' | last -%}{%- endif -%}
+          {%- if dept_handles contains link_handle -%}{%- assign is_dept = true -%}{%- endif -%}
           {%- if is_dept -%}
             <li class="ah-nav__item{% if link.links.size > 0 %} ah-nav__item--has-menu{% endif %}">
-              <a href="{{ link.url }}" class="ah-nav__link{% if link.url == '/collections/sale' %} ah-nav__link--sale{% endif %}{% if link.active or link.child_active %} is-active{% endif %}">{{ link.title }}</a>
+              <a href="{{ link.url }}" class="ah-nav__link{% if link_handle == 'sale' %} ah-nav__link--sale{% endif %}{% if link.active or link.child_active %} is-active{% endif %}">{{ link.title }}</a>
               {%- if link.links.size > 0 -%}
                 <div class="ah-dropdown">
                   <ul role="list">
@@ -48,9 +47,8 @@
               <div class="ah-mega__cols">
                 {%- for link in main_menu.links -%}
                   {%- assign is_dept = false -%}
-                  {%- for path in dept_paths -%}
-                    {%- if link.url == path -%}{%- assign is_dept = true -%}{%- endif -%}
-                  {%- endfor -%}
+                  {%- assign link_handle = '' -%}{%- if link.url contains '/collections/' -%}{%- assign link_handle = link.url | split: '?' | first | split: '/collections/' | last -%}{%- endif -%}
+                  {%- if dept_handles contains link_handle -%}{%- assign is_dept = true -%}{%- endif -%}
                   {%- unless is_dept or link.links.size == 0 or link.url contains '/policies' -%}
                     <div class="ah-mega__col">
                       <a href="{{ link.url }}" class="ah-mega__title">{{ link.title }}</a>
@@ -139,11 +137,10 @@
   <ul class="ah-drawer__depts" role="list">
     {%- for link in main_menu.links -%}
       {%- assign is_dept = false -%}
-      {%- for path in dept_paths -%}
-        {%- if link.url == path -%}{%- assign is_dept = true -%}{%- endif -%}
-      {%- endfor -%}
+      {%- assign link_handle = '' -%}{%- if link.url contains '/collections/' -%}{%- assign link_handle = link.url | split: '?' | first | split: '/collections/' | last -%}{%- endif -%}
+      {%- if dept_handles contains link_handle -%}{%- assign is_dept = true -%}{%- endif -%}
       {%- if is_dept -%}
-        <li><a href="{{ link.url }}"{% if link.url == '/collections/sale' %} class="is-sale"{% endif %}>{{ link.title }}</a></li>
+        <li><a href="{{ link.url }}"{% if link_handle == 'sale' %} class="is-sale"{% endif %}>{{ link.title }}</a></li>
       {%- endif -%}
     {%- endfor -%}
   </ul>
@@ -151,9 +148,8 @@
   <div class="ah-drawer__nav">
     {%- for link in main_menu.links -%}
       {%- assign is_dept = false -%}
-      {%- for path in dept_paths -%}
-        {%- if link.url == path -%}{%- assign is_dept = true -%}{%- endif -%}
-      {%- endfor -%}
+      {%- assign link_handle = '' -%}{%- if link.url contains '/collections/' -%}{%- assign link_handle = link.url | split: '?' | first | split: '/collections/' | last -%}{%- endif -%}
+      {%- if dept_handles contains link_handle -%}{%- assign is_dept = true -%}{%- endif -%}
       {%- if is_dept and link.links.size == 0 -%}{%- continue -%}{%- endif -%}
       {%- if link.links.size > 0 -%}
         <div class="drawer-group ah-drawer__group" data-accordion-group>

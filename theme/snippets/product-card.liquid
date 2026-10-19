@@ -22,6 +22,7 @@
   assign variant = product.selected_or_first_available_variant
 -%}
 <article class="ah-card">
+  <div class="ah-card__top">
   <a href="{{ product.url }}" class="ah-card__media" tabindex="-1" aria-hidden="true">
     {%- if product.featured_media -%}
       {%- if product.media.size > 1 -%}
@@ -37,7 +38,7 @@
     {%- unless product.available -%}
       <span class="ah-badge ah-badge--soldout">{{ 'sections.product.sold_out' | t }}</span>
     {%- else -%}
-      {%- if on_sale -%}<span class="ah-badge ah-badge--sale">−{{ pct_off }}%</span>{%- endif -%}
+      {%- if on_sale -%}<span class="ah-badge ah-badge--sale ah-badge--off">{{ 'sections.product.percent_off' | t: percent: pct_off }}</span>{%- endif -%}
       {%- if is_new and on_sale == false -%}<span class="ah-badge ah-badge--new">{{ 'sections.product.new' | t }}</span>{%- endif -%}
     {%- endunless -%}
   </div>
@@ -58,6 +59,7 @@
       {%- endif -%}
     </div>
   {%- endif -%}
+  </div>
 
   <div class="ah-card__info">
     {%- if product.type != blank -%}<span class="ah-card__type">{{ product.type }}</span>{%- endif -%}

@@ -1,0 +1,88 @@
+{%- comment -%}
+  Bento hero: one large lead banner + two stacked promos (Decathlon / SSS pattern).
+  First block is the lead and carries the page H1.
+{%- endcomment -%}
+<section class="ah-bento-wrap">
+  <div class="container">
+    <div class="ah-bento">
+      {%- for block in section.blocks -%}
+        {%- liquid
+          assign coll = block.settings.collection
+          assign link = block.settings.link | default: coll.url | default: routes.all_products_collection_url
+          assign title = block.settings.heading
+          if title == blank and forloop.first
+            assign title = 'sections.hero_banner.heading' | t
+          endif
+          if title == blank
+            assign title = coll.title
+          endif
+          assign cta = block.settings.cta
+          if cta == blank
+            if forloop.first
+              assign cta = 'sections.hero_banner.cta_primary' | t
+            else
+              assign cta = 'sections.featured_collection.shop_now' | t
+            endif
+          endif
+          assign eyebrow = block.settings.eyebrow
+          if eyebrow == blank and forloop.first
+            assign eyebrow = 'sections.hero_banner.eyebrow' | t
+          endif
+          assign text = block.settings.text
+          if text == blank and forloop.first
+            assign text = 'sections.hero_banner.text' | t
+          endif
+          if forloop.first
+            assign sizes = '(min-width: 990px) 62vw, 100vw'
+            assign loading = 'eager'
+          else
+            assign sizes = '(min-width: 990px) 34vw, 50vw'
+            assign loading = 'eager'
+          endif
+        -%}
+        <a href="{{ link }}" class="ah-bento__item{% if forloop.first %} ah-bento__item--lead{% endif %}" {{ block.shopify_attributes }}>
+          {%- if block.settings.image != blank -%}
+            {%- if forloop.first -%}
+              {{ block.settings.image | image_url: width: 1600 | image_tag: loading: loading, fetchpriority: 'high', widths: '600,900,1200,1600', sizes: sizes, alt: '' }}
+            {%- else -%}
+              {{ block.settings.image | image_url: width: 900 | image_tag: loading: loading, widths: '400,600,900', sizes: sizes, alt: '' }}
+            {%- endif -%}
+          {%- endif -%}
+          <span class="ah-bento__body">
+            {%- if eyebrow != blank -%}<span class="ah-bento__tag">{{ eyebrow }}</span>{%- endif -%}
+            {%- if forloop.first -%}
+              <h1 class="ah-bento__title">{{ title }}</h1>
+            {%- else -%}
+              <span class="ah-bento__title">{{ title }}</span>
+            {%- endif -%}
+            {%- if text != blank -%}<span class="ah-bento__text">{{ text }}</span>{%- endif -%}
+            <span class="ah-btn ah-btn--highlight{% unless forloop.first %} ah-btn--sm{% endunless %}">{{ cta }}</span>
+          </span>
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Hero bento",
+  "blocks": [
+    {
+      "type": "banner",
+      "name": "Banner",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "collection", "id": "collection", "label": "Collection" },
+        { "type": "url", "id": "link", "label": "Link", "info": "Overrides the collection link." },
+        { "type": "text", "id": "eyebrow", "label": "Tag" },
+        { "type": "text", "id": "heading", "label": "Heading", "info": "First banner: leave blank for the translated headline. Others: defaults to the collection title." },
+        { "type": "text", "id": "text", "label": "Text" },
+        { "type": "text", "id": "cta", "label": "Button label" }
+      ]
+    }
+  ],
+  "max_blocks": 3,
+  "presets": [{ "name": "Hero bento", "blocks": [{ "type": "banner" }, { "type": "banner" }, { "type": "banner" }] }]
+}
+{% endschema %}
