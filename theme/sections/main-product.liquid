@@ -193,7 +193,7 @@
                 endif
               endfor
             endif
-            assign option_position = forloop.index
+            assign option_i = forloop.index0
           -%}
           <fieldset class="ah-option" data-option-index="{{ forloop.index0 }}">
             <legend class="ah-option__label">{{ option.name }}: <span data-selected-label="{{ forloop.index0 }}">{{ option.selected_value }}</span></legend>
@@ -205,7 +205,7 @@
                   {%- assign swatch_img = nil -%}
                   {%- if swatch_bg == blank -%}
                     {%- for variant in product.variants -%}
-                      {%- assign v_opt = variant.options[option_position | minus: 1] -%}
+                      {%- assign v_opt = variant.options[option_i] -%}
                       {%- if v_opt == value and variant.featured_media -%}{%- assign swatch_img = variant.featured_media -%}{%- break -%}{%- endif -%}
                     {%- endfor -%}
                   {%- endif -%}

@@ -739,7 +739,7 @@
     fetchSection(url + '&intent=complementary').then(function (doc) {
       var items = $('[data-fbt-items]', doc);
       if (items && items.children.length) return items;
-      return fetchSection(url + '&intent=related').then(function (d) { return $('[data-fbt-items]', d); });
+      return null;
     }).then(function (items) {
       if (items) adds.innerHTML = items.innerHTML;
       ready();

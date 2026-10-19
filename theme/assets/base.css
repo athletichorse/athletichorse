@@ -1433,3 +1433,12 @@ html[lang="ar"] .ah-fbt__this { text-transform: none; letter-spacing: 0; }
 .ah-fbt__label { font-size: 13px; color: var(--muted); }
 .ah-fbt__total { font-size: 24px; font-weight: 700; color: var(--ink); }
 .ah-recs .ah-rail__track > li { min-width: 0; }
+/* FBT: compact rows */
+@media (min-width: 750px) {
+  .ah-fbt__item { grid-template-columns: 88px minmax(0, 1fr); text-align: start; align-items: center; padding: 10px 12px; }
+  .ah-fbt__check { position: absolute; top: 8px; inset-inline-end: 8px; }
+  .ah-fbt__info { padding-inline-end: 22px; }
+}
+.ah-fbt__item { grid-template-columns: 24px 64px minmax(0, 1fr); }
+@media (min-width: 750px) { .ah-fbt__item { grid-template-columns: 88px minmax(0, 1fr); } }
+.ah-fbt__media { width: 100%; }

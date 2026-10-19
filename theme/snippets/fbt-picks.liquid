@@ -1,0 +1,96 @@
+{%- comment -%}
+  Prints up to 2 add-on products for "Frequently bought together" as fbt-item rows.
+  Rules: look in categories that complement the product's main category, skip items of the same
+  kind (no ball next to a ball), keep add-ons in stock and not much pricier than the product.
+  Accepts: product
+{%- endcomment -%}
+{%- liquid
+  assign rules = 'goggles>swim-caps,swim-training|swim-caps>goggles,swim-training|fins>goggles,swim-caps|snorkeling-diving>fins,goggles|women-burkini>swim-caps,goggles|kids-swimwear>goggles,swim-caps,swim-training|men-swimwear>goggles,swim-caps|swim-training>goggles,swim-caps|football-equipment>football-equipment,referee-coach-equipment|referee-coach-equipment>referee-coach-equipment,football-equipment|trophy-cups-medals>trophy-cups-medals|tennis-equipment>tennis-equipment|paddle-equipment>paddle-equipment|badminton-equipment>badminton-equipment|squash-equipment>squash-equipment|ping-pong-equipment>ping-pong-equipment|basketball-equipment>basketball-equipment|volleyball-equipment>volleyball-equipment|handball-equipment>handball-equipment|hockey-equipment>hockey-equipment|billiard-equipment>billiard-equipment|boxing-equipment>boxing-equipment,taekwondo-martial-arts-equipment|karate-equipment>karate-equipment,taekwondo-martial-arts-equipment|taekwondo-martial-arts-equipment>taekwondo-martial-arts-equipment|weights-and-bars>gloves,gym-equipment,water-bottles|gym-equipment>gloves,water-bottles,resistance-band|home-workout-equipment>resistance-band,yoga-equipment,water-bottles|resistance-band>home-workout-equipment,yoga-equipment|yoga-equipment>resistance-band,water-bottles|medical-equipment>medical-equipment|roller-skating-equipment>roller-skating-equipment|scooters>roller-skating-equipment|camping-equipment>camping-equipment,water-bottles|shirts>men-shorts,socks,water-bottles|men-shorts>shirts,socks|pants>shirts,water-bottles|set>socks,water-bottles,bags-backpacks|kids-suit>socks,water-bottles|socks>shirts,water-bottles|gloves>water-bottles,gym-equipment|water-bottles>bags-backpacks,gloves|bags-backpacks>water-bottles,socks|handbags>water-bottles|toys-games>toys-games|flags>flags,football-equipment|training-accessories>water-bottles,bags-backpacks' | split: '|'
+  assign kinds = 'ball bag,backpack, bag,ball,pump, net,racket,shuttle,goggle, cap, fins,glove,wrap,guard,protector,moto,bottle,shaker,sock,cone,marker,whistle, mat,band,tube,rope,dumbbell,kettlebell,weight,board,swim,burkini,shirt,jersey,shorts,tracksuit,set,uniform,medal,trophy,cup' | split: ','
+
+  assign handles = product.collections | map: 'handle'
+  assign targets = ''
+  for rule in rules
+    assign pair = rule | split: '>'
+    if handles contains pair[0]
+      assign targets = pair[1]
+      break
+    endif
+  endfor
+
+  assign own_title = product.title | downcase | prepend: ' '
+  assign used = '|'
+  for k in kinds
+    if own_title contains k
+      assign used = used | append: k | append: '|'
+      break
+    endif
+  endfor
+
+  assign cap = product.price | times: 1.2
+  if cap < 3000
+    assign cap = 3000
+  endif
+  comment
+    Preferred add-ons by the product's own kind, tried before anything else
+  endcomment
+  assign prefer = ''
+  assign own_kind = used | remove: '|'
+  case own_kind
+    when 'ball'
+      assign prefer = 'pump,shin,ball bag,net'
+    when 'racket'
+      assign prefer = 'ball,shuttle,grip,bag'
+    when 'goggle'
+      assign prefer = ' cap,ear,nose'
+    when ' cap'
+      assign prefer = 'goggle'
+    when 'glove'
+      assign prefer = 'wrap,bottle'
+    when 'swim', 'burkini'
+      assign prefer = 'goggle, cap'
+    when 'dumbbell', 'weight', 'kettlebell'
+      assign prefer = 'glove, mat'
+  endcase
+  assign prefer_list = prefer | split: ','
+  assign picked = 0
+  assign picked_ids = ''
+-%}
+{%- if targets != '' -%}
+  {%- assign target_list = targets | split: ',' -%}
+  {%- for pass in (1..2) -%}
+  {%- if pass == 1 and prefer == '' -%}{%- continue -%}{%- endif -%}
+  {%- for t in target_list -%}
+    {%- if picked >= 2 -%}{%- break -%}{%- endif -%}
+    {%- for item in collections[t].products limit: 24 -%}
+      {%- if picked >= 2 -%}{%- break -%}{%- endif -%}
+      {%- if item.id == product.id or item.available == false or item.price > cap -%}{%- continue -%}{%- endif -%}
+      {%- assign id_str = item.id | prepend: '|' | append: '|' -%}
+      {%- if picked_ids contains id_str -%}{%- continue -%}{%- endif -%}
+      {%- liquid
+        assign item_title = item.title | downcase | prepend: ' '
+        assign item_kind = 'other'
+        for k in kinds
+          if item_title contains k
+            assign item_kind = k
+            break
+          endif
+        endfor
+        assign kind_key = '|' | append: item_kind | append: '|'
+      -%}
+      {%- if item_kind != 'other' and used contains kind_key -%}{%- continue -%}{%- endif -%}
+      {%- if pass == 1 -%}
+        {%- assign is_preferred = false -%}
+        {%- for w in prefer_list -%}{%- if item_title contains w -%}{%- assign is_preferred = true -%}{%- break -%}{%- endif -%}{%- endfor -%}
+        {%- unless is_preferred -%}{%- continue -%}{%- endunless -%}
+      {%- endif -%}
+      {%- render 'fbt-item', item: item -%}
+      {%- liquid
+        assign picked = picked | plus: 1
+        assign picked_ids = picked_ids | append: id_str
+        assign used = used | append: item_kind | append: '|'
+      -%}
+    {%- endfor -%}
+  {%- endfor -%}
+  {%- endfor -%}
+{%- endif -%}
