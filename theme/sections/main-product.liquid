@@ -20,7 +20,8 @@
     "@type": "Product",
     "name": {{ product.title | json }},
     "url": {{ request.origin | append: product.url | json }},
-    "description": {{ product.description | strip_html | strip_newlines | truncate: 5000 | json }},
+    {%- capture clean_desc -%}{%- render 'clean-description', product: product -%}{%- endcapture -%}
+    "description": {{ clean_desc | strip_html | strip_newlines | truncate: 5000 | json }},
     {%- if current_variant.sku != blank %}"sku": {{ current_variant.sku | json }},{% endif %}
     {%- if current_variant.barcode != blank %}"gtin": {{ current_variant.barcode | json }},{% endif %}
     "brand": { "@type": "Brand", "name": {{ product.vendor | default: shop.name | json }} },
@@ -279,7 +280,7 @@
       {%- if product.description != blank -%}
         <details open>
           <summary>{{ 'sections.product.description' | t }}</summary>
-          <div class="ah-accordion__body rte">{{ product.description }}</div>
+          <div class="ah-accordion__body rte">{%- render 'clean-description', product: product -%}</div>
         </details>
       {%- endif -%}
       <details>

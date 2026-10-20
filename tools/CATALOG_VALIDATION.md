@@ -60,6 +60,11 @@ Skip drafts and archived products. Never touch theme files and never publish a t
    - "You may also like" uses Shopify's related recommendations, with the most
      specific collection as a fallback. A product in a primary category is covered.
 8. **Images present.** Report products with zero images.
+9. **No country of origin "Egypt".** The store never shows "Made in Egypt".
+   - Remove from English `descriptionHtml`, case-insensitive: "Made in Egypt", "Country of origin: Egypt". If the phrase is a whole `<li>`, remove the `<li>` too.
+   - Remove from Arabic `body_html`: "صنع في مصر", "مصنوع في مصر", "بلد المنشأ: مصر". Do this after the English change and use the new digest.
+   - Check `seo.description` and the Arabic `meta_description` the same way.
+   - Do not touch products where Egypt is the design, for example "Handball – Egypt Flag Print".
 
 ## Limits
 
