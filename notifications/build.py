@@ -300,7 +300,7 @@ TEMPLATES = [
      lambda L: order_tag(L) + H(L, ('Payment received', 'Thank you{% if customer.first_name %}, {{ customer.first_name }}{% endif %}! We\'ve received your payment for this order.'),
                                 ('تم استلام الدفعة', 'شكراً لك{% if customer.first_name %} يا {{ customer.first_name }}{% endif %}! استلمنا دفعتك لهذا الطلب.'), '✅')
      + receipt(L) + VIEW(L)),
-    ('43562139898', 'abandoned_checkout', 'You left something behind 👀', 'نسيت شيئاً في سلتك 👀',
+    ('43562139898', 'abandoned_checkout', 'You left something in your cart', 'نسيت شيئاً في سلتك',
      lambda L: H(L, ('Still thinking it over?', 'Hi {{ billing_address.first_name }}, your items are waiting. Finish your order now and pay cash when it reaches your door.'),
                     ('ما زلت تفكر؟', 'مرحباً {{ billing_address.first_name }}، منتجاتك بانتظارك. أكمل طلبك الآن وادفع نقداً عند وصوله إلى بابك.'), '🛒')
      + button(L, '{{ url }}', 'Complete your order' if L == 'en' else 'أكمل طلبك')
