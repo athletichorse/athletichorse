@@ -65,7 +65,7 @@ img { height: auto; }
 a { color: inherit; text-decoration: none; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: 0; padding: 0; }
-ul[role="list"], ol[role="list"] { list-style: none; margin: 0; padding: 0; }
+:where(ul, ol)[role="list"] { list-style: none; margin: 0; padding: 0; }
 h1, h2, h3, h4, h5, h6, p, figure, blockquote { margin: 0; }
 h1, h2, h3, h4, h5, h6 { color: var(--ink); font-family: var(--ff-display); line-height: 1.1; font-weight: 800; }
 html[lang="ar"] :is(h1, h2, h3, h4, h5, h6) { font-weight: 700; line-height: 1.35; }
@@ -1455,7 +1455,7 @@ html[lang="ar"] .ah-fbt__this { text-transform: none; letter-spacing: 0; }
 /* Home link */
 .ah-nav__link--home { display: inline-flex; align-items: center; gap: 6px; }
 .ah-nav__link--home svg { width: 18px; height: 18px; margin-top: -2px; }
-.ah-drawer__home { display: inline-flex !important; align-items: center; gap: 6px; }
+.ah-drawer__home { display: flex !important; align-items: center; justify-content: center; gap: 6px; width: 100%; }
 .ah-drawer__home svg { width: 16px; height: 16px; }
 
 /* ---------- Motion helpers ---------- */
@@ -1559,3 +1559,56 @@ html[dir="rtl"] .ah-ab-sport:hover .ah-ab-sport__label svg { translate: -4px 0; 
 
 
 .ah-totals__row--vat { font-size: 13px; color: var(--muted); margin-top: -2px; }
+
+/* ---------- Layout consistency fixes (equal-height cards, compact mobile) ---------- */
+/* Product cards: every card in a row has the same height and the price sits on the same line */
+.ah-rail__track > li, .ah-grid > li { display: flex; min-width: 0; }
+.ah-rail__track > li > .ah-card, .ah-grid > li > .ah-card { width: 100%; }
+.ah-card { height: 100%; }
+.ah-card__info { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.ah-card__type { display: none; }
+.ah-card__title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.35; min-height: calc(2em * 1.35); }
+/* Sport cards: labels the same height whether the name is one or two lines */
+.ah-sportcard__label { min-height: 58px; }
+html[lang="ar"] .ah-sportcard__label { min-height: 52px; }
+
+@media (max-width: 749px) {
+  /* Hero: fits the screen instead of filling it */
+  .ah-bento__item--lead { min-height: 0; aspect-ratio: 4 / 4.2; }
+  .ah-bento__item--lead .ah-bento__body { margin: 10px; padding: 16px; gap: 8px; }
+  .ah-bento__item--lead .ah-bento__title { font-size: 30px; }
+  html[lang="ar"] .ah-bento__item--lead .ah-bento__title { font-size: 26px; }
+  .ah-bento__item--lead .ah-bento__text { display: none; }
+  .ah-bento__item--lead .ah-btn { min-height: 40px; padding-inline: 18px; font-size: 13px; }
+  .ah-bento__item:not(.ah-bento__item--lead) { min-height: 0; aspect-ratio: 1; }
+  .ah-bento__item:not(.ah-bento__item--lead) .ah-bento__body { margin: 8px; padding: 10px 12px; gap: 6px; }
+  .ah-bento__item:not(.ah-bento__item--lead) .ah-bento__title { font-size: 15px; line-height: 1.1; }
+  .ah-bento__item:not(.ah-bento__item--lead) .ah-btn { display: none; }
+  /* Departments: three compact tiles in one row instead of a full-screen slider */
+  .ah-depts { grid-auto-flow: initial; grid-template-columns: repeat(3, 1fr); gap: 8px; overflow: visible; margin: 0; padding: 0; }
+  .ah-dept { aspect-ratio: 3 / 4; }
+  .ah-dept__body { inset: auto 6px 6px 6px; padding: 8px; justify-content: center; text-align: center; }
+  .ah-dept__name { font-size: 15px; }
+  .ah-dept__count, .ah-dept__arrow { display: none; }
+  /* Sport cards and price tiles: smaller on phones */
+  .ah-sportcards { grid-auto-columns: 34%; }
+  .ah-sportcard__label { min-height: 44px; margin: 6px; width: calc(100% - 12px); padding: 8px; font-size: 12.5px; }
+  html[lang="ar"] .ah-sportcard__label { min-height: 40px; font-size: 13px; }
+  .ah-sportcard__label::after { width: 22px; height: 22px; background-size: 12px; }
+  .ah-prices { grid-auto-columns: 30%; }
+  /* Product rails: two cards per screen */
+  .ah-rail__track { grid-auto-columns: calc((100% - 10px) / 2.15); }
+}
+/* Images inside square frames: pin to the frame so tall photos are contained, never cropped or overflowing */
+.ah-gallery__slide { position: relative; display: block; }
+.ah-gallery__slide img { position: absolute; inset: 0; }
+.ah-tile__media { position: relative; display: block; }
+.ah-tile__media img { position: absolute; inset: 0; }
+@media (max-width: 749px) {
+  .ah-gallery__stage { max-height: 62vh; aspect-ratio: auto; height: min(100vw - 2 * var(--gutter), 62vh); }
+  .ah-grid .ah-card__quick-btn, .ah-rail .ah-card__quick-btn { width: 34px; height: 34px; }
+  .ah-card__quick-btn svg { width: 16px; height: 16px; }
+  .ah-card__title { font-size: 13.5px; }
+  .ah-card .ah-price { font-size: 14px; }
+}
+.ah-filter-toggle svg { width: 18px; height: 18px; flex-shrink: 0; }
