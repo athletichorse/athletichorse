@@ -1795,3 +1795,6 @@ html[dir="rtl"] .ah-zoom__arrow--prev svg { transform: none; }
 .ah-cart-drawer .ah-totals__row--total { border-top: 0; padding-top: 0; }
 .ah-cart-drawer .ah-coupon-toggle { padding-bottom: 8px; border-bottom: 1px solid var(--line); }
 .ah-cart-drawer .ah-line__title { font-size: 12.5px; }
+
+/* Policies: the policy text starts with its own <h1> that repeats the page title */
+.shopify-policy__body .rte > h1:first-child, .shopify-policy__body > h1:first-child, .shopify-policy__body .rte > div > h1:first-child { display: none; }
