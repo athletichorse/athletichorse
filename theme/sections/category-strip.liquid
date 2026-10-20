@@ -1,11 +1,15 @@
 <section class="ah-section ah-section--tight">
-  <div class="container">
-    {%- if section.settings.show_heading -%}
-      <div class="ah-section__head">
+  <div class="container" data-rail>
+    <div class="ah-section__head ah-sports__head">
+      {%- if section.settings.show_heading -%}
         <h2 class="ah-section__title">{% if section.settings.heading != blank %}{{ section.settings.heading }}{% else %}{{ 'sections.category_strip.heading' | t }}{% endif %}</h2>
+      {%- endif -%}
+      <div class="ah-rail__nav">
+        <button type="button" class="ah-rail__btn" data-rail-prev aria-label="{{ 'general.pagination.previous' | t }}">{%- render 'icon', name: 'chevron' -%}</button>
+        <button type="button" class="ah-rail__btn" data-rail-next aria-label="{{ 'general.pagination.next' | t }}">{%- render 'icon', name: 'chevron' -%}</button>
       </div>
-    {%- endif -%}
-    <ul class="ah-sports" role="list">
+    </div>
+    <ul class="ah-sports" role="list" data-rail-track>
       {%- for block in section.blocks -%}
         {%- assign coll = block.settings.collection -%}
         {%- if block.settings.icon == 'all' -%}

@@ -1740,3 +1740,20 @@ html[dir="rtl"] .ah-zoom__arrow--prev svg { transform: none; }
 .ah-zoom__count { position: fixed; bottom: calc(20px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); padding: 6px 14px; border-radius: var(--pill); background: var(--surface); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .ah-modal--zoom.is-single .ah-zoom__arrow, .ah-modal--zoom.is-single .ah-zoom__count { display: none; }
 @media (max-width: 749px) { .ah-zoom__arrow { display: none; } }
+
+/* Shop by sport: paged rail with ‹ 1/N › on phones and tablets; every circle the same size and fully filled */
+.ah-sports__head { flex-wrap: nowrap !important; align-items: center !important; }
+.ah-sports__head > .ah-section__title { flex: 1 1 auto; }
+.ah-sports__head .ah-rail__nav { margin-inline-start: auto; }
+@media (max-width: 989px) {
+  .ah-sports { margin-inline: 0; padding-inline: 0; gap: 12px; grid-auto-columns: calc((100% - 24px) / 3); scroll-snap-type: x mandatory; scroll-behavior: smooth; }
+}
+@media (min-width: 750px) and (max-width: 989px) {
+  .ah-sports { grid-auto-flow: column; grid-template-columns: none; overflow-x: auto; grid-auto-columns: calc((100% - 60px) / 6); }
+}
+.ah-sports__icon { width: 96px !important; height: 96px !important; flex-shrink: 0; }
+.ah-sports__icon--photo img { transform: scale(1.18); }
+.ah-sports__item:hover .ah-sports__icon--photo img { transform: scale(1.26); }
+/* Every photo circle on one light grey, white product backgrounds blend into it (mask keeps the circle clip on iOS) */
+.ah-sports__icon--photo, .ah-sports__icon--photo[class*="ah-tint-"] { background: #F1F3F2; }
+.ah-sports__icon--photo img { mix-blend-mode: multiply; }
