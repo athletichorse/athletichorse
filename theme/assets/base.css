@@ -1772,3 +1772,6 @@ html[dir="rtl"] .ah-zoom__arrow--prev svg { transform: none; }
 @media (max-width: 989px) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea, .ah-search__input { font-size: 16px !important; }
 }
+
+/* Search: loose matches below the exact ones */
+.ah-search__other { font-size: 20px; margin: 40px 0 16px; padding-top: 28px; border-top: 1px solid var(--line); }

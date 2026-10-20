@@ -19,26 +19,92 @@
   </div>
 
   {%- if search.performed and search.results_count > 0 -%}
-    {%- paginate search.results by 36 -%}
+    {%- paginate search.results by 48 -%}
+      {%- comment -%}
+        Shopify's search matches ANY word ("medicine balll" also returns every "ball").
+        Results whose title/type/tags contain EVERY searched word (with light typo and plural tolerance)
+        are shown first; the loose matches go below under "Other results".
+      {%- endcomment -%}
+      {%- liquid
+        assign raw_words = search.terms | downcase | replace: '-', ' ' | replace: ',', ' ' | split: ' '
+        assign keys = ''
+        for w in raw_words
+          assign word = w | strip
+          if word.size < 2
+            continue
+          endif
+          assign first_two = word | slice: 0, 2
+          if first_two == 'ال' and word.size > 4
+            assign word = word | slice: 2, 99
+          endif
+          if word.size >= 5
+            assign cut = word.size | minus: 1
+            assign word = word | slice: 0, cut
+          endif
+          assign keys = keys | append: word | append: '|'
+        endfor
+        assign keys = keys | split: '|'
+        assign strong_ids = ''
+        assign strong_count = 0
+        for item in search.results
+          if item.object_type != 'product'
+            continue
+          endif
+          assign hay = item.title | append: ' ' | append: item.type | append: ' ' | append: item.vendor | append: ' ' | append: item.handle | append: ' ' | append: item.tags | join: ' '
+          assign hay = hay | downcase | replace: '-', ' '
+          assign all_found = true
+          for k in keys
+            unless hay contains k
+              assign all_found = false
+              break
+            endunless
+          endfor
+          if all_found and keys.size > 0
+            assign strong_ids = strong_ids | append: ',' | append: item.id | append: ','
+            assign strong_count = strong_count | plus: 1
+          endif
+        endfor
+      -%}
       <div data-results style="padding-bottom:var(--section-gap)">
         <ul class="ah-grid" role="list" data-grid>
-          {%- for item in search.results -%}
-            {%- if item.object_type == 'product' and item.available -%}
-              <li>{%- render 'product-card', product: item -%}</li>
-            {%- endif -%}
-          {%- endfor -%}
-          {%- for item in search.results -%}
-            {%- if item.object_type == 'product' and item.available == false -%}
-              <li data-soldout{% if paginate.next %} hidden{% endif %}>{%- render 'product-card', product: item -%}</li>
-            {%- endif -%}
+          {%- for pass in (1..2) -%}
+            {%- for item in search.results -%}
+              {%- if item.object_type != 'product' -%}{%- continue -%}{%- endif -%}
+              {%- assign tag_id = ',' | append: item.id | append: ',' -%}
+              {%- if strong_count > 0 -%}
+                {%- unless strong_ids contains tag_id -%}{%- continue -%}{%- endunless -%}
+              {%- endif -%}
+              {%- if pass == 1 and item.available -%}
+                <li>{%- render 'product-card', product: item -%}</li>
+              {%- elsif pass == 2 and item.available == false -%}
+                <li data-soldout>{%- render 'product-card', product: item -%}</li>
+              {%- endif -%}
+            {%- endfor -%}
           {%- endfor -%}
         </ul>
-        {%- if paginate.pages > 1 -%}
+
+        {%- assign other_count = search.results.size | minus: strong_count -%}
+        {%- if strong_count > 0 and other_count > 0 -%}
+          <h2 class="ah-section__title ah-search__other">{{ 'general.search.other_results' | t }}</h2>
+          <ul class="ah-grid" role="list">
+            {%- for item in search.results -%}
+              {%- if item.object_type != 'product' or item.available == false -%}{%- continue -%}{%- endif -%}
+              {%- assign tag_id = ',' | append: item.id | append: ',' -%}
+              {%- unless strong_ids contains tag_id -%}
+                <li>{%- render 'product-card', product: item -%}</li>
+              {%- endunless -%}
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+
+        {%- if paginate.pages > 1 and strong_count == 0 -%}
           {%- assign shown = paginate.current_offset | plus: search.results.size -%}
           <div class="ah-load-more" data-load-more data-total="{{ paginate.items }}" data-next="{% if paginate.next %}{{ paginate.next.url }}{% endif %}">
             <span>{{ 'sections.main_collection.showing_html' | t: shown: shown, total: paginate.items }}</span>
             {%- if paginate.next -%}<a href="{{ paginate.next.url }}" class="ah-btn ah-btn--outline">{{ 'sections.main_collection.load_more' | t }}</a>{%- endif -%}
           </div>
+        {%- elsif paginate.next -%}
+          <div class="ah-load-more"><a href="{{ paginate.next.url }}" class="ah-btn ah-btn--outline">{{ 'sections.main_collection.load_more' | t }}</a></div>
         {%- endif -%}
       </div>
     {%- endpaginate -%}

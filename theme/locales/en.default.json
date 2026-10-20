@@ -58,7 +58,8 @@
         "one": "{{ count }} product",
         "other": "{{ count }} products"
       },
-      "popular": "Popular categories"
+      "popular": "Popular categories",
+      "other_results": "Other results"
     },
     "pagination": {
       "next": "Next",

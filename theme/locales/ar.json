@@ -62,7 +62,8 @@
         "many": "{{ count }} منتجاً",
         "other": "{{ count }} منتج"
       },
-      "popular": "الفئات الأكثر طلباً"
+      "popular": "الفئات الأكثر طلباً",
+      "other_results": "نتائج أخرى"
     },
     "pagination": {
       "next": "التالي",
