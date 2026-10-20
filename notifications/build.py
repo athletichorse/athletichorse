@@ -373,7 +373,7 @@ STAFF_NEW_ORDER = layout('en', 'New order {{ name }}', (
 ABANDONED_CART = ('You left something in your cart', 'نسيت شيئاً في سلتك',
     lambda L: H(L, ('Your cart is waiting', 'Hi{% if billing_address.first_name != blank %} {{ billing_address.first_name }}{% else %} there{% endif %}, you left a few things in your cart. They are still available, but stock is limited.'),
                    ('سلتك بانتظارك', 'مرحباً{% if billing_address.first_name != blank %} {{ billing_address.first_name }}{% endif %}، تركت بعض المنتجات في سلتك. ما زالت متوفرة لكن الكمية محدودة.'), '🛒')
-    + button(L, '{{ url | default: shop.url | append: "/cart" }}', 'Back to your cart' if L == 'en' else 'العودة إلى السلة')
+    + button(L, "{{ url | default: shop.url | append: '/cart' }}", 'Back to your cart' if L == 'en' else 'العودة إلى السلة')
     + items(L, loop='subtotal_line_items', title='line.title', qty='line.quantity', price=None, image='line.image', variant='line.variant.title')
     + unsubscribe(L))
 
