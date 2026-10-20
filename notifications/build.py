@@ -126,7 +126,7 @@ def layout(lang, title, body):
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F5"><tr><td align="center" style="padding:24px 8px">
 <table role="presentation" class="ah-card" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:18px;overflow:hidden">
   <tr><td style="background:#ffffff;padding:22px 28px;text-align:center">
-    {{% if shop.email_logo_url %}}<img src="{{{{ shop.email_logo_url }}}}" alt="{{{{ shop.name }}}}" width="{{{{ shop.email_logo_width | default: 170 }}}}" style="max-width:210px;height:auto">{{% else %}}<span style="font-family:{t['font']};font-size:22px;font-weight:700;color:{GREEN}">{{{{ shop.name }}}}</span>{{% endif %}}
+    <a href="{{{{ shop.url }}}}"><img src="https://cdn.shopify.com/s/files/1/0847/8952/6778/files/alhisan-alriyadi-logo-transparent.png?v=1783950120" alt="{{{{ shop.name }}}}" width="190" style="width:190px;max-width:70%;height:auto;border:0"></a>
   </td></tr>
   <tr><td style="height:5px;line-height:5px;background:{GREEN}">&nbsp;</td></tr>
   <tr><td style="height:3px;line-height:3px;background:{LIME}">&nbsp;</td></tr>
