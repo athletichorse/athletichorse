@@ -43,7 +43,7 @@
       "payment": "Payment methods"
     },
     "newsletter": {
-      "heading": "Join the team",
+      "heading": "Get exclusive offers",
       "text": "Get new drops, team offers and exclusive discounts first.",
       "placeholder": "Your email address",
       "button": "Subscribe",
@@ -330,7 +330,7 @@
       "step_3_text": "Pay cash when the courier hands you your order.",
       "step_4_title": "Play with confidence",
       "step_4_text": "Not right? Return it within {{ days }} days.",
-      "social_heading": "Join the team online",
+      "social_heading": "Follow us online",
       "social_text": "New arrivals, offers and match-day moments — follow us on Snapchat and TikTok."
     },
     "product_rail": {
