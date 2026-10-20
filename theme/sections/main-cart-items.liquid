@@ -61,6 +61,8 @@
             <div class="ah-totals__row ah-totals__row--discount"><span>{{ discount.title }}</span><span>−{%- render 'money', cents: discount.total_allocated_amount -%}</span></div>
           {%- endfor -%}
           <div class="ah-totals__row ah-totals__row--total"><span>{{ 'sections.cart.total' | t }}</span><span>{%- render 'money', cents: cart.total_price -%}</span></div>
+          {%- assign vat_cents = cart.total_price | times: 15 | divided_by: 115.0 | round -%}
+          <div class="ah-totals__row ah-totals__row--vat"><span>{{ 'sections.cart.vat_included' | t }}</span><span>{%- render 'money', cents: vat_cents -%}</span></div>
         </div>
         <p class="ah-pay-note">{{ 'sections.cart.taxes_note' | t }}</p>
         <div>
@@ -69,7 +71,6 @@
             <textarea id="CartNote" name="note" class="ah-textarea" style="min-height:80px">{{ cart.note }}</textarea>
           </label>
         </div>
-        {%- render 'came-from', id_prefix: 'CartCameFrom' -%}
         <button type="submit" name="checkout" class="ah-btn ah-btn--brand ah-btn--lg ah-btn--block" data-checkout>
           {%- render 'icon', name: 'lock' -%}{{ 'sections.cart.checkout' | t }}
         </button>

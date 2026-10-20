@@ -49,7 +49,7 @@
   {
     "name": "Store information",
     "settings": [
-      { "type": "text", "id": "store_phone", "label": "Phone", "default": "+966 54 177 0519" },
+      { "type": "text", "id": "store_phone", "label": "Phone (support)", "default": "+966 57 387 3497" },
       { "type": "text", "id": "store_email", "label": "Email", "default": "info@athletic-horse.com" },
       { "type": "textarea", "id": "store_address", "label": "Address" },
       { "type": "text", "id": "store_hours", "label": "Opening hours", "info": "e.g. Sat–Thu, 10:00 AM – 10:00 PM. Shown in the footer and contact page when filled in." },
@@ -74,7 +74,7 @@
       { "type": "text", "id": "social_x_link", "label": "X (Twitter)" },
       { "type": "text", "id": "social_tiktok_link", "label": "TikTok" },
       { "type": "text", "id": "social_snapchat_link", "label": "Snapchat" },
-      { "type": "text", "id": "social_whatsapp_number", "label": "WhatsApp number", "info": "Digits only with country code, e.g. 966541770519" },
+      { "type": "text", "id": "social_whatsapp_number", "label": "WhatsApp number", "info": "Support number. Digits only with country code, e.g. 966573873497" },
       { "type": "checkbox", "id": "show_whatsapp_button", "label": "Show floating WhatsApp button", "default": true },
       { "type": "url", "id": "social_linktree_link", "label": "Linktree / general social link" }
     ]

@@ -22,7 +22,7 @@ SOCIAL = [
     ('Snapchat', 'https://www.snapchat.com/@athletic_horse', '#FFFC00', '#111111'),
     ('TikTok', 'https://www.tiktok.com/@athletic_horse', '#111111', '#FFFFFF'),
     ('Instagram', 'https://www.instagram.com/athletic_horseksa', '#FFFFFF', INK),
-    ('WhatsApp', 'https://wa.me/966541770519', '#FFFFFF', INK),
+    ('WhatsApp', 'https://wa.me/966573873497', '#FFFFFF', INK),
 ]
 
 T = {
@@ -135,7 +135,7 @@ def layout(lang, title, body):
   </td></tr>
   <tr><td style="padding:22px 28px;background:{TINT};text-align:center;font-family:{t['font']}">
     <p style="margin:0 0 10px;font-size:14px;color:{INK}">{t['help']}</p>
-    <a href="https://wa.me/966541770519" style="display:inline-block;padding:10px 20px;border-radius:999px;background:#1FA855;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none">{t['help_btn']}</a>
+    <a href="https://wa.me/966573873497" style="display:inline-block;padding:10px 20px;border-radius:999px;background:#1FA855;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none">{t['help_btn']}</a>
   </td></tr>
   <tr><td style="padding:22px 28px 26px;text-align:center;font-family:{t['font']}">
     <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:{INK}">{t['follow']}</p>

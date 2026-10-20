@@ -194,7 +194,8 @@
       return '<div class="ah-totals__row ah-totals__row--discount"><span>' + escapeHtml(d.title) + '</span><span>−' + formatMoney(d.total_allocated_amount) + '</span></div>';
     }).join('');
     $('[data-cart-totals]', foot).innerHTML = discounts +
-      '<div class="ah-totals__row ah-totals__row--total"><span>' + escapeHtml(s.strTotal) + '</span><span>' + formatMoney(cart.total_price) + '</span></div>';
+      '<div class="ah-totals__row ah-totals__row--total"><span>' + escapeHtml(s.strTotal) + '</span><span>' + formatMoney(cart.total_price) + '</span></div>' +
+      '<div class="ah-totals__row ah-totals__row--vat"><span>' + escapeHtml(s.strVat) + '</span><span>' + formatMoney(Math.round(cart.total_price * 15 / 115)) + '</span></div>';
   }
 
   function refreshDrawer() { return Cart.get().then(renderDrawer); }
@@ -829,43 +830,35 @@
     }).catch(function () {});
   }
 
+  /* Order attribution: detected silently and saved as cart attributes, so it shows on the order in Shopify admin only */
   function initAttribution() {
     var KEY = 'ah_first_touch';
     var stored = null;
     try { stored = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
     var src = detectSource();
-    if (!stored && src) {
-      stored = { source: src, landing: window.location.pathname, at: new Date().toISOString().slice(0, 10) };
+    var params = new URLSearchParams(window.location.search);
+    if (!stored) {
+      stored = { source: src || 'Direct', landing: window.location.pathname, at: new Date().toISOString().slice(0, 10), campaign: params.get('utm_campaign') || '' };
       try { localStorage.setItem(KEY, JSON.stringify(stored)); } catch (e) {}
     }
+    if (src) { try { sessionStorage.setItem('ah_last_touch', src); } catch (e) {} }
+    var last = src;
+    if (!last) { try { last = sessionStorage.getItem('ah_last_touch'); } catch (e) {} }
     var pushed = false;
     function pushAuto() {
-      if (pushed || !stored) return;
-      pushed = true;
-      saveAttributes({ 'Auto source': stored.source, 'Landing page': stored.landing, 'First visit': stored.at });
+      if (pushed) return pushed;
+      var attrs = { 'Came from': stored.source, 'Landing page': stored.landing, 'First visit': stored.at, 'Last source': last || stored.source };
+      if (stored.campaign) attrs['Campaign'] = stored.campaign;
+      pushed = saveAttributes(attrs);
+      return pushed;
     }
     document.addEventListener('cart:added', pushAuto);
-    if (stored && (window.location.pathname.indexOf('/cart') > -1)) pushAuto();
-
-    document.addEventListener('change', function (e) {
-      var input = e.target.closest('[data-came-from] input');
-      if (!input) return;
-      $$('[data-came-from] input[value="' + input.value.replace(/"/g, '\\"') + '"]').forEach(function (i) { i.checked = true; });
-      $$('[data-came-from-error]').forEach(function (el) { el.hidden = true; });
-      $$('[data-came-from]').forEach(function (el) { el.classList.remove('is-invalid'); });
-      saveAttributes({ 'Came from': input.value });
-      pushAuto();
-    });
-
+    if (window.location.pathname.indexOf('/cart') > -1) pushAuto();
     document.addEventListener('click', function (e) {
       var go = e.target.closest('[data-checkout]');
-      if (!go) return;
-      var box = go.parentNode.querySelector('[data-came-from]') || $('[data-came-from]');
-      if (!box || $('input:checked', box)) return;
+      if (!go || pushed) return;
       e.preventDefault();
-      box.classList.remove('is-invalid'); void box.offsetWidth; box.classList.add('is-invalid');
-      var err = $('[data-came-from-error]', box); if (err) err.hidden = false;
-      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      pushAuto().then(function () { window.location.href = go.href || (root + 'checkout'); });
     }, true);
   }
 

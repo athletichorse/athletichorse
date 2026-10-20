@@ -10,7 +10,13 @@
       {%- if section.settings.whatsapp_number != blank -%}
         <a href="https://wa.me/{{ section.settings.whatsapp_number }}" class="ah-channel ah-channel--wa" target="_blank" rel="noopener noreferrer">
           <span class="ah-channel__icon">{%- render 'icon', name: 'chat' -%}</span>
-          <span><strong>{{ 'sections.contact.whatsapp' | t }}</strong><span dir="ltr">{{ section.settings.whatsapp_display | default: section.settings.whatsapp_number }}</span></span>
+          <span><strong>{{ 'sections.contact.whatsapp_support' | t }}</strong><span dir="ltr">{{ section.settings.whatsapp_display | default: section.settings.whatsapp_number }}</span></span>
+        </a>
+      {%- endif -%}
+      {%- if section.settings.bulk_number != blank -%}
+        <a href="https://wa.me/{{ section.settings.bulk_number }}?text={{ 'sections.contact.bulk_message' | t | url_encode }}" class="ah-channel ah-channel--wa" target="_blank" rel="noopener noreferrer">
+          <span class="ah-channel__icon">{%- render 'icon', name: 'whatsapp' -%}</span>
+          <span><strong>{{ 'sections.contact.whatsapp_bulk' | t }}</strong><span dir="ltr">{{ section.settings.bulk_display | default: section.settings.bulk_number }}</span></span>
         </a>
       {%- endif -%}
       {%- if settings.store_phone != blank -%}
@@ -103,6 +109,8 @@
     { "type": "textarea", "id": "text", "label": "Text" },
     { "type": "text", "id": "whatsapp_number", "label": "WhatsApp number", "info": "Digits only with country code, e.g. 966573873497" },
     { "type": "text", "id": "whatsapp_display", "label": "WhatsApp display text" },
+    { "type": "text", "id": "bulk_number", "label": "Bulk orders WhatsApp", "info": "Digits only with country code, e.g. 966541770519" },
+    { "type": "text", "id": "bulk_display", "label": "Bulk orders display text" },
     { "type": "text", "id": "email", "label": "Contact email", "info": "Defaults to the store email in theme settings." },
     { "type": "textarea", "id": "address", "label": "Store address" },
     { "type": "textarea", "id": "address_ar", "label": "Store address (Arabic)" },

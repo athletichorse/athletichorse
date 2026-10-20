@@ -260,24 +260,13 @@
       "quantity": "الكمية",
       "update": "تحديث السلة",
       "note": "ملاحظة على الطلب (اختياري)",
-      "taxes_note": "شامل الضريبة · الدفع عند الاستلام",
+      "taxes_note": "الدفع عند الاستلام · فاتورة ضريبية مع كل طلب",
       "coupon_placeholder": "كود الخصم",
       "apply": "تطبيق",
       "empty_coupon": "يرجى إدخال كود الخصم",
       "shipping_remaining": "باقي [amount] للحصول على توصيل مجاني",
       "shipping_done": "مبروك! حصلت على توصيل مجاني",
-      "came_from": "كيف عرفت عنا؟",
-      "came_from_required": "من فضلك أخبرنا كيف عرفت عنا.",
-      "came_from_google": "جوجل",
-      "came_from_chatgpt_ai": "ChatGPT / الذكاء الاصطناعي",
-      "came_from_instagram": "إنستغرام",
-      "came_from_tiktok": "تيك توك",
-      "came_from_snapchat": "سناب شات",
-      "came_from_facebook": "فيسبوك",
-      "came_from_whatsapp": "واتساب",
-      "came_from_friend_or_family": "صديق أو قريب",
-      "came_from_visited_our_store": "زرت متجرنا",
-      "came_from_other": "أخرى"
+      "vat_included": "شامل ضريبة القيمة المضافة (15٪)"
     },
     "404": {
       "heading": "الصفحة غير موجودة",
@@ -305,7 +294,10 @@
       "form_error": "حدث خطأ ما. يرجى التحقق من بياناتك والمحاولة مرة أخرى.",
       "map_title": "موقع متجرنا على خرائط جوجل",
       "directions": "احصل على الاتجاهات",
-      "store_name": "الحصان الرياضي"
+      "store_name": "الحصان الرياضي",
+      "whatsapp_support": "دعم واتساب",
+      "whatsapp_bulk": "طلبات الجملة والكميات",
+      "bulk_message": "مرحباً، أرغب في عرض سعر لطلب بالجملة."
     },
     "about": {
       "eyebrow": "قصتنا",

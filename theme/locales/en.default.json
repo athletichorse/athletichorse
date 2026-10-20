@@ -248,24 +248,13 @@
       "quantity": "Quantity",
       "update": "Update cart",
       "note": "Order note (optional)",
-      "taxes_note": "VAT included · Pay cash on delivery",
+      "taxes_note": "Pay cash on delivery · VAT invoice with every order",
       "coupon_placeholder": "Discount code",
       "apply": "Apply",
       "empty_coupon": "Please enter a discount code",
       "shipping_remaining": "You're [amount] away from free delivery",
       "shipping_done": "You've unlocked free delivery!",
-      "came_from": "How did you hear about us?",
-      "came_from_required": "Please tell us how you found us.",
-      "came_from_google": "Google",
-      "came_from_chatgpt_ai": "ChatGPT / AI",
-      "came_from_instagram": "Instagram",
-      "came_from_tiktok": "TikTok",
-      "came_from_snapchat": "Snapchat",
-      "came_from_facebook": "Facebook",
-      "came_from_whatsapp": "WhatsApp",
-      "came_from_friend_or_family": "Friend or family",
-      "came_from_visited_our_store": "Visited our store",
-      "came_from_other": "Other"
+      "vat_included": "Includes VAT (15%)"
     },
     "404": {
       "heading": "Page not found",
@@ -293,7 +282,10 @@
       "form_error": "Something went wrong. Please check your details and try again.",
       "map_title": "Our store on Google Maps",
       "directions": "Get directions",
-      "store_name": "Athletic Horse"
+      "store_name": "Athletic Horse",
+      "whatsapp_support": "WhatsApp support",
+      "whatsapp_bulk": "Bulk & wholesale orders",
+      "bulk_message": "Hello, I would like a quote for a bulk order."
     },
     "about": {
       "eyebrow": "Our story",
