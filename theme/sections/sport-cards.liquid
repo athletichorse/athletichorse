@@ -18,7 +18,7 @@
         <li {{ block.shopify_attributes }}>
           <a href="{{ coll.url | default: routes.collections_url }}" class="ah-sportcard">
             {%- if card_image -%}
-              {{ card_image | image_url: width: 600 | image_tag: loading: 'lazy', widths: '300,450,600', sizes: '(min-width: 990px) 17vw, 42vw', alt: '' }}
+              {{ card_image | image_url: width: 600 | image_tag: loading: 'lazy', widths: '300,450,600', sizes: '(min-width: 990px) 17vw, 34vw', alt: '' }}
             {%- endif -%}
             <span class="ah-sportcard__label">{{ block.settings.label | default: coll.title }}</span>
           </a>

@@ -77,6 +77,7 @@
             </div>
           </div>
         </li>
+        <li class="ah-nav__item"><a href="{{ routes.collections_url }}" class="ah-nav__link{% if template.name == 'list-collections' %} is-active{% endif %}">{{ 'general.header.all_categories' | t }}</a></li>
       </ul>
     </nav>
 
@@ -145,6 +146,7 @@
         <li><a href="{{ link.url }}"{% if link_handle == 'sale' %} class="is-sale"{% endif %}>{{ link.title }}</a></li>
       {%- endif -%}
     {%- endfor -%}
+    <li class="ah-drawer__allcats"><a href="{{ routes.collections_url }}">{%- render 'icon', name: 'all' -%}{{ 'general.header.all_categories' | t }}</a></li>
   </ul>
 
   <div class="ah-drawer__nav">

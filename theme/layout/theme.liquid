@@ -71,20 +71,36 @@
     <link rel="apple-touch-icon" href="{{ settings.favicon | image_url: width: 180, height: 180 }}">
   {%- endif -%}
 
-  {%- comment -%} Self-hosted Readex Pro (Latin + Arabic): same origin, no third-party round trips. {%- endcomment -%}
+  {%- comment -%} Self-hosted Quicksand (Latin) + IBM Plex Sans Arabic: same origin, no third-party round trips. {%- endcomment -%}
   {%- if is_ar -%}
-    {{ 'readex-arabic.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
+    {{ 'plex-arabic-400.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
   {%- endif -%}
   {{ 'quicksand-latin.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
 
   <style>
     @font-face {
-      font-family: "Readex Pro";
-      src: url("{{ 'readex-arabic.woff2' | asset_url }}") format("woff2");
-      font-weight: 160 700;
+      font-family: "Plex Arabic";
+      src: url("{{ 'plex-arabic-400.woff2' | asset_url }}") format("woff2");
+      font-weight: 400;
       font-style: normal;
       font-display: swap;
-      unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0898-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC7, U+10EC9-10EEE, U+10EF0-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+    }
+    @font-face {
+      font-family: "Plex Arabic";
+      src: url("{{ 'plex-arabic-500.woff2' | asset_url }}") format("woff2");
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC7, U+10EC9-10EEE, U+10EF0-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+    }
+    @font-face {
+      font-family: "Plex Arabic";
+      src: url("{{ 'plex-arabic-600.woff2' | asset_url }}") format("woff2");
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC7, U+10EC9-10EEE, U+10EF0-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
     }
     @font-face {
       font-family: "Quicksand";
@@ -107,10 +123,10 @@
       --color-highlight: {{ settings.color_highlight | default: '#B6F23A' }};
       --color-sale: {{ settings.color_sale | default: '#D61F45' }};
       --color-dark: {{ settings.color_dark | default: '#0B0F0C' }};
-      /* Quicksand for Latin text; Arabic characters fall through to Readex Pro (Arabic subset) */
-      --font-display: "Quicksand", "Readex Pro", "Segoe UI", Tahoma, system-ui, sans-serif;
-      --font-body: "Quicksand", "Readex Pro", "Segoe UI", Tahoma, system-ui, sans-serif;
-      --font-ar: "Quicksand", "Readex Pro", "Segoe UI", Tahoma, system-ui, sans-serif;
+      /* Quicksand for Latin text; Arabic characters fall through to IBM Plex Sans Arabic */
+      --font-display: "Quicksand", "Plex Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
+      --font-body: "Quicksand", "Plex Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
+      --font-ar: "Quicksand", "Plex Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
       --container-max: {{ settings.page_width }}px;
     }
   </style>

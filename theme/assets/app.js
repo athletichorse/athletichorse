@@ -86,26 +86,50 @@
   /* ---------- Rails (horizontal product carousels) ---------- */
   function initRails() { $$('[data-rail]').forEach(initRail); }
   function initRail(rail) {
-    (function () {
-      var track = $('[data-rail-track]', rail.closest('section') || rail);
-      var prev = $('[data-rail-prev]', rail.closest('section') || rail);
-      var next = $('[data-rail-next]', rail.closest('section') || rail);
-      if (!track || !prev || !next || rail.dataset.railReady) return;
-      rail.dataset.railReady = '1';
-      var dir = isRTL ? -1 : 1;
-      function step() { return track.clientWidth * 0.85; }
-      function update() {
-        var max = track.scrollWidth - track.clientWidth - 2;
-        var pos = Math.abs(track.scrollLeft);
-        prev.disabled = pos <= 2;
-        next.disabled = pos >= max;
-      }
-      prev.addEventListener('click', function () { track.scrollBy({ left: -step() * dir, behavior: 'smooth' }); });
-      next.addEventListener('click', function () { track.scrollBy({ left: step() * dir, behavior: 'smooth' }); });
-      track.addEventListener('scroll', update, { passive: true });
-      window.addEventListener('resize', update);
-      update();
-    })();
+    var scope = rail.closest('section') || rail;
+    var track = $('[data-rail-track]', scope);
+    var prev = $('[data-rail-prev]', scope);
+    var next = $('[data-rail-next]', scope);
+    if (!track || !prev || !next || rail.dataset.railReady) return;
+    rail.dataset.railReady = '1';
+    var dir = isRTL ? -1 : 1;
+    /* Page counter between the arrows: "1/N", one page = one screen of cards */
+    var count = $('[data-rail-count]', scope);
+    if (!count) {
+      count = document.createElement('span');
+      count.className = 'ah-rail__count'; count.setAttribute('data-rail-count', ''); count.setAttribute('aria-live', 'polite');
+      prev.parentNode.insertBefore(count, next);
+    }
+    function metrics() {
+      var items = track.children, first = items[0];
+      if (!first) return { per: 1, pages: 1, unit: track.clientWidth };
+      var gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+      var unit = first.getBoundingClientRect().width + gap;
+      var per = Math.max(1, Math.round((track.clientWidth + gap) / unit));
+      return { per: per, pages: Math.max(1, Math.ceil(items.length / per)), unit: unit };
+    }
+    function page() {
+      var m = metrics();
+      return Math.min(m.pages, Math.round(Math.abs(track.scrollLeft) / (m.unit * m.per)) + 1);
+    }
+    function update() {
+      var m = metrics(), cur = page();
+      var max = track.scrollWidth - track.clientWidth - 2, pos = Math.abs(track.scrollLeft);
+      prev.disabled = pos <= 2;
+      next.disabled = pos >= max;
+      count.textContent = cur + '/' + m.pages;
+      prev.parentNode.hidden = m.pages <= 1;
+    }
+    function go(delta) {
+      var m = metrics(), target = (page() - 1 + delta) * m.per * m.unit;
+      track.scrollTo({ left: Math.max(0, target) * dir, behavior: 'smooth' });
+    }
+    prev.addEventListener('click', function () { go(-1); });
+    next.addEventListener('click', function () { go(1); });
+    track.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    new MutationObserver(update).observe(track, { childList: true });
+    update();
   }
 
   /* ---------- Cart API ---------- */
