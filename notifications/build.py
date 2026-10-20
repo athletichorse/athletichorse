@@ -115,13 +115,13 @@ def totals(lang):
             '</table></td></tr></table>')
 
 
-def info(lang, with_address=True):
+def info(lang, with_address=True, with_payment=True):
     t = T[lang]
     addr = (f'{{% if shipping_address %}}<td class="ah-col" width="50%" valign="top" style="padding:0 6px">'
             f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ah-box" style="border:1px solid {LINE};border-radius:16px"><tr><td style="padding:16px 18px;text-align:{t["align"]}">'
             f'<span class="ah-muted" style="display:block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:{MUTED};margin-bottom:6px">{t["ship_to"]}</span>'
             f'<span class="ah-ink" dir="auto" style="display:block;font-size:14px;line-height:1.55;color:{INK}">{{{{ shipping_address | format_address }}}}</span></td></tr></table></td>{{% endif %}}') if with_address else ''
-    pay = (f'<td class="ah-col" width="50%" valign="top" style="padding:0 6px">'
+    pay = '' if not with_payment else (f'<td class="ah-col" width="50%" valign="top" style="padding:0 6px">'
            f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ah-box" style="border:1px solid {LINE};border-radius:16px"><tr><td style="padding:16px 18px;text-align:{t["align"]}">'
            f'<span class="ah-muted" style="display:block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:{MUTED};margin-bottom:6px">{t["pay"]}</span>'
            f'<span class="ah-ink" style="display:block;font-size:15px;font-weight:700;color:{INK}">💵 {t["cod_title"]}</span>'
@@ -272,6 +272,11 @@ TEMPLATES = [
      lambda L: H(L, ('Your order is ready', '{% if custom_message != blank %}{{ custom_message }}{% else %}We\'ve prepared your order. Confirm it below and pay cash on delivery.{% endif %}'),
                     ('طلبك جاهز', '{% if custom_message != blank %}{{ custom_message }}{% else %}جهّزنا طلبك. أكّده من الزر أدناه وادفع عند الاستلام.{% endif %}'), '🧾')
      + button(L, '{{ invoice_url }}', 'Confirm your order' if L == 'en' else 'تأكيد الطلب') + items(L, **LINE_ORDER) + totals(L)),
+    ('43561976058', 'order_invoice', 'Invoice for order {{ name }}', 'فاتورة الطلب {{ name }}',
+     lambda L: order_tag(L) + H(L, ('Your invoice is ready', 'Hi {{ customer.first_name | default: billing_address.first_name }}, here is the invoice for your order. Amount due: <strong>' + money('order.total_outstanding | default: total_price') + '</strong>.{% if custom_message != blank %}<br><br>{{ custom_message }}{% endif %}'),
+                                ('فاتورتك جاهزة', 'مرحباً {{ customer.first_name | default: billing_address.first_name }}، إليك فاتورة طلبك. المبلغ المستحق: <strong>' + money('order.total_outstanding | default: total_price') + '</strong>.{% if custom_message != blank %}<br><br>{{ custom_message }}{% endif %}'), '🧾')
+     + button(L, '{{ checkout_payment_collection_url }}', 'Pay invoice' if L == 'en' else 'ادفع الفاتورة')
+     + items(L, **LINE_ORDER) + totals(L) + info(L, with_payment=False)),
     ('43562139898', 'abandoned_checkout', 'You left something behind 👀', 'نسيت شيئاً في سلتك 👀',
      lambda L: H(L, ('Still thinking it over?', 'Hi {{ billing_address.first_name }}, your items are waiting. Finish your order now and pay cash when it reaches your door.'),
                     ('ما زلت تفكر؟', 'مرحباً {{ billing_address.first_name }}، منتجاتك بانتظارك. أكمل طلبك الآن وادفع نقداً عند وصوله إلى بابك.'), '🛒')
