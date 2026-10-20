@@ -245,6 +245,25 @@ def tracking(lang):
             f'{{% if fulfillment.tracking_url %}}{button(lang, "{{ fulfillment.tracking_url }}", label, secondary=True)}{{% endif %}}')
 
 
+def receipt(lang):
+    """Payment receipt details: amount, method and order, as a summary card."""
+    t = T[lang]
+    lbl = {'en': ('Amount paid', 'Payment method', 'Order'), 'ar': ('المبلغ المدفوع', 'طريقة الدفع', 'الطلب')}[lang]
+    row = lambda k, v, big=False: (f'<tr><td class="ah-muted" style="padding:6px 0;font-size:14px;color:{MUTED};text-align:{t["align"]}">{k}</td>'
+                                   f'<td class="{"ah-accent" if big else "ah-ink"}" style="padding:6px 0;font-size:{22 if big else 14}px;font-weight:700;color:{GREEN if big else INK};text-align:{t["end"]}">{v}</td></tr>')
+    method = ('{% if transaction.payment_details.payment_method_display_name %}{{ transaction.payment_details.payment_method_display_name }}'
+              '{% elsif transaction.payment_details.credit_card_company %}{{ transaction.payment_details.credit_card_company }} •••• {{ transaction.payment_details.credit_card_last_four_digits }}'
+              '{% else %}{{ transaction.gateway_display_name }}{% endif %}')
+    return (section_title(lang, 'Payment details' if lang == 'en' else 'تفاصيل الدفع') +
+            f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ah-tint" style="background:{TINT};border-radius:16px"><tr><td style="padding:18px 20px">'
+            f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' +
+            row(lbl[0], money('transaction.amount'), big=True) +
+            f'<tr><td colspan="2" style="padding:8px 0 4px"><div style="border-top:1px dashed #C9D5CD;height:1px;line-height:1px">&nbsp;</div></td></tr>' +
+            row(lbl[1], method) +
+            row(lbl[2], '<span dir="ltr">{{ order_name | default: name }}</span>') +
+            '</table></td></tr></table>')
+
+
 def H(L, en, ar, icon=None):
     return heading(L, *({'en': en, 'ar': ar}[L]), icon=icon)
 
@@ -277,6 +296,10 @@ TEMPLATES = [
                                 ('فاتورتك جاهزة', 'مرحباً {{ customer.first_name | default: billing_address.first_name }}، إليك فاتورة طلبك. المبلغ المستحق: <strong>' + money('order.total_outstanding | default: total_price') + '</strong>.{% if custom_message != blank %}<br><br>{{ custom_message }}{% endif %}'), '🧾')
      + button(L, '{{ checkout_payment_collection_url }}', 'Pay invoice' if L == 'en' else 'ادفع الفاتورة')
      + items(L, **LINE_ORDER) + totals(L) + info(L, with_payment=False)),
+    ('43562074362', 'payment_receipt', 'Payment received for order {{ order_name | default: name }} ✅', 'تم استلام دفعة الطلب {{ order_name | default: name }} ✅',
+     lambda L: order_tag(L) + H(L, ('Payment received', 'Thank you{% if customer.first_name %}, {{ customer.first_name }}{% endif %}! We\'ve received your payment for this order.'),
+                                ('تم استلام الدفعة', 'شكراً لك{% if customer.first_name %} يا {{ customer.first_name }}{% endif %}! استلمنا دفعتك لهذا الطلب.'), '✅')
+     + receipt(L) + VIEW(L)),
     ('43562139898', 'abandoned_checkout', 'You left something behind 👀', 'نسيت شيئاً في سلتك 👀',
      lambda L: H(L, ('Still thinking it over?', 'Hi {{ billing_address.first_name }}, your items are waiting. Finish your order now and pay cash when it reaches your door.'),
                     ('ما زلت تفكر؟', 'مرحباً {{ billing_address.first_name }}، منتجاتك بانتظارك. أكمل طلبك الآن وادفع نقداً عند وصوله إلى بابك.'), '🛒')
