@@ -67,8 +67,8 @@ def money(expr):
 
 def button(lang, url_expr, label, secondary=False):
     bg, fg, bd = (('#FFFFFF', GREEN, GREEN) if secondary else (GREEN, '#FFFFFF', GREEN))
-    return f'''<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:28px auto 4px"><tr><td class="ah-btn" style="border-radius:12px;background:{bg};border:2px solid {bd}">
-<a href="{url_expr}" style="display:inline-block;padding:15px 34px;font-family:{T[lang]['font']};font-size:15px;font-weight:700;color:{fg};text-decoration:none;border-radius:12px">{label}</a></td></tr></table>'''
+    return f'''<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:28px auto 4px"><tr><td class="ah-btn" bgcolor="{bg}" style="border-radius:12px;background:{bg}{'' if not secondary else ';box-shadow:inset 0 0 0 2px ' + bd}">
+<a href="{url_expr}" style="display:inline-block;padding:15px 34px;font-family:{T[lang]['font']};font-size:15px;font-weight:700;color:{fg};text-decoration:none;border-radius:12px;border:2px solid {bd}">{label}</a></td></tr></table>'''
 
 
 def section_title(lang, text):
@@ -80,7 +80,11 @@ def items(lang, loop, title, qty, price, image, variant, label=None):
     price_td = ('<td class="ah-ink" style="padding:12px 0;vertical-align:middle;font-size:15px;font-weight:700;color:' + INK +
                 ';white-space:nowrap;text-align:' + t['end'] + '{% unless forloop.last %};border-bottom:1px solid ' + LINE + '{% endunless %}">' +
                 money(price) + '</td>') if price else ''
-    return section_title(lang, label or t['items']) + f'''<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    pre = ''
+    if loop == 'subtotal_line_items':
+        pre = '{% assign ah_lines = subtotal_line_items %}{% if ah_lines == blank or ah_lines.size == 0 %}{% assign ah_lines = line_items %}{% endif %}'
+        loop = 'ah_lines'
+    return pre + '{% if ' + loop + '.size > 0 %}' + section_title(lang, label or t['items']) + f'''<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
 {{% for line in {loop} %}}
 <tr>
   <td width="76" style="padding:12px 0;vertical-align:middle{{% unless forloop.last %}};border-bottom:1px solid {LINE}{{% endunless %}}">{{% if {image} %}}<img src="{{{{ {image} | img_url: '160x160' }}}}" width="64" height="64" alt="" style="display:block;width:64px;height:64px;border-radius:14px;background:{TINT};object-fit:contain;border:1px solid {LINE}">{{% endif %}}</td>
@@ -92,7 +96,7 @@ def items(lang, loop, title, qty, price, image, variant, label=None):
   {price_td}
 </tr>
 {{% endfor %}}
-</table>'''
+</table>{{% endif %}}'''
 
 
 def totals(lang):
@@ -264,6 +268,12 @@ def receipt(lang):
             '</table></td></tr></table>')
 
 
+def unsubscribe(lang):
+    label = 'Unsubscribe from these reminders' if lang == 'en' else 'إلغاء الاشتراك في هذه التذكيرات'
+    return (f'{{% if unsubscribe_url %}}<p class="ah-muted" style="margin:28px 0 0;font-size:12px;color:{MUTED};text-align:center">'
+            f'<a href="{{{{ unsubscribe_url }}}}" style="color:{MUTED}">{label}</a></p>{{% endif %}}')
+
+
 def H(L, en, ar, icon=None):
     return heading(L, *({'en': en, 'ar': ar}[L]), icon=icon)
 
@@ -301,10 +311,11 @@ TEMPLATES = [
                                 ('تم استلام الدفعة', 'شكراً لك{% if customer.first_name %} يا {{ customer.first_name }}{% endif %}! استلمنا دفعتك لهذا الطلب.'), '✅')
      + receipt(L) + VIEW(L)),
     ('43562139898', 'abandoned_checkout', 'You left something in your cart', 'نسيت شيئاً في سلتك',
-     lambda L: H(L, ('Still thinking it over?', 'Hi {{ billing_address.first_name }}, your items are waiting. Finish your order now and pay cash when it reaches your door.'),
-                    ('ما زلت تفكر؟', 'مرحباً {{ billing_address.first_name }}، منتجاتك بانتظارك. أكمل طلبك الآن وادفع نقداً عند وصوله إلى بابك.'), '🛒')
+     lambda L: H(L, ('Still thinking it over?', 'Hi{% if billing_address.first_name != blank %} {{ billing_address.first_name }}{% else %} there{% endif %}, your items are waiting. Finish your order now and pay cash when it reaches your door.'),
+                    ('ما زلت تفكر؟', 'مرحباً{% if billing_address.first_name != blank %} {{ billing_address.first_name }}{% endif %}، منتجاتك بانتظارك. أكمل طلبك الآن وادفع نقداً عند وصوله إلى بابك.'), '🛒')
      + button(L, '{{ url }}', 'Complete your order' if L == 'en' else 'أكمل طلبك')
-     + items(L, loop='subtotal_line_items', title='line.title', qty='line.quantity', price=None, image='line.image', variant='line.variant.title')),
+     + items(L, loop='subtotal_line_items', title='line.title', qty='line.quantity', price=None, image='line.image', variant='line.variant.title')
+     + unsubscribe(L)),
     ('43561681146', 'shipping_confirmation', 'Your order {{ name }} is on the way 🚚', 'طلبك {{ name }} في الطريق إليك 🚚',
      lambda L: order_tag(L) + H(L, ('Your order is on the way!', 'Good news, {{ customer.first_name }}! Your order has shipped. Please have the amount ready for cash on delivery.'),
                                 ('طلبك في الطريق!', 'خبر سار يا {{ customer.first_name }}! تم شحن طلبك. يرجى تجهيز المبلغ للدفع عند الاستلام.'), '🚚')
