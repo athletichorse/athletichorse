@@ -244,7 +244,8 @@
       "fbt_total": "المجموع",
       "fbt_add_all": "أضف الكل إلى السلة",
       "fbt_add_selected": "أضف [count] إلى السلة",
-      "fbt_this_item": "هذا المنتج"
+      "fbt_this_item": "هذا المنتج",
+      "max_in_cart": "وصلت للحد الأقصى المتوفر"
     },
     "cart": {
       "title": "سلة التسوق",

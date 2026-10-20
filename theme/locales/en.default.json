@@ -232,7 +232,8 @@
       "fbt_total": "Total",
       "fbt_add_all": "Add all to cart",
       "fbt_add_selected": "Add [count] to cart",
-      "fbt_this_item": "This item"
+      "fbt_this_item": "This item",
+      "max_in_cart": "Max quantity in basket"
     },
     "cart": {
       "title": "Your cart",

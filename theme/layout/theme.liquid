@@ -75,7 +75,7 @@
   {%- if is_ar -%}
     {{ 'readex-arabic.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
   {%- endif -%}
-  {{ 'readex-latin.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
+  {{ 'quicksand-latin.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
 
   <style>
     @font-face {
@@ -87,9 +87,9 @@
       unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0898-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
     }
     @font-face {
-      font-family: "Readex Pro";
-      src: url("{{ 'readex-latin.woff2' | asset_url }}") format("woff2");
-      font-weight: 160 700;
+      font-family: "Quicksand";
+      src: url("{{ 'quicksand-latin.woff2' | asset_url }}") format("woff2");
+      font-weight: 300 700;
       font-style: normal;
       font-display: swap;
       unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
@@ -107,10 +107,10 @@
       --color-highlight: {{ settings.color_highlight | default: '#B6F23A' }};
       --color-sale: {{ settings.color_sale | default: '#D61F45' }};
       --color-dark: {{ settings.color_dark | default: '#0B0F0C' }};
-      /* One typeface across the whole store, in both English and Arabic */
-      --font-display: "Readex Pro", "Segoe UI", Tahoma, system-ui, sans-serif;
-      --font-body: "Readex Pro", "Segoe UI", Tahoma, system-ui, sans-serif;
-      --font-ar: "Readex Pro", "Segoe UI", Tahoma, system-ui, sans-serif;
+      /* Quicksand for Latin text; Arabic characters fall through to Readex Pro (Arabic subset) */
+      --font-display: "Quicksand", "Readex Pro", "Segoe UI", Tahoma, system-ui, sans-serif;
+      --font-body: "Quicksand", "Readex Pro", "Segoe UI", Tahoma, system-ui, sans-serif;
+      --font-ar: "Quicksand", "Readex Pro", "Segoe UI", Tahoma, system-ui, sans-serif;
       --container-max: {{ settings.page_width }}px;
     }
   </style>
@@ -168,7 +168,7 @@
   {{ content_for_header }}
 
   {%- capture riyal_svg -%}{%- render 'riyal' -%}{%- endcapture -%}
-  <script>window.themeMoneyFormat = {{ shop.money_format | json }}; window.themeRiyal = {{ riyal_svg | strip | json }}; window.themeStrings = { add: {{ 'sections.product.add_to_cart' | t | json }}, soldOut: {{ 'sections.product.sold_out' | t | json }}, unavailable: {{ 'sections.product.unavailable' | t | json }}, details: {{ 'sections.product.view_details' | t | json }}, close: {{ 'general.header.close' | t | json }} };</script>
+  <script>window.themeMoneyFormat = {{ shop.money_format | json }}; window.themeRiyal = {{ riyal_svg | strip | json }}; window.themeStrings = { add: {{ 'sections.product.add_to_cart' | t | json }}, soldOut: {{ 'sections.product.sold_out' | t | json }}, unavailable: {{ 'sections.product.unavailable' | t | json }}, details: {{ 'sections.product.view_details' | t | json }}, close: {{ 'general.header.close' | t | json }}, maxInCart: {{ 'sections.product.max_in_cart' | t | json }} };</script>
   <script src="{{ 'app.js' | asset_url }}" defer></script>
 </head>
 <body class="template-{{ template.name | handleize }}{% if template.suffix %} template-{{ template.name | handleize }}--{{ template.suffix | handleize }}{% endif %}">

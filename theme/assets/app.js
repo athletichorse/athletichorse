@@ -196,9 +196,33 @@
     $('[data-cart-totals]', foot).innerHTML = discounts +
       '<div class="ah-totals__row ah-totals__row--total"><span>' + escapeHtml(s.strTotal) + '</span><span>' + formatMoney(cart.total_price) + '</span></div>' +
       '<div class="ah-totals__row ah-totals__row--vat"><span>' + escapeHtml(s.strVat) + '</span><span>' + formatMoney(Math.round(cart.total_price * 15 / 115)) + '</span></div>';
+    applyCartLimits();
+    document.dispatchEvent(new CustomEvent('cart:updated', { detail: cart }));
   }
 
   function refreshDrawer() { return Cart.get().then(renderDrawer); }
+
+  /* Dim the + button on drawer lines that already hold every unit in stock */
+  function applyCartLimits() {
+    if (!drawerEl) return Promise.resolve();
+    return fetch(root + '?sections=cart-limits', { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var wrap = document.createElement('div'); wrap.innerHTML = data['cart-limits'] || '';
+        var el = wrap.querySelector('[data-cart-limits]');
+        var limits = el ? JSON.parse(el.textContent) : {};
+        $$('[data-line-key]', drawerEl).forEach(function (line) {
+          var max = limits[line.dataset.lineKey];
+          var plus = $$('[data-line-qty]', line).filter(function (b) { return b.getAttribute('aria-label') === '+'; })[0];
+          var input = $('[data-line-input]', line);
+          if (!plus || max === undefined) return;
+          var qty = parseInt(input.value, 10) || 0;
+          if (input) input.max = Math.max(max, qty);
+          plus.disabled = qty >= max;
+          plus.title = plus.disabled ? (window.themeStrings || {}).maxInCart || '' : '';
+        });
+      }).catch(function () {});
+  }
 
   function openDrawer() {
     if (!drawerEl) { window.location.href = root + 'cart'; return; }
@@ -231,7 +255,7 @@
 
     drawerEl.addEventListener('click', function (e) {
       var btn = e.target.closest('[data-line-qty]');
-      if (!btn) return;
+      if (!btn || btn.disabled) return;
       var line = btn.closest('[data-line-key]');
       line.classList.add('is-updating');
       Cart.change(line.dataset.lineKey, parseInt(btn.dataset.lineQty, 10)).then(renderDrawer);
@@ -240,7 +264,9 @@
       if (!e.target.matches('[data-line-input]')) return;
       var line = e.target.closest('[data-line-key]');
       line.classList.add('is-updating');
-      Cart.change(line.dataset.lineKey, Math.max(0, parseInt(e.target.value, 10) || 0)).then(renderDrawer);
+      var want = Math.max(0, parseInt(e.target.value, 10) || 0);
+      if (e.target.max) want = Math.min(want, parseInt(e.target.max, 10));
+      Cart.change(line.dataset.lineKey, want).then(renderDrawer);
     });
 
     var coupon = $('[data-coupon]', drawerEl);
@@ -493,10 +519,8 @@
       $$('[data-sticky-price]').forEach(function (p) { p.innerHTML = formatMoney(v.price); });
 
       var capped = v.inventory_management === 'shopify' && v.inventory_policy === 'deny';
-      if (qtyInput) {
-        if (capped && v.inventory_quantity > 0) qtyInput.max = v.inventory_quantity; else qtyInput.removeAttribute('max');
-        if (qtyInput.max && parseInt(qtyInput.value, 10) > parseInt(qtyInput.max, 10)) qtyInput.value = qtyInput.max;
-      }
+      current = v; capVariant = capped;
+      syncQty();
       if (stockEl) {
         if (!v.available) { stockEl.hidden = true; }
         else if (capped && v.inventory_quantity > 0 && v.inventory_quantity <= 10) {
@@ -524,12 +548,40 @@
         update(); return;
       }
       var step = e.target.closest('[data-qty-step]');
-      if (step && qtyInput) {
+      if (step && qtyInput && !step.disabled) {
         var next = (parseInt(qtyInput.value, 10) || 1) + parseInt(step.dataset.qtyStep, 10);
         var max = qtyInput.max ? parseInt(qtyInput.max, 10) : Infinity;
         qtyInput.value = Math.max(1, Math.min(max, next));
+        syncQty();
       }
     });
+    if (qtyInput) qtyInput.addEventListener('change', syncQty);
+
+    /* Quantity limit: stock minus what is already in the basket; + dims at the limit */
+    var current = null, capVariant = false, inCart = {};
+    function syncQty() {
+      if (!qtyInput || !current) return;
+      var plus = $('[data-qty-step="1"]', rootEl), minus = $('[data-qty-step="-1"]', rootEl);
+      var left = capVariant ? Math.max(0, current.inventory_quantity - (inCart[current.id] || 0)) : Infinity;
+      if (left === Infinity) qtyInput.removeAttribute('max'); else qtyInput.max = Math.max(1, left);
+      var val = parseInt(qtyInput.value, 10) || 1;
+      if (val > left && left > 0) qtyInput.value = val = left;
+      if (val < 1) qtyInput.value = val = 1;
+      if (plus) { plus.disabled = val >= left; plus.title = plus.disabled ? (window.themeStrings || {}).maxInCart || '' : ''; }
+      if (minus) minus.disabled = val <= 1;
+      if (current.available) {
+        var full = capVariant && left <= 0;
+        addBtn.disabled = full;
+        addBtn.textContent = full ? ((window.themeStrings || {}).maxInCart || s.strSoldOut) : s.strAdd;
+      }
+    }
+    function loadCartCounts(cart) {
+      inCart = {};
+      (cart.items || []).forEach(function (i) { inCart[i.variant_id] = (inCart[i.variant_id] || 0) + i.quantity; });
+      syncQty();
+    }
+    Cart.get().then(loadCartCounts).catch(function () {});
+    document.addEventListener('cart:updated', function (e) { if (e.detail) loadCartCounts(e.detail); });
     rootEl.addEventListener('change', function (e) { if (e.target.closest('[data-option-index]')) update(); });
 
     form.addEventListener('submit', function (e) {
@@ -589,8 +641,10 @@
     form.addEventListener('click', function (e) {
       var step = e.target.closest('[data-qty-step]');
       if (!step) return;
+      if (step.disabled) return;
       var input = $('input', step.parentNode);
-      input.value = Math.max(0, (parseInt(input.value, 10) || 0) + parseInt(step.dataset.qtyStep, 10));
+      var max = input.max ? parseInt(input.max, 10) : Infinity;
+      input.value = Math.max(0, Math.min(max, (parseInt(input.value, 10) || 0) + parseInt(step.dataset.qtyStep, 10)));
       form.submit();
     });
     form.addEventListener('change', function (e) { if (e.target.matches('input[type="number"]')) form.submit(); });

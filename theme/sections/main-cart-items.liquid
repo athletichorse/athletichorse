@@ -37,10 +37,16 @@
                 <span class="ah-line__variant" style="color:var(--brand)">{{ discount.discount_application.title }} (−{%- render 'money', cents: discount.amount -%})</span>
               {%- endfor -%}
               <div class="ah-line__row">
+                {%- liquid
+                  assign line_max = nil
+                  if item.variant.inventory_management == 'shopify' and item.variant.inventory_policy == 'deny'
+                    assign line_max = item.variant.inventory_quantity | at_least: item.quantity
+                  endif
+                -%}
                 <div class="ah-qty ah-qty--sm">
                   <button type="button" data-qty-step="-1" aria-label="{{ 'sections.product.decrease' | t }}">−</button>
-                  <input type="number" name="updates[]" value="{{ item.quantity }}" min="0" aria-label="{{ 'sections.cart.quantity' | t }}">
-                  <button type="button" data-qty-step="1" aria-label="{{ 'sections.product.increase' | t }}">+</button>
+                  <input type="number" name="updates[]" value="{{ item.quantity }}" min="0"{% if line_max %} max="{{ line_max }}"{% endif %} aria-label="{{ 'sections.cart.quantity' | t }}">
+                  <button type="button" data-qty-step="1" aria-label="{{ 'sections.product.increase' | t }}"{% if line_max and item.quantity >= line_max %} disabled title="{{ 'sections.product.max_in_cart' | t }}"{% endif %}>+</button>
                 </div>
                 <span class="ah-line__price">
                   {%- if item.original_line_price != item.final_line_price -%}<s class="ah-price__was">{%- render 'money', cents: item.original_line_price -%}</s> {% endif -%}
