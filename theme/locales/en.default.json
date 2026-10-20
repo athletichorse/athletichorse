@@ -256,7 +256,8 @@
       "empty_coupon": "Please enter a discount code",
       "shipping_remaining": "You're [amount] away from free delivery",
       "shipping_done": "You've unlocked free delivery!",
-      "vat_included": "Includes VAT (15%)"
+      "vat_included": "Includes VAT (15%)",
+      "coupon_toggle": "Have a discount code?"
     },
     "404": {
       "heading": "Page not found",

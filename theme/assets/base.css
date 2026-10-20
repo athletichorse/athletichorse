@@ -1775,3 +1775,23 @@ html[dir="rtl"] .ah-zoom__arrow--prev svg { transform: none; }
 
 /* Search: loose matches below the exact ones */
 .ah-search__other { font-size: 20px; margin: 40px 0 16px; padding-top: 28px; border-top: 1px solid var(--line); }
+
+/* Cart drawer: smaller titles, discount code folded away, compact footer */
+.ah-cart-drawer .ah-line__title { font-size: 13px; font-weight: 500; line-height: 1.3; }
+.ah-cart-drawer .ah-line__variant { font-size: 12px; }
+.ah-cart-drawer__foot { gap: 8px; padding-top: 10px; }
+.ah-coupon-toggle > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+.ah-coupon-toggle > summary::-webkit-details-marker { display: none; }
+.ah-coupon-toggle[open] > summary { margin-bottom: 8px; }
+.ah-cart-drawer .ah-coupon .ah-input, .ah-cart-drawer .ah-coupon .ah-btn { min-height: 40px; }
+.ah-cart-drawer .ah-coupon__msg:empty { display: none; }
+.ah-cart-drawer .ah-totals { gap: 2px; }
+.ah-cart-drawer .ah-totals__row--total { padding-top: 6px; font-size: 16px; }
+.ah-cart-drawer .ah-totals__row--vat { font-size: 12px; margin-top: 0; }
+.ah-cart-drawer .ah-pay-note { font-size: 11.5px; margin: 0; }
+.ah-cart-drawer [data-checkout] { min-height: 50px; }
+.ah-cart-drawer__foot > .ah-link-arrow { font-size: 13px; }
+.ah-cart-drawer .ah-pay-note { display: none; }
+.ah-cart-drawer .ah-totals__row--total { border-top: 0; padding-top: 0; }
+.ah-cart-drawer .ah-coupon-toggle { padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.ah-cart-drawer .ah-line__title { font-size: 12.5px; }

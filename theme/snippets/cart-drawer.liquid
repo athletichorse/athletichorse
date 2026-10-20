@@ -24,12 +24,15 @@
   <div class="ah-ship" data-cart-ship hidden></div>
   <div class="ah-cart-drawer__body" data-cart-body></div>
   <div class="ah-cart-drawer__foot" data-cart-foot hidden>
-    <form class="ah-coupon" data-coupon>
-      <label class="visually-hidden" for="CartDrawerCoupon">{{ 'sections.cart.coupon_placeholder' | t }}</label>
-      <input id="CartDrawerCoupon" type="text" class="ah-input" placeholder="{{ 'sections.cart.coupon_placeholder' | t }}" autocomplete="off">
-      <button type="submit" class="ah-btn ah-btn--outline">{{ 'sections.cart.apply' | t }}</button>
-    </form>
-    <p class="ah-coupon__msg" data-coupon-msg></p>
+    <details class="ah-coupon-toggle">
+      <summary>{{ 'sections.cart.coupon_toggle' | t }}</summary>
+      <form class="ah-coupon" data-coupon>
+        <label class="visually-hidden" for="CartDrawerCoupon">{{ 'sections.cart.coupon_placeholder' | t }}</label>
+        <input id="CartDrawerCoupon" type="text" class="ah-input" placeholder="{{ 'sections.cart.coupon_placeholder' | t }}" autocomplete="off">
+        <button type="submit" class="ah-btn ah-btn--outline">{{ 'sections.cart.apply' | t }}</button>
+      </form>
+      <p class="ah-coupon__msg" data-coupon-msg></p>
+    </details>
     <div class="ah-totals" data-cart-totals></div>
     <p class="ah-pay-note">{{ 'sections.cart.taxes_note' | t }}</p>
     <a href="/checkout" class="ah-btn ah-btn--brand ah-btn--lg ah-btn--block" data-checkout>
