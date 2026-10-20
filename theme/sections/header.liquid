@@ -96,7 +96,7 @@
           {%- for language in localization.available_languages -%}
             {%- unless language.iso_code == localization.language.iso_code -%}
               <button type="submit" name="locale_code" value="{{ language.iso_code }}" lang="{{ language.iso_code }}" class="ah-lang__btn" aria-label="{{ 'general.header.language' | t }}: {{ language.endonym_name }}">
-                {%- if language.iso_code == 'ar' -%}العربية{%- else -%}{{ language.endonym_name | default: 'English' }}{%- endif -%}
+                {%- if language.iso_code == 'ar' -%}<span class="ah-lang__full">العربية</span><span class="ah-lang__short">ع</span>{%- else -%}<span class="ah-lang__full">English</span><span class="ah-lang__short">EN</span>{%- endif -%}
               </button>
             {%- endunless -%}
           {%- endfor -%}
@@ -136,46 +136,29 @@
     </button>
   </div>
 
-  <ul class="ah-drawer__depts" role="list">
-    <li><a href="{{ routes.root_url }}" class="ah-drawer__home">{%- render 'icon', name: 'home' -%}{{ 'general.header.home' | t }}</a></li>
+  <ul class="ah-mnav" role="list">
+    <li><a href="{{ routes.root_url }}" class="ah-mnav__link{% if template.name == 'index' %} is-active{% endif %}">{{ 'general.header.home' | t }}</a></li>
     {%- for link in main_menu.links -%}
-      {%- assign is_dept = false -%}
       {%- assign link_handle = '' -%}{%- if link.url contains '/collections/' -%}{%- assign link_handle = link.url | split: '?' | first | split: '/collections/' | last -%}{%- endif -%}
-      {%- if dept_handles contains link_handle -%}{%- assign is_dept = true -%}{%- endif -%}
-      {%- if is_dept -%}
-        <li><a href="{{ link.url }}"{% if link_handle == 'sale' %} class="is-sale"{% endif %}>{{ link.title }}</a></li>
-      {%- endif -%}
-    {%- endfor -%}
-    <li class="ah-drawer__allcats"><a href="{{ routes.collections_url }}">{%- render 'icon', name: 'all' -%}{{ 'general.header.all_categories' | t }}</a></li>
-  </ul>
-
-  <div class="ah-drawer__nav">
-    {%- for link in main_menu.links -%}
-      {%- assign is_dept = false -%}
-      {%- assign link_handle = '' -%}{%- if link.url contains '/collections/' -%}{%- assign link_handle = link.url | split: '?' | first | split: '/collections/' | last -%}{%- endif -%}
-      {%- if dept_handles contains link_handle -%}{%- assign is_dept = true -%}{%- endif -%}
-      {%- if is_dept and link.links.size == 0 -%}{%- continue -%}{%- endif -%}
       {%- if link.links.size > 0 -%}
-        <div class="drawer-group ah-drawer__group" data-accordion-group>
-          <div class="drawer-group__row">
-            <a href="{{ link.url }}" class="drawer-group__title-link">{{ link.title }}</a>
-            <button type="button" class="drawer-group__chevron-btn" data-accordion-toggle aria-expanded="false" aria-label="{{ link.title }}">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="drawer-group__chevron"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+        <li class="ah-mnav__group" data-accordion-group>
+          <div class="ah-mnav__row">
+            <a href="{{ link.url }}" class="ah-mnav__link{% if link.active or link.child_active %} is-active{% endif %}">{{ link.title }}</a>
+            <button type="button" class="ah-mnav__toggle" data-accordion-toggle aria-expanded="false" aria-label="{{ link.title }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
             </button>
           </div>
-          <ul class="drawer-group__children" role="list">
+          <ul class="ah-mnav__sub" role="list">
             {%- for child in link.links -%}
               <li><a href="{{ child.url }}">{{ child.title }}</a></li>
             {%- endfor -%}
           </ul>
-        </div>
+        </li>
       {%- else -%}
-        <div class="drawer-group drawer-group--flat ah-drawer__group">
-          <a href="{{ link.url }}" class="drawer-group__title-link">{{ link.title }}</a>
-        </div>
+        <li><a href="{{ link.url }}" class="ah-mnav__link{% if link_handle == 'sale' %} is-sale{% endif %}{% if link.active %} is-active{% endif %}">{{ link.title }}</a></li>
       {%- endif -%}
     {%- endfor -%}
-  </div>
+  </ul>
 
   <div class="ah-drawer__foot">
     <a href="{{ routes.account_url }}" class="ah-drawer__account">

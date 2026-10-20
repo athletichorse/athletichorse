@@ -319,8 +319,11 @@
 </div>
 
 <div class="ah-modal ah-modal--zoom" data-zoom-modal role="dialog" aria-modal="true" aria-label="{{ 'sections.product.zoom' | t }}">
-  <button type="button" class="ah-icon-btn ah-modal__close" aria-label="{{ 'general.header.close' | t }}">{%- render 'icon', name: 'close' -%}</button>
-  <img alt="{{ product.title | escape }}" width="2000" height="2000">
+  <button type="button" class="ah-icon-btn ah-modal__close" data-zoom-close aria-label="{{ 'general.header.close' | t }}">{%- render 'icon', name: 'close' -%}</button>
+  <div class="ah-zoom__track" data-zoom-track></div>
+  <button type="button" class="ah-zoom__arrow ah-zoom__arrow--prev" data-zoom-prev aria-label="{{ 'sections.product.prev_image' | t }}">{%- render 'icon', name: 'arrow' -%}</button>
+  <button type="button" class="ah-zoom__arrow ah-zoom__arrow--next" data-zoom-next aria-label="{{ 'sections.product.next_image' | t }}">{%- render 'icon', name: 'arrow' -%}</button>
+  <span class="ah-zoom__count" data-zoom-count aria-live="polite"></span>
 </div>
 
 {%- if has_size -%}

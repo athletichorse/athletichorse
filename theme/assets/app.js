@@ -470,7 +470,9 @@
       goToMedia: function (id) {
         for (var n = 0; n < slides.length; n++) if (slides[n].dataset.mediaId === String(id)) { goTo(n); return; }
       },
-      currentImg: function () { return slides[index] ? $('img', slides[index]) : null; }
+      currentImg: function () { return slides[index] ? $('img', slides[index]) : null; },
+      index: function () { return index; },
+      goTo: function (i) { goTo(i, true); }
     };
   }
 
@@ -629,18 +631,52 @@
       });
     }
 
-    // Zoom: opens the image on the current slide
+    // Zoom: full-screen viewer of every product image, opened on the current slide; swipe or arrows to move
     var zoom = $('[data-zoom-modal]');
     if (zoom && gallery) {
-      var openZoom = function () {
-        var img = gallery.currentImg();
-        if (!img) return;
-        $('img', zoom).src = img.dataset.zoom || img.currentSrc || img.src;
-        zoom.classList.add('is-open'); lockScroll(true);
+      var zTrack = $('[data-zoom-track]', zoom), zCount = $('[data-zoom-count]', zoom);
+      var zImgs = $$('[data-slide] img', rootEl), zIndex = 0, zBuilt = false;
+      var zWidth = function () { return zTrack.clientWidth || 1; };
+      var zSync = function () {
+        zIndex = Math.max(0, Math.min(zImgs.length - 1, Math.round(Math.abs(zTrack.scrollLeft) / zWidth())));
+        zCount.textContent = (zIndex + 1) + ' / ' + zImgs.length;
       };
+      var zGo = function (i, instant) {
+        i = (i + zImgs.length) % zImgs.length;
+        zTrack.scrollTo({ left: (isRTL ? -1 : 1) * i * zWidth(), behavior: instant ? 'auto' : 'smooth' });
+        zIndex = i; zCount.textContent = (i + 1) + ' / ' + zImgs.length;
+      };
+      var openZoom = function () {
+        if (!zBuilt) {
+          zImgs.forEach(function (img) {
+            var slide = document.createElement('div'); slide.className = 'ah-zoom__slide';
+            var big = document.createElement('img');
+            big.src = img.dataset.zoom || img.currentSrc || img.src; big.alt = img.alt || ''; big.loading = 'lazy'; big.decoding = 'async';
+            slide.appendChild(big); zTrack.appendChild(slide);
+          });
+          zBuilt = true;
+        }
+        zoom.classList.toggle('is-single', zImgs.length < 2);
+        zoom.classList.add('is-open'); lockScroll(true);
+        requestAnimationFrame(function () { zGo(gallery.index(), true); });
+      };
+      var closeZoom = function () {
+        zoom.classList.remove('is-open'); lockScroll(false);
+        gallery.goTo(zIndex);
+      };
+      var zRaf = 0;
+      zTrack.addEventListener('scroll', function () { cancelAnimationFrame(zRaf); zRaf = requestAnimationFrame(zSync); }, { passive: true });
       $$('[data-slide] img', rootEl).forEach(function (i) { i.addEventListener('click', openZoom); });
       $$('[data-zoom-open]', rootEl).forEach(function (b) { b.addEventListener('click', openZoom); });
-      zoom.addEventListener('click', function () { zoom.classList.remove('is-open'); lockScroll(false); });
+      $('[data-zoom-close]', zoom).addEventListener('click', closeZoom);
+      $('[data-zoom-prev]', zoom).addEventListener('click', function () { zGo(zIndex - 1); });
+      $('[data-zoom-next]', zoom).addEventListener('click', function () { zGo(zIndex + 1); });
+      document.addEventListener('keydown', function (e) {
+        if (!zoom.classList.contains('is-open')) return;
+        if (e.key === 'Escape') closeZoom();
+        if (e.key === 'ArrowRight') zGo(zIndex + (isRTL ? -1 : 1));
+        if (e.key === 'ArrowLeft') zGo(zIndex + (isRTL ? 1 : -1));
+      });
     }
 
     update();
