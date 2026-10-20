@@ -1,49 +1,77 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
 <title>طلبك {{ name }} خرج للتوصيل 📦</title>
-<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  body { margin:0; padding:0; background:#F4F6F5; }
+  body { margin:0; padding:0; background:#EDF1EE; -webkit-text-size-adjust:100%; }
   a { color:#14532D; }
-  @media (max-width: 620px) { .ah-card { border-radius:0 !important; } .ah-pad { padding:24px 20px !important; } }
+  @media (max-width: 620px) {
+    .ah-pad { padding:28px 22px !important; }
+    .ah-col { display:block !important; width:100% !important; padding:0 0 12px 0 !important; }
+    .ah-h1 { font-size:24px !important; }
+  }
+  @media (prefers-color-scheme: dark) {
+    .ah-bg { background:#0B110D !important; }
+    .ah-card, .ah-card-td { background:#141C17 !important; }
+    .ah-ink { color:#EEF3EF !important; }
+    .ah-text { color:#C9D3CC !important; }
+    .ah-muted { color:#9AA8A0 !important; }
+    .ah-tint { background:#1B2620 !important; }
+    .ah-box { border-color:#2A3730 !important; }
+    .ah-accent { color:#B6F23A !important; }
+    .ah-foot { background:#101712 !important; border-color:#2A3730 !important; }
+    .ah-card-td td { border-color:#2A3730 !important; }
+    .ah-off { background:#2A3730 !important; }
+    .ah-dot-off { background:#141C17 !important; border-color:#2A3730 !important; color:#6F7D75 !important; }
+  }
+  [data-ogsc] .ah-ink { color:#EEF3EF !important; }
+  [data-ogsc] .ah-text { color:#C9D3CC !important; }
+  [data-ogsc] .ah-muted { color:#9AA8A0 !important; }
+  [data-ogsc] .ah-accent { color:#B6F23A !important; }
+  [data-ogsb] .ah-card-td { background:#141C17 !important; }
+  [data-ogsb] .ah-tint { background:#1B2620 !important; }
 </style>
 </head>
-<body dir="rtl" style="margin:0;padding:0;background:#F4F6F5">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F5"><tr><td align="center" style="padding:24px 8px">
-<table role="presentation" class="ah-card" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:18px;overflow:hidden">
-  <tr><td style="background:#ffffff;padding:22px 28px;text-align:center">
-    <a href="{{ shop.url }}"><img src="https://cdn.shopify.com/s/files/1/0847/8952/6778/files/alhisan-alriyadi-logo-transparent.png?v=1783950120" alt="{{ shop.name }}" width="190" style="width:190px;max-width:70%;height:auto;border:0"></a>
+<body dir="rtl" class="ah-bg" style="margin:0;padding:0;background:#EDF1EE">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ah-bg" style="background:#EDF1EE"><tr><td align="center" style="padding:28px 10px">
+<table role="presentation" class="ah-card" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#FFFFFF;border-radius:24px;overflow:hidden;font-family:'Readex Pro',Tahoma,Arial,sans-serif">
+  <tr><td bgcolor="#14532D" style="background:#14532D;background-image:linear-gradient(135deg,#14532D 0%,#0F3D22 100%);padding:30px 28px 26px;text-align:center">
+    <a href="{{ shop.url }}" style="text-decoration:none"><img src="https://cdn.shopify.com/s/files/1/0847/8952/6778/files/alhisan-alriyadi-logo-white.png?v=1792476034" alt="{{ shop.name }}" width="200" style="display:inline-block;width:200px;max-width:70%;height:auto;border:0"></a>
+    <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:18px auto 0"><tr><td style="width:44px;height:4px;line-height:4px;border-radius:4px;background:#B6F23A">&nbsp;</td></tr></table>
   </td></tr>
-  <tr><td style="height:5px;line-height:5px;background:#14532D">&nbsp;</td></tr>
-  <tr><td style="height:3px;line-height:3px;background:#B6F23A">&nbsp;</td></tr>
-  <tr><td class="ah-pad" style="padding:32px 36px;text-align:right;font-family:'Readex Pro', Tahoma, Arial, sans-serif;color:#0B0F0C">
-<p style="margin:0 0 6px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#14532D">الطلب {{ order_name | default: name }}</p><h1 style="margin:0 0 12px;font-size:26px;line-height:1.25;font-weight:700;color:#0B0F0C">يصلك اليوم!</h1><p style="margin:0;font-size:15px;line-height:1.7;color:#2B332E">طلبك خرج للتوصيل. يرجى تجهيز المبلغ — تدفع عند وصول طلبك.</p>{% if fulfillment.tracking_numbers.size > 0 %}<p style="margin:16px 0 0;font-size:14px;color:#5B6660">{% if fulfillment.tracking_company %}شركة الشحن: <strong style="color:#0B0F0C">{{ fulfillment.tracking_company }}</strong><br>{% endif %}رقم التتبع: <strong dir="ltr" style="color:#0B0F0C">{{ fulfillment.tracking_numbers.first }}</strong></p>{% endif %}{% if fulfillment.tracking_url %}<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 8px"><tr><td style="border-radius:999px;background:#14532D">
-<a href="{{ fulfillment.tracking_url }}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:999px">تتبّع شحنتك</a></td></tr></table>{% endif %}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;border-top:1px solid #E6EAE7">
+  <tr><td class="ah-pad ah-card-td" style="padding:38px 40px 34px;background:#FFFFFF;text-align:right;color:#101814">
+<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto 14px"><tr><td class="ah-tint ah-accent" style="padding:6px 14px;border-radius:999px;background:#F2F7F3;font-size:12.5px;font-weight:700;color:#14532D;letter-spacing:.03em">الطلب <span dir="ltr">{{ order_name | default: name }}</span></td></tr></table><table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto 18px"><tr><td style="width:64px;height:64px;border-radius:50%;background:#B6F23A;text-align:center;font-size:30px;line-height:64px">📦</td></tr></table><h1 class="ah-ink ah-h1" style="margin:0 0 10px;font-size:28px;line-height:1.25;font-weight:700;color:#101814;text-align:center">يصلك اليوم!</h1><p class="ah-text" style="margin:0 auto;max-width:460px;font-size:15.5px;line-height:1.7;color:#3B4640;text-align:center">طلبك خرج للتوصيل. يرجى تجهيز المبلغ عند وصول طلبك.</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:26px 0 4px"><tr><td width="25%" valign="top" style="text-align:center;padding:0 2px"><div class="" style="height:4px;line-height:4px;border-radius:4px;background:#14532D;margin-bottom:10px">&nbsp;</div><span class="" style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;background:#14532D;color:#FFFFFF;border:2px solid #14532D;font-size:12px;font-weight:700">✓</span><span class="ah-ink" style="display:block;margin-top:6px;font-size:12px;font-weight:500;color:#101814">تم التأكيد</span></td><td width="25%" valign="top" style="text-align:center;padding:0 2px"><div class="" style="height:4px;line-height:4px;border-radius:4px;background:#14532D;margin-bottom:10px">&nbsp;</div><span class="" style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;background:#14532D;color:#FFFFFF;border:2px solid #14532D;font-size:12px;font-weight:700">✓</span><span class="ah-ink" style="display:block;margin-top:6px;font-size:12px;font-weight:500;color:#101814">تم الشحن</span></td><td width="25%" valign="top" style="text-align:center;padding:0 2px"><div class="" style="height:4px;line-height:4px;border-radius:4px;background:#14532D;margin-bottom:10px">&nbsp;</div><span class="" style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;background:#14532D;color:#FFFFFF;border:2px solid #14532D;font-size:12px;font-weight:700">3</span><span class="ah-ink" style="display:block;margin-top:6px;font-size:12px;font-weight:700;color:#101814">في الطريق</span></td><td width="25%" valign="top" style="text-align:center;padding:0 2px"><div class="ah-off" style="height:4px;line-height:4px;border-radius:4px;background:#E3E9E5;margin-bottom:10px">&nbsp;</div><span class="ah-dot-off" style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;background:#FFFFFF;color:#A9B5AE;border:2px solid #E3E9E5;font-size:12px;font-weight:700">4</span><span class="ah-muted" style="display:block;margin-top:6px;font-size:12px;font-weight:500;color:#6B7770">تم التوصيل</span></td></tr></table>{% if fulfillment.tracking_numbers.size > 0 %}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ah-box" style="margin-top:22px;border:1px solid #E3E9E5;border-radius:16px"><tr><td style="padding:14px 18px;text-align:right;font-size:14px">{% if fulfillment.tracking_company %}<span class="ah-muted" style="color:#6B7770">شركة الشحن</span> <strong class="ah-ink" style="color:#101814">{{ fulfillment.tracking_company }}</strong><br>{% endif %}<span class="ah-muted" style="color:#6B7770">رقم التتبع</span> <strong class="ah-ink" dir="ltr" style="color:#101814">{{ fulfillment.tracking_numbers.first }}</strong></td></tr></table>{% endif %}{% if fulfillment.tracking_url %}<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:28px auto 4px"><tr><td class="ah-btn" style="border-radius:12px;background:#FFFFFF;border:2px solid #14532D">
+<a href="{{ fulfillment.tracking_url }}" style="display:inline-block;padding:15px 34px;font-size:15px;font-weight:700;color:#14532D;text-decoration:none;border-radius:12px">تتبّع شحنتك</a></td></tr></table>{% endif %}<p class="ah-muted" style="margin:32px 0 12px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6B7770">منتجاتك</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0">
 {% for line in fulfillment.fulfillment_line_items %}
 <tr>
-  <td width="72" style="padding:14px 0;border-bottom:1px solid #E6EAE7;vertical-align:top">{% if line.line_item.image %}<img src="{{ line.line_item.image | img_url: 'compact_cropped' }}" width="60" height="60" alt="" style="display:block;border-radius:10px;background:#F3F8EE;object-fit:contain">{% endif %}</td>
-  <td style="padding:14px 12px;border-bottom:1px solid #E6EAE7;vertical-align:top;font-family:'Readex Pro', Tahoma, Arial, sans-serif;font-size:14px;color:#0B0F0C;text-align:right">
-    <strong style="font-weight:600">{{ line.line_item.title }}</strong>{% if line.line_item.variant.title != blank and line.line_item.variant.title != 'Default Title' %}<br><span style="color:#5B6660;font-size:13px">{{ line.line_item.variant.title }}</span>{% endif %}
-    <br><span style="color:#5B6660;font-size:13px">الكمية: {{ line.quantity }}</span>
+  <td width="76" style="padding:12px 0;vertical-align:middle{% unless forloop.last %};border-bottom:1px solid #E3E9E5{% endunless %}">{% if line.line_item.image %}<img src="{{ line.line_item.image | img_url: '160x160' }}" width="64" height="64" alt="" style="display:block;width:64px;height:64px;border-radius:14px;background:#F2F7F3;object-fit:contain;border:1px solid #E3E9E5">{% endif %}</td>
+  <td style="padding:12px 14px;vertical-align:middle;text-align:right{% unless forloop.last %};border-bottom:1px solid #E3E9E5{% endunless %}">
+    <span class="ah-ink" style="display:block;font-size:15px;font-weight:700;color:#101814;line-height:1.35">{{ line.line_item.title }}</span>
+    {% if line.line_item.variant.title != blank and line.line_item.variant.title != 'Default Title' %}<span class="ah-muted" style="display:block;font-size:13px;color:#6B7770;margin-top:2px">{{ line.line_item.variant.title }}</span>{% endif %}
+    <span style="display:inline-block;margin-top:6px;padding:2px 10px;border-radius:999px;background:#F2F7F3;font-size:12px;font-weight:700;color:#14532D">الكمية {{ line.quantity }}</span>
   </td>
   
 </tr>
 {% endfor %}
 </table>
   </td></tr>
-  <tr><td style="padding:22px 28px;background:#F3F8EE;text-align:center;font-family:'Readex Pro', Tahoma, Arial, sans-serif">
-    <p style="margin:0 0 10px;font-size:14px;color:#0B0F0C">لديك سؤال؟ نرد بسرعة عبر واتساب.</p>
-    <a href="https://wa.me/966573873497" style="display:inline-block;padding:10px 20px;border-radius:999px;background:#1FA855;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none">تواصل عبر واتساب</a>
+  <tr><td class="ah-card-td" style="padding:0 40px 30px;background:#FFFFFF">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="ah-tint" style="background:#F2F7F3;border-radius:18px"><tr><td style="padding:22px 24px;text-align:center">
+      <p class="ah-ink" style="margin:0;font-size:17px;font-weight:700;color:#101814">تحتاج مساعدة؟</p>
+      <p class="ah-muted" style="margin:4px 0 14px;font-size:14px;color:#6B7770">فريقنا يرد بسرعة عبر واتساب يومياً.</p>
+      <a href="https://wa.me/966573873497" style="display:inline-block;padding:12px 24px;border-radius:12px;background:#1FA855;color:#FFFFFF;font-size:14px;font-weight:700;text-decoration:none">تواصل عبر واتساب</a>
+    </td></tr></table>
   </td></tr>
-  <tr><td style="padding:22px 28px 26px;text-align:center;font-family:'Readex Pro', Tahoma, Arial, sans-serif">
-    <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#0B0F0C">تابعنا</p>
-    <a href="https://www.snapchat.com/@athletic_horse" style="display:inline-block;margin:0 4px 8px;padding:8px 14px;border-radius:999px;background:#FFFC00;color:#111111;border:1px solid #E6EAE7;font-size:13px;font-weight:700;text-decoration:none">Snapchat</a><a href="https://www.tiktok.com/@athletic_horse" style="display:inline-block;margin:0 4px 8px;padding:8px 14px;border-radius:999px;background:#111111;color:#FFFFFF;border:1px solid #E6EAE7;font-size:13px;font-weight:700;text-decoration:none">TikTok</a><a href="https://www.instagram.com/athletic_horseksa" style="display:inline-block;margin:0 4px 8px;padding:8px 14px;border-radius:999px;background:#FFFFFF;color:#0B0F0C;border:1px solid #E6EAE7;font-size:13px;font-weight:700;text-decoration:none">Instagram</a><a href="https://wa.me/966573873497" style="display:inline-block;margin:0 4px 8px;padding:8px 14px;border-radius:999px;background:#FFFFFF;color:#0B0F0C;border:1px solid #E6EAE7;font-size:13px;font-weight:700;text-decoration:none">WhatsApp</a>
-    <p style="margin:14px 0 4px;font-size:12px;color:#5B6660">إرجاع سهل خلال 3 أيام من الاستلام.</p>
-    <p style="margin:0 0 4px;font-size:12px;color:#5B6660">شركة الحصان الرياضي · س.ت 7053046608 · الرقم الضريبي 314498395700003</p>
-    <p style="margin:0;font-size:12px;color:#5B6660">البغدادية الشرقية، جدة، المملكة العربية السعودية · <a href="{{ shop.url }}" style="color:#14532D">{{ shop.url | remove: 'https://' }}</a></p>
+  <tr><td class="ah-foot" style="padding:22px 28px 28px;background:#F7F9F8;text-align:center;border-top:1px solid #E3E9E5">
+    <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto 14px"><tr><td align="center" style="padding:0 6px;font-size:12px;font-weight:700;color:#14532D" class="ah-accent">✓ إرجاع خلال 3 أيام</td><td align="center" style="padding:0 6px;font-size:12px;font-weight:700;color:#14532D" class="ah-accent">✓ الدفع عند الاستلام</td><td align="center" style="padding:0 6px;font-size:12px;font-weight:700;color:#14532D" class="ah-accent">✓ توصيل لكل المملكة</td></tr></table>
+    <p style="margin:0 0 12px;font-size:13px"><a href="https://www.snapchat.com/@athletic_horse" style="color:#14532D;font-weight:700;text-decoration:none" class="ah-accent">Snapchat</a> &nbsp;·&nbsp; <a href="https://www.tiktok.com/@athletic_horse" style="color:#14532D;font-weight:700;text-decoration:none" class="ah-accent">TikTok</a> &nbsp;·&nbsp; <a href="https://www.instagram.com/athletic_horseksa" style="color:#14532D;font-weight:700;text-decoration:none" class="ah-accent">Instagram</a> &nbsp;·&nbsp; <a href="https://www.facebook.com/share/1BPrXjSdpZ/" style="color:#14532D;font-weight:700;text-decoration:none" class="ah-accent">Facebook</a></p>
+    <p class="ah-muted" style="margin:0 0 4px;font-size:11.5px;color:#6B7770">شركة الحصان الرياضي · س.ت 7053046608 · الرقم الضريبي 314498395700003</p>
+    <p class="ah-muted" style="margin:0;font-size:11.5px;color:#6B7770">البغدادية الشرقية، جدة، المملكة العربية السعودية · <a href="{{ shop.url }}" style="color:#6B7770">{{ shop.url | remove: 'https://' }}</a></p>
   </td></tr>
 </table>
 </td></tr></table>
