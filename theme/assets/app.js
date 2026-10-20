@@ -361,6 +361,16 @@
       document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal.classList.contains('is-open')) close(); });
     }
     function close() { modal.classList.remove('is-open'); lockScroll(false); if (lastBtn) lastBtn.focus(); }
+    /* Colour options show a dot of the real colour (same names as snippets/swatch-color.liquid), else the variant photo */
+    var SWATCHES = {"black": "#111111", "أسود": "#111111", "white": "#ffffff", "أبيض": "#ffffff", "gray": "#9a9a9a", "grey": "#9a9a9a", "رمادي": "#9a9a9a", "dark gray": "#3f3f3f", "dark grey": "#3f3f3f", "charcoal": "#3f3f3f", "رمادي غامق": "#3f3f3f", "رمادي داكن": "#3f3f3f", "navy": "#1c2b4a", "navy blue": "#1c2b4a", "كحلي": "#1c2b4a", "أزرق كحلي": "#1c2b4a", "dark blue": "#1f3f8f", "أزرق غامق": "#1f3f8f", "أزرق داكن": "#1f3f8f", "off white": "#f3efe6", "أوف وايت": "#f3efe6", "أبيض مطفي": "#f3efe6", "light pink": "#f6c1d2", "وردي فاتح": "#f6c1d2", "bronze": "#a86b32", "برونزي": "#a86b32", "black grey": "linear-gradient(135deg, #111 50%, #9a9a9a 50%)", "black gray": "linear-gradient(135deg, #111 50%, #9a9a9a 50%)", "أسود رمادي": "linear-gradient(135deg, #111 50%, #9a9a9a 50%)", "baby blue & black": "linear-gradient(135deg, #7fb8e6 50%, #111 50%)", "أزرق فاتح وأسود": "linear-gradient(135deg, #7fb8e6 50%, #111 50%)", "red blur": "radial-gradient(circle, #e0403b 30%, #f39a96 100%)", "أحمر مموه": "radial-gradient(circle, #e0403b 30%, #f39a96 100%)", "blue": "#2f6fd1", "أزرق": "#2f6fd1", "light blue": "#7fb8e6", "sky blue": "#7fb8e6", "baby blue": "#7fb8e6", "أزرق فاتح": "#7fb8e6", "أزرق سماوي": "#7fb8e6", "أزرق بيبي": "#7fb8e6", "red": "#c0392b", "أحمر": "#c0392b", "burgundy": "#6d1b2f", "maroon": "#6d1b2f", "wine": "#6d1b2f", "عنابي": "#6d1b2f", "خمري": "#6d1b2f", "orange": "#e07b28", "برتقالي": "#e07b28", "yellow": "#f0c419", "أصفر": "#f0c419", "green": "#2f7d3c", "أخضر": "#2f7d3c", "olive green": "#6b7a3a", "olive": "#6b7a3a", "زيتوني": "#6b7a3a", "pink": "#e78bb0", "وردي": "#e78bb0", "زهري": "#e78bb0", "fuchsia": "#c2185b", "فوشيا": "#c2185b", "mint": "#8fd4b8", "mint green": "#8fd4b8", "نعناعي": "#8fd4b8", "purple": "#7c4fa0", "بنفسجي": "#7c4fa0", "rose gold": "#b76e79", "ذهبي وردي": "#b76e79", "brown": "#7a4b2a", "بني": "#7a4b2a", "beige": "#e3d6bd", "بيج": "#e3d6bd", "gold": "#c9a94a", "ذهبي": "#c9a94a", "silver": "#c4c4c4", "فضي": "#c4c4c4", "multicolor": "linear-gradient(135deg, #e0403b 0%, #f0c419 33%, #2f6fd1 66%, #2f7d3c 100%)", "multi": "linear-gradient(135deg, #e0403b 0%, #f0c419 33%, #2f6fd1 66%, #2f7d3c 100%)", "multi color": "linear-gradient(135deg, #e0403b 0%, #f0c419 33%, #2f6fd1 66%, #2f7d3c 100%)", "متعدد الألوان": "linear-gradient(135deg, #e0403b 0%, #f0c419 33%, #2f6fd1 66%, #2f7d3c 100%)", "ملون": "linear-gradient(135deg, #e0403b 0%, #f0c419 33%, #2f6fd1 66%, #2f7d3c 100%)"};
+    function isColor(name) { return /colou?r|لون/i.test(name || ''); }
+    function swatchDot(p, i, val) {
+      var bg = SWATCHES[String(val).toLowerCase().trim()];
+      if (bg) return '<span class="ah-chip-opt__dot" style="background:' + bg + '"></span>';
+      var v = p.variants.filter(function (x) { return x['option' + (i + 1)] === val && x.featured_image; })[0];
+      if (v) return '<span class="ah-chip-opt__dot" style="background-image:url(' + v.featured_image.src + (v.featured_image.src.indexOf('?') < 0 ? '?' : '&') + 'width=60)"></span>';
+      return '';
+    }
     function render(p, url) {
       var body = $('[data-qv-body]', modal);
       var opts = p.options.map(function (o) { return (o && o.name) || o; });
@@ -374,7 +384,7 @@
       body.innerHTML = '<div class="ah-qv__head"><div class="ah-qv__media">' + img + '</div><div><h2 class="ah-qv__title">' + escapeHtml(p.title) + '</h2><div class="ah-price" data-qv-price></div></div></div>' +
         opts.map(function (name, i) {
           return '<fieldset class="ah-qv__opt"><legend>' + escapeHtml(name) + '</legend><div class="ah-qv__chips">' +
-            values[i].map(function (val) { return '<button type="button" class="ah-chip-opt" data-i="' + i + '" data-v="' + escapeHtml(val) + '">' + escapeHtml(val) + '</button>'; }).join('') + '</div></fieldset>';
+            values[i].map(function (val) { return '<button type="button" class="ah-chip-opt" data-i="' + i + '" data-v="' + escapeHtml(val) + '">' + (isColor(name) ? swatchDot(p, i, val) : '') + escapeHtml(val) + '</button>'; }).join('') + '</div></fieldset>';
         }).join('') +
         '<button type="button" class="ah-btn ah-btn--block" data-qv-add></button><a class="ah-qv__link" href="' + url + '">' + escapeHtml(str.details) + '</a>';
       var add = $('[data-qv-add]', body);

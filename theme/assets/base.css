@@ -1757,3 +1757,8 @@ html[dir="rtl"] .ah-zoom__arrow--prev svg { transform: none; }
 /* Every photo circle on one light grey, white product backgrounds blend into it (mask keeps the circle clip on iOS) */
 .ah-sports__icon--photo, .ah-sports__icon--photo[class*="ah-tint-"] { background: #F1F3F2; }
 .ah-sports__icon--photo img { mix-blend-mode: multiply; }
+
+/* Quick view colour chips: a dot of the colour before the name */
+.ah-chip-opt { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.ah-chip-opt__dot { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; background-size: cover; background-position: center; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 15%); }
+.ah-chip-opt.is-selected .ah-chip-opt__dot { box-shadow: 0 0 0 2px #fff; }
