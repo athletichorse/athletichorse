@@ -23,7 +23,9 @@
       "sports": "Sports",
       "all_categories": "All categories",
       "mega_promo": "Build your home gym",
-      "home": "Home"
+      "home": "Home",
+      "about": "About us",
+      "contact": "Contact us"
     },
     "breadcrumb": {
       "home": "Home",
@@ -51,7 +53,7 @@
       "success": "You're in! Thanks for subscribing."
     },
     "search": {
-      "placeholder": "Search football, goggles, dumbbells…",
+      "placeholder": "Search for a product",
       "results_title": "Search results",
       "results_for": "Results for “{{ terms }}”",
       "no_results": "No results for “{{ terms }}”. Try a different word or browse the categories below.",

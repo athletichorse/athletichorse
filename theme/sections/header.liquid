@@ -16,8 +16,15 @@
     <nav class="ah-nav" aria-label="{{ 'general.header.primary_nav' | t }}">
       <ul class="ah-nav__list" role="list">
         <li class="ah-nav__item"><a href="{{ routes.root_url }}" class="ah-nav__link ah-nav__link--home{% if template.name == 'index' %} is-active{% endif %}">{%- render 'icon', name: 'home' -%}<span>{{ 'general.header.home' | t }}</span></a></li>
-        {%- comment -%} Departments first (Sale / Men / Women / Kids), in menu order {%- endcomment -%}
+        {%- comment -%} Shop All and All categories side by side, then departments (Sale / Men / Women / Kids) in menu order {%- endcomment -%}
         {%- for link in main_menu.links -%}
+          {%- if link.url contains '/collections/all-products-newest' or link.url == '/collections/all' -%}
+            <li class="ah-nav__item"><a href="{{ link.url }}" class="ah-nav__link{% if link.active %} is-active{% endif %}">{{ link.title }}</a></li>
+          {%- endif -%}
+        {%- endfor -%}
+        <li class="ah-nav__item"><a href="{{ routes.collections_url }}" class="ah-nav__link{% if template.name == 'list-collections' %} is-active{% endif %}">{{ 'general.header.all_categories' | t }}</a></li>
+        {%- for link in main_menu.links -%}
+          {%- if link.url contains '/collections/all-products-newest' or link.url == '/collections/all' -%}{%- continue -%}{%- endif -%}
           {%- assign is_dept = false -%}
           {%- assign link_handle = '' -%}{%- if link.url contains '/collections/' -%}{%- assign link_handle = link.url | split: '?' | first | split: '/collections/' | last -%}{%- endif -%}
           {%- if dept_handles contains link_handle -%}{%- assign is_dept = true -%}{%- endif -%}
@@ -77,7 +84,8 @@
             </div>
           </div>
         </li>
-        <li class="ah-nav__item"><a href="{{ routes.collections_url }}" class="ah-nav__link{% if template.name == 'list-collections' %} is-active{% endif %}">{{ 'general.header.all_categories' | t }}</a></li>
+        <li class="ah-nav__item"><a href="{{ pages['about-us'].url | default: '/pages/about-us' }}" class="ah-nav__link{% if page.handle == 'about-us' %} is-active{% endif %}">{{ 'general.header.about' | t }}</a></li>
+        <li class="ah-nav__item"><a href="{{ pages.contact.url | default: '/pages/contact' }}" class="ah-nav__link{% if page.handle == 'contact' %} is-active{% endif %}">{{ 'general.header.contact' | t }}</a></li>
       </ul>
     </nav>
 
@@ -85,7 +93,7 @@
       <form action="{{ routes.search_url }}" method="get" role="search" class="ah-search ah-search--desktop">
         <input type="hidden" name="type" value="product">
         <label class="visually-hidden" for="HeaderSearchDesktop">{{ 'general.header.search' | t }}</label>
-        <input id="HeaderSearchDesktop" type="search" name="q" class="ah-search__input" placeholder="{{ 'general.search.placeholder' | t }}" value="{{ search.terms | escape }}" autocomplete="off">
+        <input id="HeaderSearchDesktop" type="search" name="q" class="ah-search__input" placeholder="{{ 'general.search.placeholder' | t }}" value="{{ search.terms | split: ' OR ' | first | escape }}" autocomplete="off">
         <button type="submit" class="ah-search__btn" aria-label="{{ 'general.header.search' | t }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-3.5-3.5"/></svg>
         </button>
@@ -118,7 +126,7 @@
       <form action="{{ routes.search_url }}" method="get" role="search" class="ah-search">
         <input type="hidden" name="type" value="product">
         <label class="visually-hidden" for="HeaderSearchMobile">{{ 'general.header.search' | t }}</label>
-        <input id="HeaderSearchMobile" type="search" name="q" class="ah-search__input" placeholder="{{ 'general.search.placeholder' | t }}" value="{{ search.terms | escape }}" autocomplete="off">
+        <input id="HeaderSearchMobile" type="search" name="q" class="ah-search__input" placeholder="{{ 'general.search.placeholder' | t }}" value="{{ search.terms | split: ' OR ' | first | escape }}" autocomplete="off">
         <button type="submit" class="ah-search__btn" aria-label="{{ 'general.header.search' | t }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-3.5-3.5"/></svg>
         </button>

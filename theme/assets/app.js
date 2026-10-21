@@ -84,6 +84,36 @@
   }
 
   /* ---------- Rails (horizontal product carousels) ---------- */
+
+  /* ---------- Search synonyms ----------
+     Shopify search only finds the exact word typed, so common alternatives are added as "word OR synonym"
+     (the results page shows only the typed words and treats either alternative as an exact match). */
+  /* Arabic: Shopify search ignores OR, so a common spelling is swapped for the one used in product names.
+     English: the alternative is added as "word OR synonym" (the results page shows only the typed words). */
+  var SEARCH_REPLACE = [
+    ['شنطة', 'حقيبة'], ['شنطه', 'حقيبة'], ['شنط', 'حقائب'], ['حقيبه', 'حقيبة'], ['جزمة', 'حذاء'], ['جزمه', 'حذاء'],
+    ['كوره', 'كرة'], ['نظاره', 'نظارة'], ['سباحه', 'سباحة'], ['مايو', 'مايوه'],
+    ['دمبلز', 'دمبل'], ['ميداليه', 'ميدالية'], ['كفوف', 'قفازات'], ['جوانتي', 'قفازات'], ['شراب', 'جوارب']
+  ];
+  var SEARCH_SYNONYMS = [['swimsuit', 'swimwear'], ['swimwear', 'swimsuit'], ['bag', 'backpack'], ['tshirt', 't-shirt'], ['sneakers', 'shoes'], ['ball', 'balls']];
+  function wordRe(w) { return new RegExp('(^|\\s)' + w + '(?=\\s|$)', 'i'); }
+  function initSearchSynonyms() {
+    $$('form[action*="/search"]').forEach(function (form) {
+      form.addEventListener('submit', function () {
+        var input = form.querySelector('input[name="q"]');
+        if (!input) return;
+        var q = input.value.trim();
+        if (!q || / OR /.test(q)) return;
+        SEARCH_REPLACE.forEach(function (pair) { q = q.replace(wordRe(pair[0]), '$1' + pair[1]); });
+        var alts = [];
+        if (!/[\u0600-\u06FF]/.test(q)) {
+          SEARCH_SYNONYMS.forEach(function (pair) { var re = wordRe(pair[0]); if (re.test(q)) alts.push(q.replace(re, '$1' + pair[1])); });
+        }
+        input.value = [q].concat(alts).join(' OR ');
+      });
+    });
+  }
+
   function initRails() { $$('[data-rail]').forEach(initRail); }
   function initRail(rail) {
     var scope = rail.closest('section') || rail;
@@ -1049,6 +1079,7 @@
     initDrawer();
     initAnnouncement();
     initRails();
+    initSearchSynonyms();
     initCartDrawer();
     initQuickAdd();
     initCardHover();

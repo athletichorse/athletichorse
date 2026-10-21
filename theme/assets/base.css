@@ -1798,3 +1798,14 @@ html[dir="rtl"] .ah-zoom__arrow--prev svg { transform: none; }
 
 /* Policies: the policy text starts with its own <h1> that repeats the page title */
 .shopify-policy__body .rte > h1:first-child, .shopify-policy__body > h1:first-child, .shopify-policy__body .rte > div > h1:first-child { display: none; }
+
+/* Desktop header: the logo never shrinks; menu tightens a little on 990–1439px screens to fit About / Contact */
+@media (min-width: 990px) {
+  .ah-header__logo { flex-shrink: 0; min-width: 150px; }
+  .ah-header__logo img { max-width: none; width: auto; height: 36px; }
+}
+@media (min-width: 990px) and (max-width: 1439px) {
+  .ah-header__bar { gap: 14px; }
+  .ah-nav__link { padding-inline: 7px; font-size: 13.5px; }
+  .ah-nav__link--home span { display: none; }
+}
