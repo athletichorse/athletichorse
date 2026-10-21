@@ -40,7 +40,11 @@ Skip drafts and archived products. Never touch theme files and never publish a t
    - Write natural Modern Standard Arabic suited to a Saudi sports store.
    - Keep brand names and numbers. Keep the HTML structure of `body_html`.
    - `meta_title` format: `<الاسم المختصر> | الحصان الرياضي`.
-   - Variant option values do not need translating.
+   - Option names and values must also be in Arabic. They show on product pages, in the cart, at checkout and in emails.
+     - For each product, read `translatableResource` for its `ProductOption` and `ProductOptionValue` IDs (`product.options{id optionValues{id}}`).
+     - Register the `ar` `name` from the dictionary at `tools/option_dictionary.json`.
+     - Leave pure size codes and numbers as they are (`XL`, `2XL`, `42`).
+     - If a value is not in the dictionary, translate it into natural Arabic and add it to the report.
 5. **Option naming.**
    - Option names: `Size`, `Color`, `Weight`, `Length`.
    - Size values: `Small`, `Medium`, `Large`, `XL`, `2XL`, …, not `S/M/L` or `M`.

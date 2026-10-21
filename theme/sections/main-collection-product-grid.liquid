@@ -77,6 +77,7 @@
           {%- for option in collection.sort_options -%}
             <option value="{{ option.value }}" {% if option.value == current_sort %}selected{% endif %}>
               {%- case option.value -%}
+                {%- when 'relevance' -%}{{ 'sections.main_collection.sort_relevance' | t }}
                 {%- when 'manual' -%}{{ 'sections.main_collection.sort_featured' | t }}
                 {%- when 'best-selling' -%}{{ 'sections.main_collection.sort_best_selling' | t }}
                 {%- when 'title-ascending' -%}{{ 'sections.main_collection.sort_title_asc' | t }}

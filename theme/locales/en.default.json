@@ -40,7 +40,8 @@
       "rights": "All rights reserved.",
       "cr": "CR No.",
       "vat": "VAT No.",
-      "payment": "Payment methods"
+      "payment": "Payment methods",
+      "store_address": "Al Boghdadiyah Al Sharqiyah, Jeddah 22235, Saudi Arabia"
     },
     "newsletter": {
       "heading": "Get exclusive offers",
@@ -164,7 +165,8 @@
       "show_results": "Show results",
       "clear_all": "Clear all",
       "no_products": "No products found",
-      "empty_state_text": "Try removing a filter or browse our other categories."
+      "empty_state_text": "Try removing a filter or browse our other categories.",
+      "sort_relevance": "Most relevant"
     },
     "product": {
       "add_to_cart": "Add to cart",

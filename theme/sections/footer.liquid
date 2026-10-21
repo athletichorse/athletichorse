@@ -50,7 +50,7 @@
             <li>{%- render 'icon', name: 'mail' -%}<a href="mailto:{{ settings.store_email }}">{{ settings.store_email }}</a></li>
           {%- endif -%}
           {%- if settings.store_address != blank -%}
-            <li>{%- render 'icon', name: 'pin' -%}<span>{{ settings.store_address }}</span></li>
+            <li>{%- render 'icon', name: 'pin' -%}<span>{% if request.locale.iso_code == 'ar' %}{{ 'general.footer.store_address' | t }}{% else %}{{ settings.store_address }}{% endif %}</span></li>
           {%- endif -%}
           {%- if settings.store_hours != blank -%}
             <li>{%- render 'icon', name: 'clock' -%}<span>{{ settings.store_hours }}</span></li>
@@ -61,7 +61,7 @@
 
     <div class="ah-footer__bottom">
       <div class="ah-footer__legal">
-        <span>&copy; {{ 'now' | date: '%Y' }} {{ shop.name }}. {{ 'general.footer.rights' | t }}</span>
+        <span>&copy; {{ 'now' | date: '%Y' }} {% if request.locale.iso_code == 'ar' %}الحصان الرياضي{% else %}{{ shop.name }}{% endif %}. {{ 'general.footer.rights' | t }}</span>
         {%- if settings.legal_name != blank -%}<span lang="ar">{{ settings.legal_name }}</span>{%- endif -%}
         {%- if settings.cr_number != blank -%}<span>{{ 'general.footer.cr' | t }}: {{ settings.cr_number }}</span>{%- endif -%}
         {%- if settings.vat_number != blank -%}<span>{{ 'general.footer.vat' | t }}: {{ settings.vat_number }}</span>{%- endif -%}

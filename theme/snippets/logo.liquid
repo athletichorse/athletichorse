@@ -1,5 +1,11 @@
 {%- comment -%} Site logo. Accepts: css_class (optional) {%- endcomment -%}
-<a href="{{ routes.root_url }}" class="logo{% if css_class %} {{ css_class }}{% endif %}" aria-label="{{ shop.name }}">
+{%- liquid
+  assign logo_name = shop.name
+  if request.locale.iso_code == 'ar'
+    assign logo_name = 'الحصان الرياضي'
+  endif
+-%}
+<a href="{{ routes.root_url }}" class="logo{% if css_class %} {{ css_class }}{% endif %}" aria-label="{{ logo_name }}">
   {%- if settings.logo != blank -%}
     {%- assign logo_w = settings.logo_width | default: 180 -%}
     {%- assign logo_h = logo_w | divided_by: settings.logo.aspect_ratio | round -%}
@@ -9,10 +15,10 @@
       height: logo_h,
       widths: '200,300,400,500',
       sizes: '200px',
-      alt: shop.name,
+      alt: logo_name,
       loading: 'eager'
     }}
   {%- else -%}
-    {{ shop.name }}
+    {{ logo_name }}
   {%- endif -%}
 </a>
