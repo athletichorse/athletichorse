@@ -42,7 +42,7 @@ PRIMARY = [
     ('camping-equipment', r'tent|camping'),
     ('treadmills', r'treadmill'),
     ('exercise-bikes', r'exercise bike|spin bike|stationary bike'),
-    ('football-equipment', r'football|soccer|shin guard|goal(keeper)?\b|goal net|rebounder|rebound wall|training (cone|marker|ladder|pole|vest|rings|plate|hoop)|\bcones?\b|agility|jump hurdle|training ladder|ball bag|ball pump|foot pump|sports training vest'),
+    ('football-equipment', r'football|soccer|shin guard|goal(keeper)?\b|goal net|rebounder|rebound wall|(?<!weighted )training (cone|marker|ladder|pole|vest|rings|plate|hoop)|\bcones?\b|agility|jump hurdle|training ladder|ball bag|ball pump|foot pump|sports training vest'),
     ('resistance-band', r'resistance|power band|power tube|thera ?band|stretch band|toning tube|hip band|exercise band|elastic band|trx force|loop band'),
     ('yoga-equipment', r'yoga|pilates|foam roller|yoga block'),
     ('weights-and-bars', r'dumbbell|weight bar|\bbar 1[28]0|olympic|hex bar|curl.*bar|weight plate|weight bag|kettlebell|ankle.*weight|wrist weights|weighted|medicine ball|sandbag|barbell|weight training bench'),
