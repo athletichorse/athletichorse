@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="{{ request.locale.iso_code }}" dir="{% if request.locale.iso_code == 'ar' %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="{{ settings.color_accent }}">
+  <link rel="canonical" href="{{ canonical_url }}">
+
+  {%- liquid
+    assign shop_name_ar = 'الحصان الرياضي'
+    assign is_ar = false
+    if request.locale.iso_code == 'ar'
+      assign is_ar = true
+    endif
+
+    assign meta_description = page_description
+    if meta_description == blank and template.name == 'index'
+      assign meta_description = 'general.meta.home_description' | t
+    endif
+    if meta_description == blank
+      assign meta_description = shop.description
+    endif
+
+    assign share_image = page_image
+    if share_image == blank
+      assign share_image = settings.share_image | default: settings.logo
+    endif
+  -%}
+
+  <title>
+    {%- if template.name == 'index' -%}
+      {{ 'general.meta.home_title' | t }}
+    {%- else -%}
+      {{ page_title }}
+      {%- if current_tags %} &ndash; {{ current_tags | join: ', ' }}{% endif -%}
+      {%- if current_page != 1 %} &ndash; {{ 'general.pagination.page' | t: number: current_page }}{% endif -%}
+      {%- unless page_title contains shop.name or page_title contains shop_name_ar %} | {% if request.locale.iso_code == 'ar' %}{{ shop_name_ar }}{% else %}{{ shop.name }}{% endif %}{% endunless -%}
+    {%- endif -%}
+  </title>
+  {%- if template.name == 'search' %}
+  <meta name="robots" content="noindex, follow">
+  {%- endif %}
+  {%- if meta_description != blank -%}
+    <meta name="description" content="{{ meta_description | strip_html | escape | truncate: 160 }}">
+  {%- endif -%}
+
+  {%- comment -%}
+    hreflang tags are intentionally NOT emitted here: Shopify's native
+    localization/Markets feature already injects them via
+    {{ content_for_header }} below.
+  {%- endcomment -%}
+
+  <meta property="og:site_name" content="{% if request.locale.iso_code == 'ar' %}{{ shop_name_ar }}{% else %}{{ shop.name }}{% endif %}">
+  <meta property="og:type" content="{% if template contains 'product' %}product{% else %}website{% endif %}">
+  <meta property="og:title" content="{{ page_title | escape }}">
+  {%- if meta_description != blank -%}<meta property="og:description" content="{{ meta_description | strip_html | escape | truncate: 200 }}">{%- endif -%}
+  <meta property="og:url" content="{{ canonical_url }}">
+  {%- if share_image != blank -%}
+    <meta property="og:image" content="https:{{ share_image | image_url: width: 1200 }}">
+    <meta property="og:image:secure_url" content="https:{{ share_image | image_url: width: 1200 }}">
+    <meta name="twitter:image" content="https:{{ share_image | image_url: width: 1200 }}">
+  {%- endif -%}
+  {%- if template contains 'product' -%}
+    <meta property="product:price:amount" content="{{ product.price | money_without_currency | strip_html }}">
+    <meta property="product:price:currency" content="{{ cart.currency.iso_code }}">
+  {%- endif -%}
+  <meta property="og:locale" content="{% if is_ar %}ar_SA{% else %}en_US{% endif %}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ page_title | escape }}">
+  {%- if meta_description != blank -%}<meta name="twitter:description" content="{{ meta_description | strip_html | escape | truncate: 200 }}">{%- endif -%}
+
+  {%- if settings.favicon != blank -%}
+    <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 32, height: 32 }}">
+    <link rel="apple-touch-icon" href="{{ settings.favicon | image_url: width: 180, height: 180 }}">
+  {%- endif -%}
+
+  {%- comment -%} Self-hosted Quicksand (Latin) + IBM Plex Sans Arabic: same origin, no third-party round trips. {%- endcomment -%}
+  {%- if is_ar -%}
+    {{ 'plex-arabic-400.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
+  {%- endif -%}
+  {{ 'quicksand-latin.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
+
+  <style>
+    @font-face {
+      font-family: "Plex Arabic";
+      src: url("{{ 'plex-arabic-400.woff2' | asset_url }}") format("woff2");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC7, U+10EC9-10EEE, U+10EF0-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+    }
+    @font-face {
+      font-family: "Plex Arabic";
+      src: url("{{ 'plex-arabic-500.woff2' | asset_url }}") format("woff2");
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC7, U+10EC9-10EEE, U+10EF0-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+    }
+    @font-face {
+      font-family: "Plex Arabic";
+      src: url("{{ 'plex-arabic-600.woff2' | asset_url }}") format("woff2");
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+      unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC7, U+10EC9-10EEE, U+10EF0-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1;
+    }
+    @font-face {
+      font-family: "Quicksand";
+      src: url("{{ 'quicksand-latin.woff2' | asset_url }}") format("woff2");
+      font-weight: 300 700;
+      font-style: normal;
+      font-display: swap;
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+
+    :root {
+      --color-background: {{ settings.color_background }};
+      --color-background-alt: {{ settings.color_background_alt }};
+      --color-ink: {{ settings.color_ink }};
+      --color-ink-soft: {{ settings.color_ink_soft }};
+      --color-border: {{ settings.color_border }};
+      --color-accent: {{ settings.color_accent }};
+      --color-accent-dark: {{ settings.color_accent_dark }};
+      --color-accent-soft: {{ settings.color_accent_soft }};
+      --color-highlight: {{ settings.color_highlight | default: '#B6F23A' }};
+      --color-sale: {{ settings.color_sale | default: '#D61F45' }};
+      --color-dark: {{ settings.color_dark | default: '#0B0F0C' }};
+      /* Quicksand for Latin text; Arabic characters fall through to IBM Plex Sans Arabic */
+      --font-display: "Quicksand", "Plex Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
+      --font-body: "Quicksand", "Plex Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
+      --font-ar: "Quicksand", "Plex Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
+      --container-max: {{ settings.page_width }}px;
+    }
+  </style>
+
+  {{ 'base.css' | asset_url | stylesheet_tag: preload: true }}
+
+  {%- if template.name == 'index' -%}
+    {%- capture search_url_template -%}{{ request.origin }}{{ routes.search_url }}?q={search_term_string}{%- endcapture -%}
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": {{ shop.name | json }},
+        "url": {{ request.origin | append: routes.root_url | json }},
+        "inLanguage": {{ request.locale.iso_code | json }},
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": {{ search_url_template | json }}
+          },
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
+  {%- endif -%}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "OnlineStore",
+      "name": {{ shop.name | json }},
+      "alternateName": {{ shop_name_ar | json }},
+      "url": {{ request.origin | append: routes.root_url | json }},
+      "logo": {% if settings.logo %}{{ settings.logo | image_url: width: 600 | prepend: 'https:' | json }}{% else %}null{% endif %},
+      {%- if settings.store_email != blank %}"email": {{ settings.store_email | json }},{% endif %}
+      {%- if settings.store_phone != blank %}"telephone": {{ settings.store_phone | json }},{% endif %}
+      {%- if settings.legal_name != blank %}"legalName": {{ settings.legal_name | json }},{% endif %}
+      {%- if settings.cr_number != blank %}"identifier": { "@type": "PropertyValue", "propertyID": "CR", "value": {{ settings.cr_number | json }} },{% endif %}
+      {%- if settings.vat_number != blank %}"vatID": {{ settings.vat_number | json }},{% endif %}
+      "areaServed": { "@type": "Country", "name": "Saudi Arabia" },
+      "currenciesAccepted": "SAR",
+      "sameAs": [
+        {%- liquid
+          assign printed_link = false
+        -%}
+        {%- if settings.social_instagram_link != blank -%}{{ settings.social_instagram_link | json }}{% assign printed_link = true %}{%- endif -%}
+        {%- if settings.social_facebook_link != blank -%}{% if printed_link %},{% endif %}{{ settings.social_facebook_link | json }}{% assign printed_link = true %}{%- endif -%}
+        {%- if settings.social_x_link != blank -%}{% if printed_link %},{% endif %}{{ settings.social_x_link | json }}{% assign printed_link = true %}{%- endif -%}
+        {%- if settings.social_tiktok_link != blank -%}{% if printed_link %},{% endif %}{{ settings.social_tiktok_link | json }}{% assign printed_link = true %}{%- endif -%}
+        {%- if settings.social_snapchat_link != blank -%}{% if printed_link %},{% endif %}{{ settings.social_snapchat_link | json }}{% assign printed_link = true %}{%- endif -%}
+      ]
+    }
+  </script>
+
+  {{ content_for_header }}
+
+  {%- capture riyal_svg -%}{%- render 'riyal' -%}{%- endcapture -%}
+  <script>window.themeMoneyFormat = {{ shop.money_format | json }}; window.themeRiyal = {{ riyal_svg | strip | json }}; window.themeStrings = { add: {{ 'sections.product.add_to_cart' | t | json }}, soldOut: {{ 'sections.product.sold_out' | t | json }}, unavailable: {{ 'sections.product.unavailable' | t | json }}, details: {{ 'sections.product.view_details' | t | json }}, close: {{ 'general.header.close' | t | json }}, maxInCart: {{ 'sections.product.max_in_cart' | t | json }} };</script>
+  <script src="{{ 'app.js' | asset_url }}" defer></script>
+</head>
+<body class="template-{{ template.name | handleize }}{% if template.suffix %} template-{{ template.name | handleize }}--{{ template.suffix | handleize }}{% endif %}">
+  <a href="#main" class="skip-link">{{ 'general.a11y.skip_to_content' | t }}</a>
+
+  {% section 'announcement-bar' %}
+  {% section 'header' %}
+  {%- render 'cart-drawer' -%}
+
+  <main id="main" tabindex="-1">
+    {{ content_for_layout }}
+  </main>
+
+  {%- if request.page_type == 'policy' -%}
+    <script type="application/json" data-policy-config>
+      {
+        "toc": {{ 'general.policy.contents' | t | json }},
+        "navLabel": {{ 'general.policy.nav_label' | t | json }},
+        "links": [
+          {%- for p in shop.policies -%}
+            { "title": {{ p.title | json }}, "url": {{ p.url | json }} }{% unless forloop.last %},{% endunless %}
+          {%- endfor -%}
+        ],
+        "help": {
+          "title": {{ 'general.policy.help_title' | t | json }},
+          "text": {{ 'general.policy.help_text' | t | json }},
+          "cta": {{ 'general.policy.help_cta' | t | json }},
+          "url": {% if settings.social_whatsapp_number != blank %}{{ 'https://wa.me/' | append: settings.social_whatsapp_number | json }}{% else %}{{ '/pages/contact' | json }}{% endif %}
+        }
+      }
+    </script>
+  {%- endif -%}
+
+  {% section 'newsletter' %}
+  {% section 'footer' %}
+
+  {%- if settings.show_whatsapp_button and settings.social_whatsapp_number != blank -%}
+    <a class="wa-float" href="https://wa.me/{{ settings.social_whatsapp_number }}" target="_blank" rel="noopener noreferrer" aria-label="{{ 'general.whatsapp.label' | t }}">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M16.04 3C8.86 3 3.03 8.83 3.03 16c0 2.29.6 4.53 1.74 6.5L3 29l6.68-1.75A12.97 12.97 0 0 0 16.04 29C23.2 29 29 23.17 29 16S23.2 3 16.04 3Zm0 23.62c-2.02 0-4-.54-5.72-1.57l-.41-.24-3.96 1.04 1.06-3.86-.27-.4A10.6 10.6 0 0 1 5.4 16c0-5.86 4.77-10.63 10.64-10.63 5.86 0 10.62 4.77 10.62 10.63 0 5.86-4.76 10.62-10.62 10.62Zm5.83-7.95c-.32-.16-1.89-.93-2.18-1.04-.3-.1-.5-.16-.72.16-.21.32-.82 1.04-1 1.25-.19.21-.37.24-.69.08-.32-.16-1.35-.5-2.57-1.59-.95-.85-1.59-1.9-1.78-2.21-.18-.32-.02-.5.14-.65.15-.15.32-.37.48-.56.16-.18.21-.32.32-.53.1-.21.05-.4-.03-.56-.08-.16-.72-1.73-.98-2.37-.26-.62-.52-.54-.72-.55h-.61c-.21 0-.56.08-.85.4-.29.32-1.12 1.09-1.12 2.66 0 1.57 1.14 3.09 1.3 3.3.16.21 2.25 3.43 5.45 4.81.76.33 1.35.52 1.82.67.76.24 1.46.21 2 .13.61-.09 1.89-.77 2.15-1.52.27-.74.27-1.38.19-1.52-.08-.13-.29-.21-.61-.37Z"/></svg>
+    </a>
+  {%- endif -%}
+</body>
+</html>

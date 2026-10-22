@@ -1,0 +1,68 @@
+<section class="ah-section{% if section.settings.dark %} ah-section--dark{% endif %}">
+  <div class="container">
+    {%- if section.settings.heading != blank -%}
+      <div class="ah-section__head">
+        <div>
+          <h2 class="ah-section__title">{{ section.settings.heading }}</h2>
+          {%- if section.settings.text != blank -%}<p class="ah-section__desc">{{ section.settings.text }}</p>{%- endif -%}
+        </div>
+      </div>
+    {%- endif -%}
+    <div class="ah-editorial{% if section.blocks.size == 2 %} ah-editorial--2{% endif %}">
+      {%- for block in section.blocks -%}
+        {%- liquid
+          assign coll = block.settings.collection
+          assign link = block.settings.link | default: coll.url | default: routes.all_products_collection_url
+          assign title = block.settings.title | default: coll.title
+          assign promo_image = block.settings.image | default: coll.image
+          if forloop.first
+            assign sizes = '(min-width: 750px) 55vw, 100vw'
+          else
+            assign sizes = '(min-width: 750px) 45vw, 100vw'
+          endif
+        -%}
+        <a href="{{ link }}" class="ah-promo" {{ block.shopify_attributes }}>
+          {%- if promo_image -%}
+            {{ promo_image | image_url: width: 1400 | image_tag: loading: 'lazy', widths: '500,800,1100,1400', sizes: sizes, alt: title }}
+          {%- endif -%}
+          <span class="ah-promo__body">
+            {%- if block.settings.eyebrow != blank -%}<span class="ah-eyebrow ah-eyebrow--light">{{ block.settings.eyebrow }}</span>{%- endif -%}
+            <span class="ah-promo__title">{{ title }}</span>
+            {%- if block.settings.text != blank -%}<span class="ah-promo__text">{{ block.settings.text }}</span>{%- endif -%}
+            <span class="ah-btn ah-btn--highlight">{% if block.settings.cta != blank %}{{ block.settings.cta }}{% else %}{{ 'sections.featured_collection.shop_now' | t }}{% endif %}</span>
+          </span>
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Editorial grid",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading" },
+    { "type": "text", "id": "text", "label": "Subheading" },
+    { "type": "checkbox", "id": "dark", "label": "Dark background", "default": false }
+  ],
+  "blocks": [
+    {
+      "type": "promo",
+      "name": "Promo tile",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "collection", "id": "collection", "label": "Collection" },
+        { "type": "url", "id": "link", "label": "Link", "info": "Overrides the collection link." },
+        { "type": "text", "id": "eyebrow", "label": "Eyebrow" },
+        { "type": "text", "id": "title", "label": "Title", "info": "Leave blank to use the collection title." },
+        { "type": "text", "id": "text", "label": "Text" },
+        { "type": "text", "id": "cta", "label": "Button label" }
+      ]
+    }
+  ],
+  "max_blocks": 3,
+  "presets": [
+    { "name": "Editorial grid", "blocks": [{ "type": "promo" }, { "type": "promo" }, { "type": "promo" }] }
+  ]
+}
+{% endschema %}

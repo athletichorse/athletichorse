@@ -1,0 +1,206 @@
+{%- liquid
+  assign main_menu = linklists[section.settings.menu]
+  assign dept_handles = 'all-products-newest,all,sale,men,women,kids' | split: ','
+-%}
+
+<div class="drawer-overlay" data-overlay></div>
+
+<header class="ah-header" data-ah-header>
+  <div class="container ah-header__bar">
+    <button class="ah-icon-btn ah-header__menu" data-drawer-open aria-expanded="false" aria-label="{{ 'general.header.menu' | t }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h10"/></svg>
+    </button>
+
+    {%- render 'logo', css_class: 'ah-header__logo' -%}
+
+    <nav class="ah-nav" aria-label="{{ 'general.header.primary_nav' | t }}">
+      <ul class="ah-nav__list" role="list">
+        <li class="ah-nav__item"><a href="{{ routes.root_url }}" class="ah-nav__link ah-nav__link--home{% if template.name == 'index' %} is-active{% endif %}">{%- render 'icon', name: 'home' -%}<span>{{ 'general.header.home' | t }}</span></a></li>
+        {%- comment -%} Shop All and All categories side by side, then departments (Sale / Men / Women / Kids) in menu order {%- endcomment -%}
+        {%- for link in main_menu.links -%}
+          {%- if link.url contains '/collections/all-products-newest' or link.url == '/collections/all' -%}
+            <li class="ah-nav__item"><a href="{{ link.url }}" class="ah-nav__link{% if link.active %} is-active{% endif %}">{{ link.title }}</a></li>
+          {%- endif -%}
+        {%- endfor -%}
+        <li class="ah-nav__item"><a href="{{ routes.collections_url }}" class="ah-nav__link{% if template.name == 'list-collections' %} is-active{% endif %}">{{ 'general.header.all_categories' | t }}</a></li>
+        {%- for link in main_menu.links -%}
+          {%- if link.url contains '/collections/all-products-newest' or link.url == '/collections/all' -%}{%- continue -%}{%- endif -%}
+          {%- assign is_dept = false -%}
+          {%- assign link_handle = '' -%}{%- if link.url contains '/collections/' -%}{%- assign link_handle = link.url | split: '?' | first | split: '/collections/' | last -%}{%- endif -%}
+          {%- if dept_handles contains link_handle -%}{%- assign is_dept = true -%}{%- endif -%}
+          {%- if is_dept -%}
+            <li class="ah-nav__item{% if link.links.size > 0 %} ah-nav__item--has-menu{% endif %}">
+              <a href="{{ link.url }}" class="ah-nav__link{% if link_handle == 'sale' %} ah-nav__link--sale{% endif %}{% if link.active or link.child_active %} is-active{% endif %}">{{ link.title }}</a>
+              {%- if link.links.size > 0 -%}
+                <div class="ah-dropdown">
+                  <ul role="list">
+                    {%- for child in link.links -%}
+                      <li><a href="{{ child.url }}">{{ child.title }}</a></li>
+                    {%- endfor -%}
+                  </ul>
+                </div>
+              {%- endif -%}
+            </li>
+          {%- endif -%}
+        {%- endfor -%}
+
+        {%- comment -%} Every other menu item with children becomes a column in the "Sports" mega menu {%- endcomment -%}
+        <li class="ah-nav__item ah-nav__item--has-menu ah-nav__item--mega">
+          <a href="{{ routes.collections_url }}" class="ah-nav__link" aria-haspopup="true">
+            {{ 'general.header.sports' | t }}
+            <svg class="ah-nav__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+          </a>
+          <div class="ah-mega">
+            <div class="container ah-mega__inner">
+              <div class="ah-mega__cols">
+                {%- for link in main_menu.links -%}
+                  {%- assign is_dept = false -%}
+                  {%- assign link_handle = '' -%}{%- if link.url contains '/collections/' -%}{%- assign link_handle = link.url | split: '?' | first | split: '/collections/' | last -%}{%- endif -%}
+                  {%- if dept_handles contains link_handle -%}{%- assign is_dept = true -%}{%- endif -%}
+                  {%- unless is_dept or link.links.size == 0 or link.url contains '/policies' -%}
+                    <div class="ah-mega__col">
+                      <a href="{{ link.url }}" class="ah-mega__title">{{ link.title }}</a>
+                      <ul role="list">
+                        {%- for child in link.links -%}
+                          <li><a href="{{ child.url }}">{{ child.title }}</a></li>
+                        {%- endfor -%}
+                      </ul>
+                    </div>
+                  {%- endunless -%}
+                {%- endfor -%}
+              </div>
+              {%- if section.settings.mega_image != blank -%}
+                <a href="{{ section.settings.mega_link | default: routes.collections_url }}" class="ah-mega__promo">
+                  {{ section.settings.mega_image | image_url: width: 640 | image_tag: loading: 'lazy', widths: '320,480,640', sizes: '320px', alt: '' }}
+                  <span class="ah-mega__promo-text">
+                    <strong>{% if section.settings.mega_heading != blank %}{{ section.settings.mega_heading }}{% else %}{{ 'general.header.mega_promo' | t }}{% endif %}</strong>
+                    <span class="ah-link-arrow">{{ 'sections.featured_collection.shop_now' | t }}</span>
+                  </span>
+                </a>
+              {%- endif -%}
+            </div>
+            <div class="container ah-mega__foot">
+              <a href="{{ routes.collections_url }}" class="ah-link-arrow">{{ 'general.header.all_categories' | t }}</a>
+            </div>
+          </div>
+        </li>
+        <li class="ah-nav__item"><a href="{{ pages['about-us'].url | default: '/pages/about-us' }}" class="ah-nav__link{% if page.handle == 'about-us' %} is-active{% endif %}">{{ 'general.header.about' | t }}</a></li>
+        <li class="ah-nav__item"><a href="{{ pages.contact.url | default: '/pages/contact' }}" class="ah-nav__link{% if page.handle == 'contact' %} is-active{% endif %}">{{ 'general.header.contact' | t }}</a></li>
+      </ul>
+    </nav>
+
+    <div class="ah-header__actions">
+      <form action="{{ routes.search_url }}" method="get" role="search" class="ah-search ah-search--desktop">
+        <input type="hidden" name="type" value="product">
+        <label class="visually-hidden" for="HeaderSearchDesktop">{{ 'general.header.search' | t }}</label>
+        <input id="HeaderSearchDesktop" type="search" name="q" class="ah-search__input" placeholder="{{ 'general.search.placeholder' | t }}" value="{{ search.terms | split: ' OR ' | first | escape }}" autocomplete="off">
+        <button type="submit" class="ah-search__btn" aria-label="{{ 'general.header.search' | t }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-3.5-3.5"/></svg>
+        </button>
+      </form>
+
+      {%- if localization.available_languages.size > 1 -%}
+        {%- form 'localization', id: 'lang-form-desktop', class: 'ah-lang' -%}
+          {%- for language in localization.available_languages -%}
+            {%- unless language.iso_code == localization.language.iso_code -%}
+              <button type="submit" name="locale_code" value="{{ language.iso_code }}" lang="{{ language.iso_code }}" class="ah-lang__btn" aria-label="{{ 'general.header.language' | t }}: {{ language.endonym_name }}">
+                {%- if language.iso_code == 'ar' -%}<span class="ah-lang__full">العربية</span><span class="ah-lang__short">ع</span>{%- else -%}<span class="ah-lang__full">English</span><span class="ah-lang__short">EN</span>{%- endif -%}
+              </button>
+            {%- endunless -%}
+          {%- endfor -%}
+        {%- endform -%}
+      {%- endif -%}
+
+      <a href="{{ routes.account_url }}" class="ah-icon-btn ah-header__account" aria-label="{{ 'general.header.account' | t }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path stroke-linecap="round" d="M4 21c1.4-4 4.6-6 8-6s6.6 2 8 6"/></svg>
+      </a>
+      <a href="{{ routes.cart_url }}" class="ah-icon-btn ah-header__cart" aria-label="{{ 'general.header.cart' | t }}" data-cart-drawer-open>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14l-1.2 11.1a2 2 0 0 1-2 1.9H8.2a2 2 0 0 1-2-1.9L5 8Z"/><path stroke-linecap="round" d="M9 8V7a3 3 0 0 1 6 0v1"/></svg>
+        <span class="cart-count"{% if cart.item_count == 0 %} style="display:none"{% endif %}>{{ cart.item_count }}</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="ah-header__mobile-search">
+    <div class="container">
+      <form action="{{ routes.search_url }}" method="get" role="search" class="ah-search">
+        <input type="hidden" name="type" value="product">
+        <label class="visually-hidden" for="HeaderSearchMobile">{{ 'general.header.search' | t }}</label>
+        <input id="HeaderSearchMobile" type="search" name="q" class="ah-search__input" placeholder="{{ 'general.search.placeholder' | t }}" value="{{ search.terms | split: ' OR ' | first | escape }}" autocomplete="off">
+        <button type="submit" class="ah-search__btn" aria-label="{{ 'general.header.search' | t }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-3.5-3.5"/></svg>
+        </button>
+      </form>
+    </div>
+  </div>
+</header>
+
+<!-- Mobile drawer -->
+<nav class="mobile-drawer ah-drawer" aria-label="{{ 'general.header.menu' | t }}">
+  <div class="ah-drawer__head">
+    {%- render 'logo', css_class: 'ah-drawer__logo' -%}
+    <button class="ah-icon-btn" data-drawer-close aria-label="{{ 'general.header.close_menu' | t }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <ul class="ah-mnav" role="list">
+    <li><a href="{{ routes.root_url }}" class="ah-mnav__link{% if template.name == 'index' %} is-active{% endif %}">{{ 'general.header.home' | t }}</a></li>
+    {%- for link in main_menu.links -%}
+      {%- assign link_handle = '' -%}{%- if link.url contains '/collections/' -%}{%- assign link_handle = link.url | split: '?' | first | split: '/collections/' | last -%}{%- endif -%}
+      {%- if link.links.size > 0 -%}
+        <li class="ah-mnav__group" data-accordion-group>
+          <div class="ah-mnav__row">
+            <a href="{{ link.url }}" class="ah-mnav__link{% if link.active or link.child_active %} is-active{% endif %}">{{ link.title }}</a>
+            <button type="button" class="ah-mnav__toggle" data-accordion-toggle aria-expanded="false" aria-label="{{ link.title }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+            </button>
+          </div>
+          <ul class="ah-mnav__sub" role="list">
+            {%- for child in link.links -%}
+              <li><a href="{{ child.url }}">{{ child.title }}</a></li>
+            {%- endfor -%}
+          </ul>
+        </li>
+      {%- else -%}
+        <li><a href="{{ link.url }}" class="ah-mnav__link{% if link_handle == 'sale' %} is-sale{% endif %}{% if link.active %} is-active{% endif %}">{{ link.title }}</a></li>
+      {%- endif -%}
+    {%- endfor -%}
+  </ul>
+
+  <div class="ah-drawer__foot">
+    <a href="{{ routes.account_url }}" class="ah-drawer__account">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="20" height="20"><circle cx="12" cy="8" r="4"/><path stroke-linecap="round" d="M4 21c1.4-4 4.6-6 8-6s6.6 2 8 6"/></svg>
+      {{ 'general.header.account' | t }}
+    </a>
+    {%- if localization.available_languages.size > 1 -%}
+      {%- form 'localization', id: 'lang-form-mobile', class: 'lang-toggle lang-toggle--drawer ah-drawer__lang' -%}
+        {%- for language in localization.available_languages -%}
+          <button type="submit" name="locale_code" value="{{ language.iso_code }}" lang="{{ language.iso_code }}" aria-pressed="{% if language.iso_code == localization.language.iso_code %}true{% else %}false{% endif %}">
+            {%- if language.iso_code == 'ar' -%}العربية{%- else -%}English{%- endif -%}
+          </button>
+        {%- endfor -%}
+      {%- endform -%}
+    {%- endif -%}
+    {%- render 'social-links', class: 'social-row social-row--drawer' -%}
+  </div>
+</nav>
+
+{% schema %}
+{
+  "name": "Header",
+  "settings": [
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "Main menu",
+      "default": "main-menu",
+      "info": "Sale / Men / Women / Kids appear as top links. Every other menu item that has sub-items becomes a column in the \"Sports\" mega menu."
+    },
+    { "type": "header", "content": "Mega menu promo" },
+    { "type": "image_picker", "id": "mega_image", "label": "Promo image" },
+    { "type": "text", "id": "mega_heading", "label": "Promo heading" },
+    { "type": "url", "id": "mega_link", "label": "Promo link" }
+  ]
+}
+{% endschema %}

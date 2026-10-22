@@ -1,0 +1,363 @@
+{
+  "sections": {
+    "hero": {
+      "type": "hero-bento",
+      "blocks": {
+        "b1": {
+          "type": "banner",
+          "settings": {
+            "image": "shopify://shop_images/photo-1646504458774-dbad0e941c14.jpg",
+            "link": "/collections/all-products-newest"
+          }
+        },
+        "b2": {
+          "type": "banner",
+          "settings": {
+            "image": "shopify://shop_images/photo-1653013509667-be96d466ad34.jpg",
+            "collection": "football-equipment"
+          }
+        },
+        "b3": {
+          "type": "banner",
+          "settings": {
+            "image": "shopify://shop_images/photo-1519315901367-f34ff9154487.jpg",
+            "collection": "water-sports"
+          }
+        }
+      },
+      "block_order": [
+        "b1",
+        "b2",
+        "b3"
+      ],
+      "settings": {}
+    },
+    "ticker": {
+      "type": "promo-ticker",
+      "blocks": {
+        "t1": {
+          "type": "item",
+          "settings": {
+            "preset": "cod",
+            "icon": "cash"
+          }
+        },
+        "t2": {
+          "type": "item",
+          "settings": {
+            "preset": "free_delivery",
+            "icon": "truck"
+          }
+        },
+        "t3": {
+          "type": "item",
+          "settings": {
+            "preset": "returns",
+            "icon": "return"
+          }
+        },
+        "t4": {
+          "type": "item",
+          "settings": {
+            "preset": "authentic",
+            "icon": "shield"
+          }
+        },
+        "t5": {
+          "type": "item",
+          "settings": {
+            "preset": "teams",
+            "icon": "trophy"
+          }
+        }
+      },
+      "block_order": [
+        "t1",
+        "t2",
+        "t3",
+        "t4",
+        "t5"
+      ],
+      "settings": {
+        "color": "lime"
+      }
+    },
+    "category-strip": {
+      "type": "category-strip",
+      "blocks": {
+        "s1": {
+          "type": "item",
+          "settings": {
+            "icon": "sale",
+            "collection": "sale"
+          }
+        },
+        "s2": {
+          "type": "item",
+          "settings": {
+            "icon": "football",
+            "collection": "football-equipment"
+          }
+        },
+        "s3": {
+          "type": "item",
+          "settings": {
+            "icon": "water",
+            "collection": "water-sports"
+          }
+        },
+        "s4": {
+          "type": "item",
+          "settings": {
+            "icon": "gym",
+            "collection": "gym-equipment"
+          }
+        },
+        "s5": {
+          "type": "item",
+          "settings": {
+            "icon": "racket",
+            "collection": "racket-equipment"
+          }
+        },
+        "s6": {
+          "type": "item",
+          "settings": {
+            "icon": "martial",
+            "collection": "taekwondo-martial-arts-equipment"
+          }
+        },
+        "s7": {
+          "type": "item",
+          "settings": {
+            "icon": "basketball",
+            "collection": "basketball-equipment"
+          }
+        },
+        "s8": {
+          "type": "item",
+          "settings": {
+            "icon": "trophy",
+            "collection": "trophy-cups-medals"
+          }
+        },
+        "s9": {
+          "type": "item",
+          "settings": {
+            "icon": "backpack",
+            "collection": "bags-backpacks"
+          }
+        },
+        "s10": {
+          "type": "item",
+          "settings": {
+            "icon": "kids",
+            "collection": "kids"
+          }
+        },
+        "s11": {
+          "type": "item",
+          "settings": {
+            "icon": "all"
+          }
+        }
+      },
+      "block_order": [
+        "s1",
+        "s2",
+        "s3",
+        "s4",
+        "s5",
+        "s6",
+        "s7",
+        "s8",
+        "s9",
+        "s10",
+        "s11"
+      ],
+      "settings": {
+        "show_heading": true,
+        "style": "photos"
+      }
+    },
+    "new-arrivals": {
+      "type": "product-swiper",
+      "settings": {
+        "collection": "all-products-newest",
+        "product_count": 12,
+        "title_preset": "new_arrivals",
+        "background": "white"
+      }
+    },
+    "departments": {
+      "type": "department-tiles",
+      "blocks": {
+        "d1": {
+          "type": "tile",
+          "settings": {
+            "collection": "men",
+            "image": "shopify://shop_images/photo-1486739985386-d4fae04ca6f7.jpg"
+          }
+        },
+        "d2": {
+          "type": "tile",
+          "settings": {
+            "collection": "women",
+            "image": "shopify://shop_images/photo-1571019613454-1cb2f99b2d8b.jpg"
+          }
+        },
+        "d3": {
+          "type": "tile",
+          "settings": {
+            "collection": "kids",
+            "image": "shopify://shop_images/photo-1622659097509-4d56de14539e.jpg"
+          }
+        }
+      },
+      "block_order": [
+        "d1",
+        "d2",
+        "d3"
+      ],
+      "settings": {}
+    },
+    "prices": {
+      "type": "price-tiles",
+      "blocks": {
+        "p1": {
+          "type": "tier",
+          "settings": {
+            "amount": 25
+          }
+        },
+        "p2": {
+          "type": "tier",
+          "settings": {
+            "amount": 50
+          }
+        },
+        "p3": {
+          "type": "tier",
+          "settings": {
+            "amount": 100
+          }
+        },
+        "p4": {
+          "type": "tier",
+          "settings": {
+            "amount": 200
+          }
+        },
+        "p5": {
+          "type": "tier",
+          "settings": {
+            "amount": 500
+          }
+        }
+      },
+      "block_order": [
+        "p1",
+        "p2",
+        "p3",
+        "p4",
+        "p5"
+      ],
+      "settings": {}
+    },
+    "sale": {
+      "type": "product-swiper",
+      "settings": {
+        "collection": "sale",
+        "product_count": 12,
+        "title_preset": "sale",
+        "background": "sale"
+      }
+    },
+    "sports": {
+      "type": "sport-cards",
+      "blocks": {
+        "s1": {
+          "type": "sport",
+          "settings": {
+            "collection": "football-equipment",
+            "image": "shopify://shop_images/photo-1528162841823-9e55a8cc2f58.jpg"
+          }
+        },
+        "s2": {
+          "type": "sport",
+          "settings": {
+            "collection": "paddle-equipment",
+            "image": "shopify://shop_images/photo-1658723826297-fe4d1b1e6600.jpg"
+          }
+        },
+        "s3": {
+          "type": "sport",
+          "settings": {
+            "collection": "basketball-equipment",
+            "image": "shopify://shop_images/photo-1595795279832-13f0df36fbb9.jpg"
+          }
+        },
+        "s4": {
+          "type": "sport",
+          "settings": {
+            "collection": "taekwondo-martial-arts-equipment",
+            "image": "shopify://shop_images/photo-1555597673-b21d5c935865.jpg"
+          }
+        },
+        "s5": {
+          "type": "sport",
+          "settings": {
+            "collection": "gym-equipment",
+            "image": "shopify://shop_images/photo-1758448756350-3d0eec02ba37.jpg"
+          }
+        },
+        "s6": {
+          "type": "sport",
+          "settings": {
+            "collection": "water-sports",
+            "image": "shopify://shop_images/photo-1530549387789-4c1017266635.jpg"
+          }
+        }
+      },
+      "block_order": [
+        "s1",
+        "s2",
+        "s3",
+        "s4",
+        "s5",
+        "s6"
+      ],
+      "settings": {}
+    },
+    "swimming": {
+      "type": "product-swiper",
+      "settings": {
+        "collection": "goggles",
+        "product_count": 12,
+        "title_preset": "swimming",
+        "background": "surface"
+      }
+    },
+    "story": {
+      "type": "store-story",
+      "settings": {
+        "image": "shopify://shop_images/photo-1758448756350-3d0eec02ba37.jpg",
+        "stat_1": "50+",
+        "stat_2": "1000+",
+        "link": "/collections"
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "ticker",
+    "category-strip",
+    "new-arrivals",
+    "departments",
+    "prices",
+    "sale",
+    "sports",
+    "swimming",
+    "story"
+  ]
+}

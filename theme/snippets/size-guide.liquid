@@ -1,0 +1,53 @@
+{%- comment -%}
+  Size guide modal. Picks the kids, women's or men's table from the product's title and collections.
+  Accepts: product
+{%- endcomment -%}
+{%- liquid
+  assign guide = 'men'
+  assign handles = product.collections | map: 'handle' | join: ','
+  assign title_down = product.title | downcase
+  if handles contains 'kids' or title_down contains 'kid' or title_down contains 'junior' or title_down contains 'boys' or title_down contains 'girls' or title_down contains 'child'
+    assign guide = 'kids'
+  elsif handles contains 'women' or title_down contains 'women' or title_down contains 'ladies' or title_down contains 'burkini'
+    assign guide = 'women'
+  endif
+-%}
+<div class="ah-modal" id="SizeGuide" role="dialog" aria-modal="true" aria-labelledby="SizeGuideTitle">
+  <div class="ah-modal__panel ah-sizeguide">
+    <button type="button" class="ah-icon-btn ah-modal__close" data-modal-close aria-label="{{ 'general.header.close' | t }}">{%- render 'icon', name: 'close' -%}</button>
+    <h3 id="SizeGuideTitle">{{ 'sections.product.size_guide_heading' | t }} — {{ 'sections.product.sg_title_' | append: guide | t }}</h3>
+    <div class="ah-sizeguide__scroll">
+      <table class="ah-table">
+        {%- case guide -%}
+          {%- when 'kids' -%}
+            <thead><tr><th>{{ 'sections.product.size_guide_col_size' | t }}</th><th>{{ 'sections.product.sg_age' | t }}</th><th>{{ 'sections.product.sg_height' | t }}</th><th>{{ 'sections.product.size_guide_col_chest' | t }}</th><th>{{ 'sections.product.size_guide_col_waist' | t }}</th></tr></thead>
+            <tbody>
+              {%- assign rows = '2|1–2|86–92|52|50;4|3–4|98–104|56|52;5|4–5|104–110|58|53;6|5–6|110–116|60|54;7|6–7|116–122|62|55;8|7–8|122–128|64|57;10|9–10|134–140|70|60;12|11–12|146–152|76|63;14|13–14|152–158|80|66;16|15–16|158–164|84|70;18|17–18|164–170|88|74' | split: ';' -%}
+              {%- for row in rows -%}{%- assign c = row | split: '|' -%}<tr data-size-row="{{ c[0] }}"><td>{{ c[0] }}</td><td>{{ 'sections.product.sg_years' | t: range: c[1] }}</td><td>{{ c[2] }}</td><td>{{ c[3] }}</td><td>{{ c[4] }}</td></tr>{%- endfor -%}
+            </tbody>
+          {%- when 'women' -%}
+            <thead><tr><th>{{ 'sections.product.size_guide_col_size' | t }}</th><th>{{ 'sections.product.sg_bust' | t }}</th><th>{{ 'sections.product.size_guide_col_waist' | t }}</th><th>{{ 'sections.product.sg_hips' | t }}</th><th>{{ 'sections.product.sg_weight' | t }}</th></tr></thead>
+            <tbody>
+              {%- assign rows = 'S|82–88|64–70|88–94|50–58;M|88–94|70–76|94–100|58–66;L|94–100|76–82|100–106|66–74;XL|100–106|82–88|106–112|74–82;2XL|106–112|88–94|112–118|82–90;3XL|112–118|94–100|118–124|90–100;4XL|118–124|100–106|124–130|100–110;5XL|124–130|106–112|130–136|110–120' | split: ';' -%}
+              {%- for row in rows -%}{%- assign c = row | split: '|' -%}<tr data-size-row="{{ c[0] }}"><td>{{ 'sections.product.sg_size_' | append: c[0] | t }}</td><td>{{ c[1] }}</td><td>{{ c[2] }}</td><td>{{ c[3] }}</td><td>{{ c[4] }}</td></tr>{%- endfor -%}
+            </tbody>
+          {%- else -%}
+            <thead><tr><th>{{ 'sections.product.size_guide_col_size' | t }}</th><th>{{ 'sections.product.size_guide_col_chest' | t }}</th><th>{{ 'sections.product.size_guide_col_waist' | t }}</th><th>{{ 'sections.product.sg_hips' | t }}</th><th>{{ 'sections.product.sg_weight' | t }}</th></tr></thead>
+            <tbody>
+              {%- assign rows = 'S|88–94|74–80|90–96|55–65;M|94–100|80–86|96–102|65–75;L|100–106|86–92|102–108|75–85;XL|106–112|92–98|108–114|85–95;2XL|112–118|98–104|114–120|95–105;3XL|118–124|104–110|120–126|105–115;4XL|124–130|110–116|126–132|115–125;5XL|130–136|116–124|132–138|125–140;6XL|136–142|124–132|138–144|140–155' | split: ';' -%}
+              {%- for row in rows -%}{%- assign c = row | split: '|' -%}<tr data-size-row="{{ c[0] }}"><td>{{ 'sections.product.sg_size_' | append: c[0] | t }}</td><td>{{ c[1] }}</td><td>{{ c[2] }}</td><td>{{ c[3] }}</td><td>{{ c[4] }}</td></tr>{%- endfor -%}
+            </tbody>
+        {%- endcase -%}
+      </table>
+    </div>
+    <h4>{{ 'sections.product.sg_how' | t }}</h4>
+    <ul class="ah-sizeguide__tips">
+      {%- if guide == 'kids' -%}
+        <li>{{ 'sections.product.sg_kids_1' | t }}</li><li>{{ 'sections.product.sg_kids_2' | t }}</li><li>{{ 'sections.product.sg_kids_3' | t }}</li>
+      {%- else -%}
+        <li>{{ 'sections.product.sg_chest' | t }}</li><li>{{ 'sections.product.sg_waist' | t }}</li><li>{{ 'sections.product.sg_hip' | t }}</li><li>{{ 'sections.product.sg_between' | t }}</li>
+      {%- endif -%}
+    </ul>
+    <p class="ah-sizeguide__note">{{ 'sections.product.size_guide_note' | t }}</p>
+  </div>
+</div>

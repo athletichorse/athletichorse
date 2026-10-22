@@ -1,0 +1,74 @@
+<section class="ah-section{% if section.settings.alt_background %} ah-section--surface{% endif %}">
+  <div class="container">
+    <div class="ah-section__head">
+      <div>
+        <h2 class="ah-section__title">{% if section.settings.heading != blank %}{{ section.settings.heading }}{% else %}{{ 'sections.category_tiles.heading' | t }}{% endif %}</h2>
+        <p class="ah-section__desc">{% if section.settings.text != blank %}{{ section.settings.text }}{% else %}{{ 'sections.category_tiles.text' | t }}{% endif %}</p>
+      </div>
+      <a href="{{ routes.collections_url }}" class="ah-link-arrow">{{ 'sections.category_tiles.all_categories' | t }}</a>
+    </div>
+    <ul class="ah-tiles" role="list" style="--cols: {{ section.blocks.size }}">
+      {%- for block in section.blocks -%}
+        <li {{ block.shopify_attributes }}>
+          {%- if block.type == 'all' -%}
+            <a href="{{ routes.collections_url }}" class="ah-tile ah-tile--all">
+              <span class="ah-tile__icon">{%- render 'icon', name: 'all' -%}</span>
+              <span class="ah-tile__name">{% if block.settings.label != blank %}{{ block.settings.label }}{% else %}{{ 'sections.category_tiles.all_categories' | t }}{% endif %}</span>
+              <span class="ah-link-arrow" style="color:var(--lime)">{{ 'sections.featured_collection.shop_now' | t }}</span>
+            </a>
+          {%- else -%}
+            {%- assign coll = collections[block.settings.collection] -%}
+            {%- if coll -%}
+              {%- assign tile_image = block.settings.image | default: coll.image | default: coll.products.first.featured_image -%}
+              <a href="{{ coll.url }}" class="ah-tile">
+                <span class="ah-tile__media">
+                  {%- if tile_image -%}
+                    {{ tile_image | image_url: width: 500 | image_tag: loading: 'lazy', widths: '250,375,500', sizes: '(min-width: 1200px) 16vw, (min-width: 750px) 30vw, 48vw', alt: '' }}
+                  {%- endif -%}
+                </span>
+                <span class="ah-tile__body">
+                  <span>
+                    <span class="ah-tile__name">{{ block.settings.label | default: coll.title }}</span>
+                    <span class="ah-tile__count">{{ 'sections.department_tiles.products' | t: count: coll.all_products_count }}</span>
+                  </span>
+                  <span class="ah-tile__arrow" aria-hidden="true">{%- render 'icon', name: 'arrow' -%}</span>
+                </span>
+              </a>
+            {%- endif -%}
+          {%- endif -%}
+        </li>
+      {%- endfor -%}
+    </ul>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Category tiles",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading" },
+    { "type": "textarea", "id": "text", "label": "Text" },
+    { "type": "checkbox", "id": "alt_background", "label": "Grey background", "default": false }
+  ],
+  "blocks": [
+    {
+      "type": "tile",
+      "name": "Category tile",
+      "settings": [
+        { "type": "collection", "id": "collection", "label": "Collection" },
+        { "type": "image_picker", "id": "image", "label": "Image", "info": "Optional. Falls back to the collection or first product image." },
+        { "type": "text", "id": "label", "label": "Custom label" }
+      ]
+    },
+    {
+      "type": "all",
+      "name": "All categories tile",
+      "settings": [{ "type": "text", "id": "label", "label": "Custom label" }]
+    }
+  ],
+  "max_blocks": 12,
+  "presets": [
+    { "name": "Category tiles", "blocks": [{ "type": "tile" }, { "type": "tile" }, { "type": "tile" }, { "type": "tile" }, { "type": "tile" }, { "type": "all" }] }
+  ]
+}
+{% endschema %}

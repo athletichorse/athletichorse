@@ -1,0 +1,218 @@
+{%- comment -%}
+  About us: animated, bright storytelling page. Numbers are live where possible (product and
+  category counts come from the catalog); everything animates in on scroll and respects
+  prefers-reduced-motion.
+{%- endcomment -%}
+{%- liquid
+  assign all_coll = collections['all-products-newest']
+  assign product_total = all_coll.products_count | default: shop.products_count
+  assign category_total = 0
+  assign return_days = settings.return_days | default: 3
+  assign rating = section.settings.google_rating | default: '5.0'
+-%}
+
+{%- paginate collections by 250 -%}
+  {%- for c in collections -%}
+    {%- if c.products_count > 0 and c.handle != 'frontpage' and c.handle != 'all-products-newest' -%}{%- assign category_total = category_total | plus: 1 -%}{%- endif -%}
+  {%- endfor -%}
+{%- endpaginate -%}
+
+<section class="ah-ab-hero">
+  <div class="container ah-ab-hero__inner">
+    <div class="ah-ab-hero__copy" data-reveal>
+      <span class="ah-eyebrow">{{ 'sections.about.eyebrow' | t }}</span>
+      <h1 class="ah-ab-hero__title">
+        {%- assign heading = section.settings.heading | default: '' -%}
+        {%- if heading == blank -%}{%- assign heading = 'sections.about.heading' | t -%}{%- endif -%}
+        {%- assign words = heading | split: ' ' -%}
+        {%- for w in words -%}<span class="ah-word" style="--i: {{ forloop.index0 }}">{{ w }}</span>{% unless forloop.last %} {% endunless %}{%- endfor -%}
+      </h1>
+      <p class="ah-ab-hero__intro">{% if section.settings.intro != blank %}{{ section.settings.intro }}{% else %}{{ 'sections.about.intro' | t }}{% endif %}</p>
+      <div class="ah-ab-hero__ctas">
+        <a href="{{ all_coll.url | default: routes.all_products_collection_url }}" class="ah-btn ah-btn--lg">{{ 'sections.about.cta_shop' | t }}</a>
+        {%- if settings.social_whatsapp_number != blank -%}
+          <a href="https://wa.me/{{ settings.social_whatsapp_number }}" class="ah-btn ah-btn--lg ah-btn--outline" target="_blank" rel="noopener noreferrer">{%- render 'icon', name: 'whatsapp' -%}{{ 'sections.about.cta_whatsapp' | t }}</a>
+        {%- endif -%}
+      </div>
+      {%- if section.settings.maps_url != blank -%}
+        <a class="ah-rating-chip" href="{{ section.settings.maps_url }}" target="_blank" rel="noopener noreferrer">
+          <span class="ah-rating-chip__stars" aria-hidden="true">★★★★★</span>
+          <strong>{{ rating }}</strong> {{ 'sections.about.google_rating' | t }}
+        </a>
+      {%- endif -%}
+    </div>
+    <div class="ah-ab-hero__collage" aria-hidden="true">
+      {%- assign hero_imgs = 'image,image_2,image_3' | split: ',' -%}
+      {%- for key in hero_imgs -%}
+        {%- assign img = section.settings[key] -%}
+        {%- if img != blank -%}
+          <div class="ah-ab-hero__tile ah-ab-hero__tile--{{ forloop.index }}" data-parallax="{{ forloop.index | times: 0.04 }}">
+            {%- if forloop.first -%}
+              {{ img | image_url: width: 1000 | image_tag: loading: 'eager', fetchpriority: 'high', widths: '500,750,1000', sizes: '(min-width: 990px) 30vw, 70vw', alt: '' }}
+            {%- else -%}
+              {{ img | image_url: width: 700 | image_tag: loading: 'lazy', widths: '350,500,700', sizes: '(min-width: 990px) 20vw, 45vw', alt: '' }}
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+<div class="ah-marquee" aria-hidden="true" dir="ltr">
+  <div class="ah-marquee__track">
+    {%- assign sports = 'sections.about.marquee' | t | split: '|' -%}
+    {%- for n in (1..2) -%}
+      {%- for s in sports -%}<span>{{ s | strip }}</span><span class="ah-marquee__dot">●</span>{%- endfor -%}
+    {%- endfor -%}
+  </div>
+</div>
+
+<section class="ah-section ah-ab-counters">
+  <div class="container">
+    <ul class="ah-counters" role="list">
+      <li data-reveal style="--d: 0">
+        <b><span data-count="{{ product_total }}">{{ product_total }}</span>+</b>
+        <span>{{ 'sections.about.count_products' | t }}</span>
+      </li>
+      <li data-reveal style="--d: 1">
+        <b><span data-count="{{ category_total }}">{{ category_total }}</span></b>
+        <span>{{ 'sections.about.count_categories' | t }}</span>
+      </li>
+      <li data-reveal style="--d: 2">
+        <b><span data-count="{{ rating }}" data-decimals="1">{{ rating }}</span>★</b>
+        <span>{{ 'sections.about.count_rating' | t }}</span>
+      </li>
+      <li data-reveal style="--d: 3">
+        <b><span data-count="{{ return_days }}">{{ return_days }}</span></b>
+        <span>{{ 'sections.about.count_returns' | t }}</span>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section class="ah-section">
+  <div class="container ah-ab-story">
+    {%- if section.settings.image_story != blank -%}
+      <div class="ah-ab-story__media" data-reveal>
+        <div data-parallax="0.06">{{ section.settings.image_story | image_url: width: 1200 | image_tag: loading: 'lazy', widths: '600,900,1200', sizes: '(min-width: 990px) 45vw, 100vw', alt: '' }}</div>
+      </div>
+    {%- endif -%}
+    <div class="ah-ab-story__copy" data-reveal>
+      <span class="ah-eyebrow">{{ 'sections.about.mission_heading' | t }}</span>
+      <h2 class="ah-section__title">{{ 'sections.about.story_heading' | t }}</h2>
+      <p>{{ 'sections.about.mission_text' | t }}</p>
+      <ul class="ah-checks" role="list">
+        <li>{{ 'sections.about.check_1' | t }}</li>
+        <li>{{ 'sections.about.check_2' | t }}</li>
+        <li>{{ 'sections.about.check_3' | t }}</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="ah-section ah-section--surface">
+  <div class="container">
+    <div class="ah-section__head" data-reveal>
+      <div>
+        <span class="ah-eyebrow">{{ 'sections.about.why_eyebrow' | t }}</span>
+        <h2 class="ah-section__title">{{ 'sections.about.why_heading' | t }}</h2>
+      </div>
+    </div>
+    <ul class="ah-values" role="list">
+      {%- assign values = 'shield,truck,cash,return' | split: ',' -%}
+      {%- for v in values -%}
+        <li class="ah-value" data-reveal style="--d: {{ forloop.index0 }}">
+          <span class="ah-value__icon">{%- render 'icon', name: v -%}</span>
+          <h3>{{ 'sections.about.value_' | append: v | append: '_title' | t }}</h3>
+          <p>{{ 'sections.about.value_' | append: v | append: '_text' | t: days: return_days }}</p>
+        </li>
+      {%- endfor -%}
+    </ul>
+  </div>
+</section>
+
+<section class="ah-section">
+  <div class="container">
+    <div class="ah-section__head" data-reveal>
+      <div>
+        <span class="ah-eyebrow">{{ 'sections.about.steps_eyebrow' | t }}</span>
+        <h2 class="ah-section__title">{{ 'sections.about.steps_heading' | t }}</h2>
+      </div>
+    </div>
+    <ol class="ah-steps" data-steps>
+      {%- for n in (1..4) -%}
+        <li class="ah-step" data-reveal style="--d: {{ n | minus: 1 }}">
+          <span class="ah-step__num">{{ n }}</span>
+          <h3>{{ 'sections.about.step_' | append: n | append: '_title' | t }}</h3>
+          <p>{{ 'sections.about.step_' | append: n | append: '_text' | t: days: return_days }}</p>
+        </li>
+      {%- endfor -%}
+    </ol>
+  </div>
+</section>
+
+{%- if section.blocks.size > 0 -%}
+  <section class="ah-section ah-section--surface">
+    <div class="container">
+      <div class="ah-section__head" data-reveal>
+        <div><h2 class="ah-section__title">{{ 'sections.about.gear_heading' | t }}</h2></div>
+        <a href="{{ routes.collections_url }}" class="ah-link-arrow">{{ 'general.header.all_categories' | t }}</a>
+      </div>
+      <ul class="ah-ab-sports" role="list">
+        {%- for block in section.blocks -%}
+          {%- assign gear_coll = collections[block.settings.collection] -%}
+          {%- if gear_coll == blank -%}{%- continue -%}{%- endif -%}
+          {%- assign tile_img = block.settings.image | default: gear_coll.image | default: gear_coll.products.first.featured_image -%}
+          <li data-reveal style="--d: {{ forloop.index0 | modulo: 4 }}" {{ block.shopify_attributes }}>
+            <a href="{{ gear_coll.url }}" class="ah-ab-sport">
+              {%- if tile_img -%}{{ tile_img | image_url: width: 600 | image_tag: loading: 'lazy', widths: '300,450,600', sizes: '(min-width: 990px) 22vw, 45vw', alt: '' }}{%- endif -%}
+              <span class="ah-ab-sport__label">{{ block.settings.label | default: gear_coll.title }} {%- render 'icon', name: 'arrow' -%}</span>
+            </a>
+          </li>
+        {%- endfor -%}
+      </ul>
+    </div>
+  </section>
+{%- endif -%}
+
+<section class="ah-section ah-ab-social">
+  <div class="container" data-reveal>
+    <h2 class="ah-section__title">{{ 'sections.about.social_heading' | t }}</h2>
+    <p>{{ 'sections.about.social_text' | t }}</p>
+    <div class="ah-ab-social__links">
+      {%- if settings.social_snapchat_link != blank -%}<a href="{{ settings.social_snapchat_link }}" class="ah-ab-social__btn ah-ab-social__btn--snap" target="_blank" rel="noopener noreferrer">{%- render 'icon', name: 'snapchat' -%}Snapchat</a>{%- endif -%}
+      {%- if settings.social_tiktok_link != blank -%}<a href="{{ settings.social_tiktok_link }}" class="ah-ab-social__btn ah-ab-social__btn--tiktok" target="_blank" rel="noopener noreferrer">{%- render 'icon', name: 'tiktok' -%}TikTok</a>{%- endif -%}
+      {%- if settings.social_instagram_link != blank -%}<a href="{{ settings.social_instagram_link }}" class="ah-ab-social__btn" target="_blank" rel="noopener noreferrer">{%- render 'icon', name: 'instagram' -%}Instagram</a>{%- endif -%}
+      {%- if settings.social_facebook_link != blank -%}<a href="{{ settings.social_facebook_link }}" class="ah-ab-social__btn" target="_blank" rel="noopener noreferrer">{%- render 'icon', name: 'facebook' -%}Facebook</a>{%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "About us",
+  "settings": [
+    { "type": "image_picker", "id": "image", "label": "Hero image (large)" },
+    { "type": "image_picker", "id": "image_2", "label": "Hero image (small 1)" },
+    { "type": "image_picker", "id": "image_3", "label": "Hero image (small 2)" },
+    { "type": "image_picker", "id": "image_story", "label": "Story image" },
+    { "type": "text", "id": "heading", "label": "Heading", "info": "Leave blank to use the translated default." },
+    { "type": "textarea", "id": "intro", "label": "Intro text", "info": "Leave blank to use the translated default." },
+    { "type": "text", "id": "google_rating", "label": "Google rating", "default": "5.0" },
+    { "type": "url", "id": "maps_url", "label": "Google Maps / reviews link" }
+  ],
+  "blocks": [
+    {
+      "type": "sport",
+      "name": "Sport tile",
+      "settings": [
+        { "type": "collection", "id": "collection", "label": "Collection" },
+        { "type": "text", "id": "label", "label": "Label", "info": "Defaults to the collection title." },
+        { "type": "image_picker", "id": "image", "label": "Image", "info": "Defaults to the collection image." }
+      ]
+    }
+  ],
+  "presets": [{ "name": "About us" }]
+}
+{% endschema %}

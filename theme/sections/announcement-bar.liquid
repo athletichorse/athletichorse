@@ -1,0 +1,49 @@
+{%- liquid
+  assign msg_1 = section.settings.message
+  if msg_1 == blank
+    assign msg_1 = 'general.announcement.message' | t
+  endif
+  assign msg_2 = section.settings.message_2
+  if msg_2 == blank
+    assign msg_2 = 'general.announcement.business_inquiry' | t
+  endif
+  assign msg_3 = section.settings.message_3
+  if msg_3 == blank
+    assign msg_3 = 'general.announcement.returns' | t
+  endif
+-%}
+{%- capture riyal -%}{%- render 'riyal' -%}{%- endcapture -%}
+<div class="ah-announce" role="region" aria-label="{{ 'general.announcement.label' | t }}">
+  <div class="container ah-announce__inner">
+    <div class="ah-announce__side">
+      {%- if settings.store_phone != blank -%}
+        <a href="tel:{{ settings.store_phone | remove: ' ' }}" dir="ltr">{{ settings.store_phone }}</a>
+      {%- endif -%}
+    </div>
+    <div class="ah-announce__track" aria-live="polite">
+      <p class="ah-announce__msg is-active" data-announce-msg>
+        {%- if section.settings.link != blank -%}<a href="{{ section.settings.link }}">{{ msg_1 | replace: '[riyal]', riyal }}</a>{%- else -%}{{ msg_1 | replace: '[riyal]', riyal }}{%- endif -%}
+      </p>
+      <p class="ah-announce__msg" data-announce-msg>{{ msg_3 }}</p>
+      <p class="ah-announce__msg" data-announce-msg>{{ msg_2 }}</p>
+    </div>
+    <div class="ah-announce__side">
+      <a href="{{ pages.contact.url | default: '/pages/contact' }}">{{ 'general.footer.contact' | t }}</a>
+      {%- if shop.policies.size > 0 -%}
+        <a href="{{ shop.refund_policy.url | default: shop.policies.first.url }}">{{ 'general.announcement.returns_link' | t }}</a>
+      {%- endif -%}
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Announcement bar",
+  "settings": [
+    { "type": "text", "id": "message", "label": "Message 1", "info": "Leave blank to use the translated default (free shipping)." },
+    { "type": "url", "id": "link", "label": "Message 1 link" },
+    { "type": "text", "id": "message_3", "label": "Message 2", "info": "Leave blank to use the translated default (easy returns)." },
+    { "type": "text", "id": "message_2", "label": "Message 3", "info": "Leave blank to use the translated default (bulk orders)." }
+  ]
+}
+{% endschema %}

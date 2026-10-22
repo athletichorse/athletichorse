@@ -1,0 +1,13 @@
+<div class="container container--narrow">
+  {%- render 'breadcrumbs', current: page.title -%}
+  <div class="ah-page-head">
+    <h1 class="ah-page-head__title">{{ page.title }}</h1>
+  </div>
+  <div class="rte" style="padding-bottom:var(--section-gap)">
+    {{ page.content }}
+  </div>
+</div>
+
+{% schema %}
+{ "name": "Page", "settings": [] }
+{% endschema %}

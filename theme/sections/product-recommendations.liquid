@@ -1,0 +1,85 @@
+{%- comment -%}
+  "You may also like". Renders products from the product's most specific category on page load,
+  then swaps in Shopify's related-product recommendations when they are available.
+{%- endcomment -%}
+{%- liquid
+  assign limit = section.settings.limit
+  assign broad = 'all-products-newest,all,frontpage,sale,men,women,kids,water-sports,racket-equipment,gym-equipment,taekwondo-martial-arts-equipment,training-accessories'
+-%}
+{%- if recommendations.performed -%}
+  {%- if recommendations.products_count > 0 -%}
+    <ul class="ah-rail__track" data-rail-track data-recs-items role="list">
+      {%- for item in recommendations.products limit: limit -%}
+        <li>{%- render 'product-card', product: item -%}</li>
+      {%- endfor -%}
+    </ul>
+  {%- endif -%}
+{%- else -%}
+  {%- liquid
+    comment
+      Relevance first: smallest (most specific) categories the product is in, then its sport-level
+      category. Department/catch-all collections (all, sale, men, women, kids) are never used.
+      Shopify's automatic recommendations are not swapped in: they drift to unrelated products.
+    endcomment
+    assign skip = 'all-products-newest,all,frontpage,sale,men,women,kids,new-arrivals,best-sellers'
+    assign sport_level = 'water-sports,racket-equipment,gym-equipment,taekwondo-martial-arts-equipment,training-accessories,football-equipment,basketball-equipment,gloves,socks,bags-backpacks,water-bottles,flags,handbags,shirts,pants,set,toys-games'
+    assign sorted = product.collections | sort: 'products_count'
+    assign best = nil
+    assign picked = ''
+    assign shown = 0
+    assign title_words = product.title | downcase | split: ' '
+    assign phrase = title_words[0] | append: ' ' | append: title_words[1]
+  -%}
+  {%- capture rec_items -%}
+    {%- comment -%} Pass 0: same kind of product (shares the first two title words, e.g. "medicine ball"); 1: specific categories; 2: sport-level category {%- endcomment -%}
+    {%- for pass in (0..2) -%}
+      {%- for c in sorted -%}
+        {%- if skip contains c.handle -%}{%- continue -%}{%- endif -%}
+        {%- assign is_sport = false -%}{%- if sport_level contains c.handle -%}{%- assign is_sport = true -%}{%- endif -%}
+        {%- if pass == 1 and is_sport -%}{%- continue -%}{%- endif -%}
+        {%- if pass == 2 and is_sport == false -%}{%- continue -%}{%- endif -%}
+        {%- if best == nil and pass > 0 -%}{%- assign best = c -%}{%- endif -%}
+        {%- for item in c.products limit: 50 -%}
+          {%- if shown >= limit -%}{%- break -%}{%- endif -%}
+          {%- assign key = ',' | append: item.id | append: ',' -%}
+          {%- if item.id == product.id or item.available == false or picked contains key -%}{%- continue -%}{%- endif -%}
+          {%- if pass == 0 -%}
+            {%- assign item_title = item.title | downcase -%}
+            {%- unless title_words.size > 1 and item_title contains phrase -%}{%- continue -%}{%- endunless -%}
+          {%- endif -%}
+          <li>{%- render 'product-card', product: item -%}</li>
+          {%- assign picked = picked | append: key -%}
+          {%- assign shown = shown | plus: 1 -%}
+        {%- endfor -%}
+      {%- endfor -%}
+    {%- endfor -%}
+  {%- endcapture -%}
+  <section class="ah-section ah-section--surface ah-recs" data-recs>
+    <div class="container" data-rail>
+      <div class="ah-section__head">
+        <div><h2 class="ah-section__title">{{ 'sections.product.you_may_also_like' | t }}</h2></div>
+        <div class="ah-section__head-end">
+          {%- if best -%}<a href="{{ best.url }}" class="ah-link-arrow">{{ 'sections.featured_collection.view_all' | t }}</a>{%- endif -%}
+          <div class="ah-rail__nav">
+            <button type="button" class="ah-rail__btn" data-rail-prev aria-label="{{ 'general.pagination.previous' | t }}">{%- render 'icon', name: 'chevron' -%}</button>
+            <button type="button" class="ah-rail__btn" data-rail-next aria-label="{{ 'general.pagination.next' | t }}">{%- render 'icon', name: 'chevron' -%}</button>
+          </div>
+        </div>
+      </div>
+      <div class="ah-rail" data-recs-rail>
+        <ul class="ah-rail__track" data-rail-track data-recs-items role="list">
+          {{ rec_items }}
+        </ul>
+      </div>
+    </div>
+  </section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "You may also like",
+  "settings": [
+    { "type": "range", "id": "limit", "label": "Products to show", "min": 4, "max": 12, "step": 1, "default": 10 }
+  ]
+}
+{% endschema %}

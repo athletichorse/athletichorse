@@ -1,0 +1,341 @@
+{%- liquid
+  assign current_variant = product.selected_or_first_available_variant
+  assign crumb_coll = blank
+  for c in product.collections
+    unless c.handle == 'all-products-newest' or c.handle == 'all' or c.handle == 'frontpage'
+      assign crumb_coll = c
+      break
+    endunless
+  endfor
+  assign has_size = false
+-%}
+
+<div class="container">
+  {%- render 'breadcrumbs', parent_title: crumb_coll.title, parent_url: crumb_coll.url, current: product.title -%}
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": {{ product.title | json }},
+    "url": {{ request.origin | append: product.url | json }},
+    {%- capture clean_desc -%}{%- render 'clean-description', product: product -%}{%- endcapture -%}
+    "description": {{ clean_desc | strip_html | strip_newlines | truncate: 5000 | json }},
+    {%- if current_variant.sku != blank %}"sku": {{ current_variant.sku | json }},{% endif %}
+    {%- if current_variant.barcode != blank %}"gtin": {{ current_variant.barcode | json }},{% endif %}
+    "brand": { "@type": "Brand", "name": {{ product.vendor | default: shop.name | json }} },
+    {%- if product.type != blank %}"category": {{ product.type | json }},{% endif %}
+    "image": [{% for media in product.media limit: 6 %}{% if media.media_type == 'image' %}{% unless forloop.first %},{% endunless %}{{ media | image_url: width: 1200 | prepend: 'https:' | json }}{% endif %}{% endfor %}],
+    "offers": [
+      {%- for variant in product.variants limit: 50 -%}
+        {
+          "@type": "Offer",
+          {%- if variant.sku != blank %}"sku": {{ variant.sku | json }},{% endif %}
+          "name": {% if variant.title == 'Default Title' %}{{ product.title | json }}{% else %}{{ product.title | append: ' – ' | append: variant.title | json }}{% endif %},
+          "url": {{ request.origin | append: variant.url | json }},
+          "priceCurrency": {{ cart.currency.iso_code | json }},
+          "price": {{ variant.price | divided_by: 100.0 | json }},
+          "itemCondition": "https://schema.org/NewCondition",
+          "availability": "https://schema.org/{% if variant.available %}InStock{% else %}OutOfStock{% endif %}",
+          "seller": { "@type": "Organization", "name": {{ shop.name | json }} },
+          "shippingDetails": {
+            "@type": "OfferShippingDetails",
+            "shippingDestination": { "@type": "DefinedRegion", "addressCountry": "SA" }
+          },
+          "hasMerchantReturnPolicy": {
+            "@type": "MerchantReturnPolicy",
+            "applicableCountry": "SA",
+            "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+            "merchantReturnDays": {{ settings.return_days | default: 14 }}
+          }
+        }{% unless forloop.last %},{% endunless %}
+      {%- endfor -%}
+    ]
+  }
+</script>
+
+<div class="container ah-product" data-product
+  data-str-add="{{ 'sections.product.add_to_cart' | t | escape }}"
+  data-str-sold-out="{{ 'sections.product.sold_out' | t | escape }}"
+  data-str-unavailable="{{ 'sections.product.unavailable' | t | escape }}"
+  data-str-in-stock="{{ 'sections.product.in_stock' | t | escape }}"
+  data-str-low-stock="{{ 'sections.product.low_stock' | t | escape }}"
+  data-str-save="{{ 'sections.product.you_save_html' | t: amount: '[amount]', percent: '[percent]' | escape }}"
+  data-str-off="{{ 'sections.product.percent_off' | t: percent: '[percent]' | escape }}">
+  {%- comment -%}
+    Built by hand rather than `{{ product | json }}`: the drop-to-json output omits
+    inventory_quantity / inventory_policy, which the stock cap and low-stock note need.
+  {%- endcomment -%}
+  <script type="application/json" data-product-json>
+    {
+      "options": [{% for option_name in product.options %}{{ option_name | json }}{% unless forloop.last %},{% endunless %}{% endfor %}],
+      "variants": [
+        {%- for variant in product.variants -%}
+          {
+            "id": {{ variant.id | json }},
+            "option1": {{ variant.option1 | json }},
+            "option2": {{ variant.option2 | json }},
+            "option3": {{ variant.option3 | json }},
+            "available": {{ variant.available | json }},
+            "price": {{ variant.price | json }},
+            "compare_at_price": {{ variant.compare_at_price | json }},
+            "inventory_management": {{ variant.inventory_management | json }},
+            "inventory_policy": {{ variant.inventory_policy | json }},
+            "inventory_quantity": {{ variant.inventory_quantity | json }},
+            "featured_image": {% if variant.featured_media %}{ "id": {{ variant.featured_media.id | json }}, "src": {{ variant.featured_media | image_url: width: 1200 | json }} }{% else %}null{% endif %}
+          }{% unless forloop.last %},{% endunless %}
+        {%- endfor -%}
+      ]
+    }
+  </script>
+
+  {%- liquid
+    assign main_media = current_variant.featured_media | default: product.featured_media
+    assign image_count = 0
+    for media in product.media
+      if media.media_type == 'image'
+        assign image_count = image_count | plus: 1
+      endif
+    endfor
+  -%}
+  <div class="ah-gallery{% if image_count > 1 %} ah-gallery--multi{% endif %}" data-gallery>
+    <div class="ah-gallery__stage">
+      <div class="ah-card__badges">
+        {%- unless product.available -%}
+          <span class="ah-badge ah-badge--soldout">{{ 'sections.product.sold_out' | t }}</span>
+        {%- else -%}
+          {%- if product.compare_at_price > product.price -%}<span class="ah-badge ah-badge--sale">{{ 'sections.main_collection.on_sale' | t }}</span>{%- endif -%}
+        {%- endunless -%}
+      </div>
+      {%- if image_count > 0 -%}
+        <div class="ah-gallery__track" data-gallery-track tabindex="0" aria-label="{{ product.title | escape }}">
+          {%- assign slide = 0 -%}
+          {%- for media in product.media -%}
+            {%- if media.media_type == 'image' -%}
+              {%- liquid
+                assign slide = slide | plus: 1
+                assign media_alt = media.alt | default: product.title
+                if request.locale.iso_code != 'en'
+                  assign media_alt = product.title
+                  if slide > 1
+                    assign media_alt = media_alt | append: ' – ' | append: slide
+                  endif
+                endif
+                assign zoom_src = media | image_url: width: 2000
+                assign img_loading = 'lazy'
+                assign img_priority = 'auto'
+                if slide == 1
+                  assign img_loading = 'eager'
+                  assign img_priority = 'high'
+                endif
+              -%}
+              <div class="ah-gallery__slide" data-slide data-media-id="{{ media.id }}">
+                {{ media | image_url: width: 1200 | image_tag:
+                  widths: '450,600,800,1000,1200',
+                  sizes: '(min-width: 990px) 50vw, 100vw',
+                  alt: media_alt,
+                  loading: img_loading,
+                  fetchpriority: img_priority,
+                  data-zoom: zoom_src
+                }}
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+        {%- if image_count > 1 -%}
+          <button type="button" class="ah-gallery__arrow ah-gallery__arrow--prev" data-gallery-prev aria-label="{{ 'sections.product.prev_image' | t }}">{%- render 'icon', name: 'arrow' -%}</button>
+          <button type="button" class="ah-gallery__arrow ah-gallery__arrow--next" data-gallery-next aria-label="{{ 'sections.product.next_image' | t }}">{%- render 'icon', name: 'arrow' -%}</button>
+          <span class="ah-gallery__count" aria-live="polite"><span data-gallery-index>1</span> / {{ image_count }}</span>
+        {%- endif -%}
+        <button type="button" class="ah-gallery__zoom" data-zoom-open aria-label="{{ 'sections.product.zoom' | t }}">{%- render 'icon', name: 'zoom' -%}</button>
+      {%- else -%}
+        {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
+      {%- endif -%}
+    </div>
+
+    {%- if image_count > 1 -%}
+      <div class="ah-gallery__thumbs">
+        {%- assign slide = 0 -%}
+        {%- for media in product.media -%}
+          {%- if media.media_type == 'image' -%}
+            <button type="button" class="ah-gallery__thumb{% if slide == 0 %} is-active{% endif %}" data-thumb="{{ slide }}" data-media-id="{{ media.id }}" aria-label="{{ 'sections.product.view_image' | t: number: forloop.index }}">
+              {{ media | image_url: width: 160 | image_tag: loading: 'lazy', alt: '', width: 80, height: 80 }}
+            </button>
+            {%- assign slide = slide | plus: 1 -%}
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+
+  <div class="ah-pinfo">
+    <div>
+      {%- if product.vendor != blank and product.vendor != shop.name -%}<span class="ah-pinfo__vendor">{{ product.vendor }}</span>{%- endif -%}
+      <h1 class="ah-pinfo__title">{{ product.title }}</h1>
+    </div>
+
+    {%- render 'price', product: product, variant: current_variant, show_off: true, data_attr: true -%}
+    <p class="ah-pinfo__tax">{{ 'sections.product.tax_included' | t }}</p>
+
+    {%- form 'product', product, data-product-form: '', class: 'ah-buy' -%}
+      <input type="hidden" name="id" value="{{ current_variant.id }}">
+
+      {%- unless product.has_only_default_variant -%}
+        {%- for option in product.options_with_values -%}
+          {%- liquid
+            assign option_down = option.name | downcase
+            assign is_color = false
+            assign is_size = false
+            if option_down == 'color' or option_down == 'colour' or option.name == 'اللون'
+              assign is_color = true
+            elsif option_down contains 'size' or option.name contains 'مقاس' or option.name contains 'قياس'
+              assign is_size = true
+            endif
+            if is_size
+              for value in option.values
+                assign v_up = value | upcase | strip
+                if v_up == 'S' or v_up == 'M' or v_up == 'L' or v_up contains 'XL' or v_up contains 'SMALL' or v_up contains 'MEDIUM' or v_up contains 'LARGE' or value contains 'صغير' or value contains 'وسط' or value contains 'كبير'
+                  assign has_size = true
+                endif
+              endfor
+            endif
+            assign option_i = forloop.index0
+          -%}
+          <fieldset class="ah-option" data-option-index="{{ forloop.index0 }}">
+            <legend class="ah-option__label">{{ option.name }}: <span data-selected-label="{{ forloop.index0 }}">{{ option.selected_value }}</span></legend>
+            {%- if is_color -%}
+              <div class="ah-option__values">
+                {%- for value in option.values -%}
+                  {%- capture swatch_bg -%}{%- render 'swatch-color', value: value -%}{%- endcapture -%}
+                  {%- assign swatch_bg = swatch_bg | strip -%}
+                  {%- assign swatch_img = nil -%}
+                  {%- if swatch_bg == blank -%}
+                    {%- for variant in product.variants -%}
+                      {%- assign v_opt = variant.options[option_i] -%}
+                      {%- if v_opt == value and variant.featured_media -%}{%- assign swatch_img = variant.featured_media -%}{%- break -%}{%- endif -%}
+                    {%- endfor -%}
+                  {%- endif -%}
+                  <button type="button" role="radio" aria-checked="{% if option.selected_value == value %}true{% else %}false{% endif %}" class="ah-swatch{% if option.selected_value == value %} is-selected{% endif %}{% if swatch_img %} ah-swatch--img{% endif %}" data-value="{{ value | escape }}" aria-label="{{ value | escape }}" title="{{ value | escape }}">
+                    {%- if swatch_img -%}
+                      <span>{{ swatch_img | image_url: width: 96 | image_tag: loading: 'lazy', alt: '', width: 48, height: 48 }}</span>
+                    {%- else -%}
+                      <span style="background: {{ swatch_bg | default: '#b9b9b9' }};"></span>
+                    {%- endif -%}
+                  </button>
+                {%- endfor -%}
+              </div>
+            {%- elsif option.values.size <= 12 -%}
+              <div class="ah-option__values">
+                {%- for value in option.values -%}
+                  <button type="button" role="radio" aria-checked="{% if option.selected_value == value %}true{% else %}false{% endif %}" class="ah-chip-opt{% if option.selected_value == value %} is-selected{% endif %}" data-value="{{ value | escape }}">{{ value }}</button>
+                {%- endfor -%}
+              </div>
+            {%- else -%}
+              <select class="ah-select" aria-label="{{ option.name | escape }}">
+                {%- for value in option.values -%}
+                  <option value="{{ value | escape }}" {% if option.selected_value == value %}selected{% endif %}>{{ value }}</option>
+                {%- endfor -%}
+              </select>
+            {%- endif -%}
+            {%- if is_size and has_size -%}
+              <button type="button" class="ah-size-link" data-modal-open="SizeGuide">{%- render 'icon', name: 'ruler' -%}{{ 'sections.product.size_guide' | t }}</button>
+            {%- endif -%}
+          </fieldset>
+        {%- endfor -%}
+      {%- endunless -%}
+
+      <p class="ah-stock" data-stock {% unless current_variant.available %}hidden{% endunless %}>{{ 'sections.product.in_stock' | t }}</p>
+
+      <div class="ah-buy__row">
+        <div class="ah-qty">
+          <button type="button" data-qty-step="-1" aria-label="{{ 'sections.product.decrease' | t }}">−</button>
+          <label class="visually-hidden" for="Quantity">{{ 'sections.product.quantity' | t }}</label>
+          <input type="number" id="Quantity" name="quantity" value="1" min="1" data-qty-input>
+          <button type="button" data-qty-step="1" aria-label="{{ 'sections.product.increase' | t }}">+</button>
+        </div>
+        <button type="submit" class="ah-btn ah-btn--block ah-buy__add" data-add-to-cart {% unless current_variant.available %}disabled{% endunless %}>
+          {%- if current_variant.available -%}{{ 'sections.product.add_to_cart' | t }}{%- else -%}{{ 'sections.product.sold_out' | t }}{%- endif -%}
+        </button>
+        {%- if settings.social_whatsapp_number != blank -%}
+          {%- capture wa_text -%}{{ 'sections.product.whatsapp_message' | t: title: product.title }} {{ request.origin }}{{ product.url }}{%- endcapture -%}
+          <a class="ah-buy__wa" href="https://wa.me/{{ settings.social_whatsapp_number }}?text={{ wa_text | url_encode }}" target="_blank" rel="noopener noreferrer" aria-label="{{ 'sections.product.ask_whatsapp' | t }}" title="{{ 'sections.product.ask_whatsapp' | t }}">
+            {%- render 'icon', name: 'whatsapp' -%}
+          </a>
+        {%- endif -%}
+      </div>
+      {%- if section.settings.show_dynamic_checkout -%}
+        <div class="ah-buy__now">{{ form | payment_button }}</div>
+      {%- endif -%}
+    {%- endform -%}
+
+    <div class="ah-perks">
+      <div class="ah-perk">{%- render 'icon', name: 'truck' -%}<span>{{ 'sections.value_props.delivery_title' | t }}</span></div>
+      <div class="ah-perk">{%- render 'icon', name: 'return' -%}<span>{{ 'sections.value_props.returns_title' | t }}</span></div>
+      <div class="ah-perk">{%- render 'icon', name: 'cash' -%}<span>{{ 'sections.value_props.secure_title' | t }}</span></div>
+      <div class="ah-perk">{%- render 'icon', name: 'shield' -%}<span>{{ 'sections.value_props.authentic_title' | t }}</span></div>
+    </div>
+
+    <div class="ah-accordion">
+      {%- if product.description != blank -%}
+        <details open>
+          <summary>{{ 'sections.product.description' | t }}</summary>
+          <div class="ah-accordion__body rte">{%- render 'clean-description', product: product -%}</div>
+        </details>
+      {%- endif -%}
+      <details>
+        <summary>{{ 'sections.product.shipping_returns' | t }}</summary>
+        <div class="ah-accordion__body rte">
+          {%- capture riyal -%}{%- render 'riyal' -%}{%- endcapture -%}
+          <p>{{ 'sections.product.shipping_returns_text' | t | replace: '[riyal]', riyal }}</p>
+          <p>
+            {%- if shop.shipping_policy -%}<a href="{{ shop.shipping_policy.url }}">{{ shop.shipping_policy.title }}</a>{%- endif -%}
+            {%- if shop.refund_policy -%} · <a href="{{ shop.refund_policy.url }}">{{ shop.refund_policy.title }}</a>{%- endif -%}
+          </p>
+        </div>
+      </details>
+      {%- if current_variant.sku != blank -%}
+        <details>
+          <summary>{{ 'sections.product.details' | t }}</summary>
+          <div class="ah-accordion__body rte"><p>{{ 'sections.product.sku' | t }}: {{ current_variant.sku }}</p>{%- if product.type != blank -%}<p>{{ 'sections.product.category' | t }}: {{ product.type }}</p>{%- endif -%}</div>
+        </details>
+      {%- endif -%}
+    </div>
+  </div>
+</div>
+
+<div class="ah-sticky-atc" data-sticky-atc>
+  <div class="container ah-sticky-atc__inner">
+    <div class="ah-sticky-atc__media">
+      {%- if product.featured_media -%}{{ product.featured_media | image_url: width: 120 | image_tag: alt: '', loading: 'lazy' }}{%- endif -%}
+    </div>
+    <div class="ah-sticky-atc__info">
+      <span class="ah-sticky-atc__title">{{ product.title }}</span>
+      <span class="ah-sticky-atc__price" data-sticky-price>{%- render 'money', cents: current_variant.price -%}</span>
+    </div>
+    <button type="button" class="ah-btn" data-sticky-add {% unless current_variant.available %}disabled{% endunless %}>
+      {%- if current_variant.available -%}{{ 'sections.product.add_to_cart' | t }}{%- else -%}{{ 'sections.product.sold_out' | t }}{%- endif -%}
+    </button>
+  </div>
+</div>
+
+<div class="ah-modal ah-modal--zoom" data-zoom-modal role="dialog" aria-modal="true" aria-label="{{ 'sections.product.zoom' | t }}">
+  <button type="button" class="ah-icon-btn ah-modal__close" data-zoom-close aria-label="{{ 'general.header.close' | t }}">{%- render 'icon', name: 'close' -%}</button>
+  <div class="ah-zoom__track" data-zoom-track></div>
+  <button type="button" class="ah-zoom__arrow ah-zoom__arrow--prev" data-zoom-prev aria-label="{{ 'sections.product.prev_image' | t }}">{%- render 'icon', name: 'arrow' -%}</button>
+  <button type="button" class="ah-zoom__arrow ah-zoom__arrow--next" data-zoom-next aria-label="{{ 'sections.product.next_image' | t }}">{%- render 'icon', name: 'arrow' -%}</button>
+  <span class="ah-zoom__count" data-zoom-count aria-live="polite"></span>
+</div>
+
+{%- if has_size -%}
+  {%- render 'size-guide', product: product -%}
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Product information",
+  "settings": [
+    { "type": "checkbox", "id": "show_dynamic_checkout", "label": "Show Buy it now button", "default": true }
+  ]
+}
+{% endschema %}
