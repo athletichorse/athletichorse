@@ -114,6 +114,53 @@
     });
   }
 
+
+  /* ---------- Motion layer ----------
+     Lazy images fade in as they arrive; homepage sections reveal once on scroll; the cart badge pops on add.
+     Everything is decorative: content is visible without JS and with reduced motion. */
+  function initMotionLayer() {
+    var root = document.documentElement;
+    if (!('IntersectionObserver' in window)) return;
+    function markLoaded(img) { img.classList.add('is-loaded'); }
+    function watchImages(scope) {
+      $$('.ah-card__media img, .ah-sports__icon img', scope || document).forEach(function (img) {
+        if (img.complete && img.naturalWidth) markLoaded(img);
+        else { img.addEventListener('load', function () { markLoaded(img); }, { once: true }); img.addEventListener('error', function () { markLoaded(img); }, { once: true }); }
+      });
+    }
+    watchImages();
+    root.classList.add('js-motion');
+    new MutationObserver(function (list) {
+      list.forEach(function (m) { m.addedNodes.forEach(function (n) { if (n.nodeType === 1) watchImages(n); }); });
+    }).observe(document.body, { childList: true, subtree: true });
+
+    if (document.body.classList.contains('template-index') || /(^|\s)index(\s|$)/.test(document.body.dataset.template || '')) {
+      var pending = [];
+      $$('main .shopify-section').slice(1).forEach(function (sec) {
+        if (sec.getBoundingClientRect().top < window.innerHeight) return;
+        sec.setAttribute('data-ah-reveal', '');
+        pending.push(sec);
+      });
+      /* A scroll check (not IntersectionObserver) so a fast fling past a section still reveals it */
+      var ticking = false;
+      var check = function () {
+        ticking = false;
+        var limit = window.innerHeight * 0.92;
+        pending = pending.filter(function (sec) {
+          if (sec.getBoundingClientRect().top < limit) { sec.classList.add('is-in'); return false; }
+          return true;
+        });
+        if (!pending.length) window.removeEventListener('scroll', onScroll);
+      };
+      var onScroll = function () { if (!ticking) { ticking = true; requestAnimationFrame(check); } };
+      if (pending.length) { window.addEventListener('scroll', onScroll, { passive: true }); check(); }
+    }
+
+    document.addEventListener('cart:updated', function () {
+      $$('.cart-count').forEach(function (b) { b.classList.remove('is-bump'); void b.offsetWidth; b.classList.add('is-bump'); });
+    });
+  }
+
   function initRails() { $$('[data-rail]').forEach(initRail); }
   function initRail(rail) {
     var scope = rail.closest('section') || rail;
@@ -1080,6 +1127,7 @@
     initAnnouncement();
     initRails();
     initSearchSynonyms();
+    initMotionLayer();
     initCartDrawer();
     initQuickAdd();
     initCardHover();

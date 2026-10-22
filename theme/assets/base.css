@@ -382,7 +382,7 @@ html[dir="rtl"] .mobile-drawer { transform: translateX(100%); }
 .social-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .social-row a {
   width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%;
-  border: 1px solid var(--line); color: var(--ink); background: #fff; transition: all .2s var(--ease);
+  border: 1px solid var(--line); color: var(--ink); background: #fff; transition: background-color .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease), transform 160ms var(--ease-out);
 }
 .social-row a:hover { background: var(--dark); color: #fff; border-color: var(--dark); }
 .social-row svg { width: 18px; height: 18px; }
@@ -503,7 +503,7 @@ html[lang="ar"] .ah-promo__title { font-stretch: 100%; text-transform: none; fon
 @media (min-width: 1400px) { .ah-rail__track { grid-auto-columns: calc((100% - 64px) / 5); } }
 .ah-rail__nav { display: none; gap: 8px; }
 @media (min-width: 990px) { .ah-rail__nav { display: flex; } }
-.ah-rail__btn { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--line); color: var(--ink); background: #fff; transition: all .2s var(--ease); }
+.ah-rail__btn { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--line); color: var(--ink); background: #fff; transition: background-color .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease), opacity .2s var(--ease), transform 160ms var(--ease-out); }
 .ah-rail__btn:hover:not([disabled]) { border-color: var(--ink); background: var(--ink); color: #fff; }
 .ah-rail__btn[disabled] { opacity: .35; cursor: default; }
 .ah-rail__btn svg { width: 20px; height: 20px; }
@@ -1809,3 +1809,93 @@ html[dir="rtl"] .ah-zoom__arrow--prev svg { transform: none; }
   .ah-nav__link { padding-inline: 7px; font-size: 13.5px; }
   .ah-nav__link--home span { display: none; }
 }
+
+/* =====================================================================
+   Motion layer — Apple-style, CSS-only, no library.
+   Rules: transform/opacity only; strong ease-out; UI ≤ 300ms; press feedback on pointer-down;
+   hover motion only on real mouse pointers; reveals fire once; reduced motion = fades only.
+   ===================================================================== */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* 1. Press feedback — instant, on press, everything tappable */
+.ah-btn, .ah-icon-btn, .ah-card__quick-btn, .ah-chip-opt, .ah-swatch, .ah-rail__btn, .ah-lang__btn,
+.ah-qty button, .ah-sports__icon, .ah-sportcard, .ah-dept, .ah-bento__item, .ah-price-tile, .ah-mnav__link, .ah-zoom__arrow {
+  -webkit-tap-highlight-color: transparent;
+}
+.ah-btn, .ah-icon-btn, .ah-card__quick-btn, .ah-chip-opt, .ah-swatch, .ah-lang__btn, .ah-qty button, .ah-zoom__arrow {
+  transition-property: background-color, color, border-color, box-shadow, opacity, transform;
+  transition-duration: .2s, .2s, .2s, .2s, .2s, 160ms;
+  transition-timing-function: var(--ease), var(--ease), var(--ease), var(--ease), var(--ease), var(--ease-out);
+}
+.ah-btn:active, .ah-icon-btn:active, .ah-card__quick-btn:active, .ah-chip-opt:active, .ah-swatch:active,
+.ah-rail__btn:active:not([disabled]), .ah-lang__btn:active, .ah-qty button:active:not(:disabled), .ah-zoom__arrow:active { transform: scale(0.97); }
+.ah-sportcard:active, .ah-dept:active, .ah-bento__item:active, .ah-price-tile:active { transform: scale(0.985); transition: transform 160ms var(--ease-out); }
+.ah-sports__item:active .ah-sports__icon { transform: scale(0.95); }
+
+/* 2. Translucent header — content scrolls underneath (falls back to solid white) */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ah-header { background: rgb(255 255 255 / 82%); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); }
+}
+@media (prefers-reduced-transparency: reduce) { .ah-header { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; } }
+
+/* 3. Sheets and drawers — iOS drawer curve, enter and exit along the same path */
+.mobile-drawer, .ah-cart-drawer { transition: transform 420ms var(--ease-drawer); will-change: transform; }
+.drawer-overlay, .ah-cart-overlay { transition: opacity 320ms var(--ease-out); }
+.ah-qv__panel { animation: ah-sheet-up 360ms var(--ease-drawer); }
+@media (min-width: 750px) { .ah-qv__panel { animation-name: ah-pop-in; animation-duration: 240ms; animation-timing-function: var(--ease-out); } }
+@keyframes ah-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes ah-pop-in { from { transform: scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
+.ah-modal { transition: opacity 240ms var(--ease-out), visibility 0s linear 240ms; }
+.ah-modal.is-open { transition-delay: 0s; }
+.ah-modal .ah-modal__panel { transform: scale(0.96); transition: transform 240ms var(--ease-out); }
+.ah-modal.is-open .ah-modal__panel { transform: none; }
+
+/* 4. Menus — dropdown/mega menu grow from the menu bar */
+@media (min-width: 990px) {
+  .ah-dropdown, .ah-mega { transform-origin: top center; transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out), visibility 0s linear 200ms; }
+  .ah-nav__item:not(:hover):not(:focus-within) > .ah-dropdown, .ah-nav__item:not(:hover):not(:focus-within) > .ah-mega { transform: translateY(-4px) scale(0.99); }
+}
+.ah-mnav__sub { transition: max-height 320ms var(--ease-out); }
+.ah-mnav__toggle svg { transition: transform 240ms var(--ease-out); }
+
+/* 5. Images fade in as they arrive instead of popping */
+.js-motion .ah-card__media img[loading="lazy"]:not(.is-loaded), .js-motion .ah-sports__icon img[loading="lazy"]:not(.is-loaded) { opacity: 0; }
+.js-motion .ah-card__media img, .js-motion .ah-sports__icon img { transition: opacity 400ms var(--ease-out), transform .6s var(--ease); }
+.js-motion .ah-card__media img.is-loaded, .js-motion .ah-sports__icon img.is-loaded { opacity: 1; }
+.js-motion .ah-card.is-alt:hover .ah-card__img--main.is-loaded { opacity: 0; }
+
+/* 6. Sections reveal once as they scroll into view (homepage and category pages only) */
+.js-motion [data-ah-reveal] { opacity: 0; transform: translateY(16px); transition: opacity 600ms var(--ease-out), transform 600ms var(--ease-out); }
+.js-motion [data-ah-reveal].is-in { opacity: 1; transform: none; }
+.js-motion [data-ah-reveal] .ah-rail__track > li, .js-motion [data-ah-reveal] .ah-sports > li { opacity: 0; transform: translateY(10px); transition: opacity 500ms var(--ease-out), transform 500ms var(--ease-out); }
+.js-motion [data-ah-reveal].is-in .ah-rail__track > li, .js-motion [data-ah-reveal].is-in .ah-sports > li { opacity: 1; transform: none; }
+.js-motion [data-ah-reveal].is-in :is(.ah-rail__track, .ah-sports) > li:nth-child(2) { transition-delay: 40ms; }
+.js-motion [data-ah-reveal].is-in :is(.ah-rail__track, .ah-sports) > li:nth-child(3) { transition-delay: 80ms; }
+.js-motion [data-ah-reveal].is-in :is(.ah-rail__track, .ah-sports) > li:nth-child(4) { transition-delay: 120ms; }
+.js-motion [data-ah-reveal].is-in :is(.ah-rail__track, .ah-sports) > li:nth-child(5) { transition-delay: 160ms; }
+.js-motion [data-ah-reveal].is-in :is(.ah-rail__track, .ah-sports) > li:nth-child(6) { transition-delay: 200ms; }
+
+/* 7. Cart badge acknowledges an add */
+.cart-count.is-bump { animation: ah-bump 420ms var(--ease-out); }
+@keyframes ah-bump { 0% { transform: scale(1); } 35% { transform: scale(1.35); } 100% { transform: scale(1); } }
+
+/* 8. Hover motion only on real mouse pointers (touch fires false hovers on tap) */
+@media (hover: none) {
+  .ah-card:hover .ah-card__media img, .ah-dept:hover img, .ah-sportcard:hover img, .ah-sports__item:hover .ah-sports__icon,
+  .ah-sports__item:hover .ah-sports__icon--photo img { transform: none; }
+}
+
+/* 9. Reduced motion — keep fades, drop movement */
+@media (prefers-reduced-motion: reduce) {
+  .js-motion [data-ah-reveal], .js-motion [data-ah-reveal] .ah-rail__track > li, .js-motion [data-ah-reveal] .ah-sports > li { transform: none !important; transition: opacity 200ms ease !important; transition-delay: 0s !important; }
+  .mobile-drawer, .ah-cart-drawer { transition: transform 1ms linear, opacity 200ms ease; }
+  .ah-qv__panel { animation: ah-fade 200ms ease; }
+  .cart-count.is-bump { animation: none; }
+  :is(.ah-btn, .ah-icon-btn, .ah-card__quick-btn, .ah-chip-opt, .ah-swatch, .ah-sportcard, .ah-dept, .ah-bento__item):active { transform: none; }
+  .ah-ticker__track, .ah-marquee { animation-play-state: paused; }
+}
+@keyframes ah-fade { from { opacity: 0; } to { opacity: 1; } }
