@@ -1,3 +1,12 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin language editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
 {
   "general": {
     "meta": {
@@ -366,7 +375,7 @@
       "save_up_to": "Save up to {{ percent }}% — limited stock"
     },
     "mega_sale": {
-      "pill": "Two days only",
+      "pill": "Extended until 20 Nov",
       "title": "Mega Sale",
       "cta_discount": "Shop biggest discounts",
       "cta_cheapest": "Shop cheapest first",

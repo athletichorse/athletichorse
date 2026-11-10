@@ -1,3 +1,12 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin language editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
 {
   "general": {
     "meta": {
@@ -378,7 +387,7 @@
       "save_up_to": "وفّر حتى {{ percent }}% — الكمية محدودة"
     },
     "mega_sale": {
-      "pill": "ليومين فقط",
+      "pill": "ممتد حتى 20 نوفمبر",
       "title": "التخفيضات الكبرى",
       "cta_discount": "تسوّق أكبر الخصومات",
       "cta_cheapest": "تسوّق الأرخص أولاً",
