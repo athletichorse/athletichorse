@@ -34,7 +34,7 @@ Work branch: `claude/epic-thompson-9cypg1`. Theme source lives in `theme/`.
 | **Athletic Horse – 11.11 Mega Sale** | **188405547258** | **live (MAIN)** since 10 Nov 2026 = Update 8 + sale |
 
 ## 11.11 Mega Sale (10–11 Nov 2026, Riyadh time)
-- Collection `11-11-mega-sale` (ID 516880924922), manual sort = highest discount first, 55 in-stock discounted products (6–53% off), template suffix `mega-sale`, Arabic title "تخفيضات 11.11 الكبرى".
+- Collection `11-11-mega-sale` (ID 516880924922), sort = lowest price first (PRICE_ASC, owner request 10 Nov), 55 in-stock discounted products (6–53% off), template suffix `mega-sale`, Arabic title "تخفيضات 11.11 الكبرى".
 - Section `theme/sections/mega-sale.liquid` (CSS prefix `ah-1111` — `ah-mega` is taken by the header mega menu): hero + countdown, "Biggest discounts" rail, "Lowest prices" rail (cheapest first). Shown only between Unix 1794258000 and 1794430800 (12 Nov 00:00 Riyadh); JS also hides it when the countdown ends. Red "11.11 Sale" nav link in `header.liquid` uses the same window.
 - No prices were changed for the sale.
 
