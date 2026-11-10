@@ -19,8 +19,8 @@ if ! fresh; then
   | python3 -c 'import sys,json;d=json.load(sys.stdin);t=d.get("access_token");sys.exit("token exchange failed: "+str(d.get("error",d))) if not t else print(t,end="")' > "$CACHE.tmp"
   mv "$CACHE.tmp" "$CACHE"
 fi
-if [[ "${1:-}" == @* ]]; then BODY=$(cat "${1#@}")
-else BODY=$(python3 -c 'import sys,json;print(json.dumps({"query":sys.argv[1]}))' "${1:?query required}"); fi
+if [[ "${1:-}" == @* ]]; then DATA="$1"   # pass file straight to curl (large bodies OK)
+else DATA=$(python3 -c 'import sys,json;print(json.dumps({"query":sys.argv[1]}))' "${1:?query required}"); fi
 curl -sS "https://$SHOP/admin/api/$API/graphql.json" \
-  -H "X-Shopify-Access-Token: $(cat "$CACHE")" -H 'Content-Type: application/json' --data-binary "$BODY"
+  -H "X-Shopify-Access-Token: $(cat "$CACHE")" -H 'Content-Type: application/json' --data-binary "$DATA"
 echo
