@@ -1,0 +1,32 @@
+{
+  "sections": {
+    "main-collection-banner": {
+      "type": "main-collection-banner",
+      "settings": {
+        "show_image": false
+      }
+    },
+    "main-collection-product-grid": {
+      "type": "main-collection-product-grid",
+      "settings": {
+        "per_page": 24,
+        "enable_filtering": true
+      }
+    },
+    "mega_sale": {
+      "type": "mega-sale",
+      "settings": {
+        "collection": "11-11-mega-sale",
+        "start_ts": "1794258000",
+        "end_ts": "1794430800",
+        "show_rails": false,
+        "product_count": 16
+      }
+    }
+  },
+  "order": [
+    "mega_sale",
+    "main-collection-banner",
+    "main-collection-product-grid"
+  ]
+}

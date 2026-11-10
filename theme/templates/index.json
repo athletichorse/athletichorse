@@ -346,9 +346,20 @@
         "stat_2": "1000+",
         "link": "/collections"
       }
+    },
+    "mega_sale": {
+      "type": "mega-sale",
+      "settings": {
+        "collection": "11-11-mega-sale",
+        "start_ts": "1794258000",
+        "end_ts": "1794430800",
+        "show_rails": true,
+        "product_count": 16
+      }
     }
   },
   "order": [
+    "mega_sale",
     "hero",
     "ticker",
     "category-strip",

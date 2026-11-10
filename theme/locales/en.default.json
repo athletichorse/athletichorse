@@ -364,6 +364,23 @@
     "sale_rail": {
       "flag": "Sale",
       "save_up_to": "Save up to {{ percent }}% — limited stock"
+    },
+    "mega_sale": {
+      "pill": "Two days only",
+      "title": "Mega Sale",
+      "cta_discount": "Shop biggest discounts",
+      "cta_cheapest": "Shop cheapest first",
+      "ends_in": "Sale ends in",
+      "days": "Days",
+      "hours": "Hours",
+      "minutes": "Min",
+      "seconds": "Sec",
+      "rail_discount_eyebrow": "Highest discount first",
+      "rail_discount": "Biggest discounts",
+      "rail_price_eyebrow": "Cheapest first",
+      "rail_price": "Lowest prices",
+      "nav": "11.11 Sale",
+      "subtitle_html": "Up to <strong>{{ percent }}% off</strong> sports gear, swimwear and fitness equipment. Cash on delivery across Saudi Arabia."
     }
   }
 }

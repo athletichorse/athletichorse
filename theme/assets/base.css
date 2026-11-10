@@ -1899,3 +1899,37 @@ html[dir="rtl"] .ah-zoom__arrow--prev svg { transform: none; }
   .ah-ticker__track, .ah-marquee { animation-play-state: paused; }
 }
 @keyframes ah-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ===== 11.11 Mega Sale ===== */
+.ah-1111__hero { position: relative; overflow: hidden; background: radial-gradient(120% 140% at 85% 0%, var(--brand) 0%, var(--brand-dark) 45%, var(--dark) 100%); color: #E7ECE9; }
+.ah-1111__hero::after { content: ""; position: absolute; inset: auto -8% -55% auto; width: 560px; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgb(182 242 58 / 22%), transparent 68%); pointer-events: none; }
+.ah-1111__inner { position: relative; z-index: 1; display: grid; gap: 28px; align-items: center; padding-block: clamp(28px, 5vw, 56px); }
+@media (min-width: 990px) { .ah-1111__inner { grid-template-columns: 1.4fr 1fr; gap: 48px; } }
+.ah-1111__pill { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px; background: var(--sale); color: #fff; font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+html[lang="ar"] .ah-1111__pill { text-transform: none; letter-spacing: 0; }
+.ah-1111__pill svg { width: 15px; height: 15px; }
+.ah-1111__title { margin-top: 14px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; color: #fff; line-height: .95; }
+.ah-1111__num { font-size: clamp(64px, 12vw, 136px); font-weight: 800; letter-spacing: -.04em; color: var(--lime); font-variant-numeric: tabular-nums; }
+.ah-1111__word { font-size: clamp(32px, 5.4vw, 64px); font-weight: 700; letter-spacing: -.02em; text-transform: uppercase; }
+html[lang="ar"] .ah-1111__word { text-transform: none; letter-spacing: 0; }
+.ah-1111__sub { margin-top: 14px; font-size: clamp(16px, 1.8vw, 20px); color: #C9D1CC; max-width: 46ch; }
+.ah-1111__sub strong { color: var(--lime); }
+.ah-1111__ctas { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 10px; }
+.ah-1111__btn { --btn-bg: var(--lime); --btn-fg: var(--dark); font-weight: 700; }
+.ah-1111__btn:hover { --btn-bg: #fff; }
+.ah-1111__btn--ghost { --btn-bg: transparent; --btn-fg: #fff; border: 1.5px solid rgb(255 255 255 / 45%); }
+.ah-1111__btn--ghost:hover { --btn-bg: rgb(255 255 255 / 10%); border-color: #fff; }
+.ah-1111__clock { justify-self: start; padding: 18px 20px; border-radius: var(--radius-lg); background: rgb(255 255 255 / 6%); border: 1px solid rgb(255 255 255 / 12%); }
+@media (min-width: 990px) { .ah-1111__clock { justify-self: end; } }
+.ah-1111__clock-label { display: block; font-size: 13px; font-weight: 600; color: #AEB8B2; text-transform: uppercase; letter-spacing: .06em; }
+html[lang="ar"] .ah-1111__clock-label { text-transform: none; letter-spacing: 0; }
+.ah-1111__units { margin-top: 10px; display: flex; gap: 8px; }
+.ah-1111__unit { display: grid; justify-items: center; gap: 4px; min-width: 64px; padding: 10px 6px; border-radius: var(--radius); background: var(--dark); }
+.ah-1111__unit b { font-size: clamp(26px, 3.4vw, 38px); font-weight: 800; color: var(--lime); font-variant-numeric: tabular-nums; line-height: 1; }
+.ah-1111__unit small { font-size: 11px; color: #AEB8B2; }
+@media (max-width: 420px) { .ah-1111__unit { min-width: 0; flex: 1; } }
+.ah-1111__rail .ah-eyebrow { color: var(--sale); }
+.ah-1111 .ah-card .ah-badge--off { font-size: 12.5px; height: 26px; }
+@media (prefers-reduced-motion: no-preference) { .ah-1111__num { animation: ah-1111-in .7s var(--ease-out, ease) both; } }
+@keyframes ah-1111-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+.ah-nav__link--mega { color: var(--sale) !important; font-weight: 700; }
