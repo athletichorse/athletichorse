@@ -28,9 +28,9 @@ Work branch: `claude/epic-thompson-9cypg1`. Theme source lives in `theme/`.
 ## Themes
 | Theme | ID | State |
 |---|---|---|
-| Athletic Horse 2026 – Update 7 | 187347828986 | **live (MAIN)** as of 10 Nov 2026 |
+| Athletic Horse 2026 – Update 7 | 187347828986 | unpublished (was live until 10 Nov 2026) |
 | Athletic Horse 2026 – Update 8 | 187384955130 | unpublished; latest non-sale work (menu with About/Contact, motion layer, search fixes) |
-| **Athletic Horse – 11.11 Mega Sale** | **188405547258** | unpublished = Update 8 + sale |
+| **Athletic Horse – 11.11 Mega Sale** | **188405547258** | **live (MAIN)** since 10 Nov 2026 = Update 8 + sale |
 
 ## 11.11 Mega Sale (10–11 Nov 2026, Riyadh time)
 - Collection `11-11-mega-sale` (ID 516880924922), manual sort = highest discount first, 55 in-stock discounted products (6–53% off), template suffix `mega-sale`, Arabic title "تخفيضات 11.11 الكبرى".
