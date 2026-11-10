@@ -38,6 +38,9 @@ Work branch: `claude/epic-thompson-9cypg1`. Theme source lives in `theme/`.
 - Section `theme/sections/mega-sale.liquid` (CSS prefix `ah-1111` — `ah-mega` is taken by the header mega menu): hero + countdown, "Biggest discounts" rail, "Lowest prices" rail (cheapest first). Shown only between Unix 1794258000 and 1794430800 (12 Nov 00:00 Riyadh); JS also hides it when the countdown ends. Red "11.11 Sale" nav link in `header.liquid` uses the same window.
 - No prices were changed for the sale.
 
+## Pages
+- **Events & Team Wear Production** `/pages/events-team-wear` (Page 163190178042, created 10 Nov 2026 on owner request): EN body + AR translation from `pages/events-team-wear.{en,ar}.html`; quotes via bulk WhatsApp +966 54 177 0519. In main menu before Contact (AR "ملابس الفعاليات والفرق"). Page CSS prefix `ah-ev`; theme `.rte ul > li::before` draws dots, overridden in page CSS.
+
 ## Recurring work
 - Nightly scheduled check (trigger `trig_01VGXG5GyJzr2BvvoctNSQth`) runs `tools/CATALOG_VALIDATION.md` on ACTIVE products changed in the last 26h + Arabic email templates (`notifications/templates.json`).
 
