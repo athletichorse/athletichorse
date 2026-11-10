@@ -277,16 +277,18 @@
       return '<div class="ah-line" data-line-key="' + item.key + '">' +
         '<a class="ah-line__media" href="' + item.url + '">' + img + '</a>' +
         '<div class="ah-line__info">' +
-          '<a class="ah-line__title" href="' + item.url + '">' + escapeHtml(item.product_title) + '</a>' + variant +
+          '<div class="ah-line__top">' +
+            '<a class="ah-line__title" href="' + item.url + '">' + escapeHtml(item.product_title) + '</a>' +
+            '<span class="ah-line__price">' + price + '</span>' +
+          '</div>' + variant +
           '<div class="ah-line__row">' +
             '<div class="ah-qty ah-qty--sm">' +
               '<button type="button" data-line-qty="' + (item.quantity - 1) + '" aria-label="−">−</button>' +
               '<input type="number" value="' + item.quantity + '" min="0" data-line-input aria-label="' + escapeHtml(s.strQty) + '">' +
               '<button type="button" data-line-qty="' + (item.quantity + 1) + '" aria-label="+">+</button>' +
             '</div>' +
-            '<span class="ah-line__price">' + price + '</span>' +
+            '<button type="button" class="ah-line__remove" data-line-qty="0">' + escapeHtml(s.strRemove) + '</button>' +
           '</div>' +
-          '<button type="button" class="ah-line__remove" data-line-qty="0">' + escapeHtml(s.strRemove) + '</button>' +
         '</div></div>';
     }).join('');
 

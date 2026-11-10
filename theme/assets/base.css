@@ -1933,3 +1933,20 @@ html[lang="ar"] .ah-1111__clock-label { text-transform: none; letter-spacing: 0;
 @media (prefers-reduced-motion: no-preference) { .ah-1111__num { animation: ah-1111-in .7s var(--ease-out, ease) both; } }
 @keyframes ah-1111-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
 .ah-nav__link--mega { color: var(--sale) !important; font-weight: 700; }
+
+/* Cart lines: price beside the title; quantity and Remove on one row */
+.ah-line__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ah-line__top .ah-line__title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ah-line__top .ah-line__price { flex: none; white-space: nowrap; text-align: end; }
+.ah-line__top .ah-line__price .ah-price__was { display: block; font-size: 12px; font-weight: 400; }
+.ah-line__row { justify-content: flex-start; gap: 14px; margin-top: 6px; }
+.ah-line__remove { margin-inline-start: auto; padding: 6px 0; text-underline-offset: 3px; }
+.ah-cart-drawer .ah-line { grid-template-columns: 68px 1fr; gap: 12px; padding-block: 14px; }
+.ah-cart-drawer .ah-line__media { width: 68px; height: 68px; }
+.ah-cart-drawer .ah-line__info { gap: 2px; }
+.ah-cart-drawer .ah-line__title { font-size: 13.5px; font-weight: 500; line-height: 1.35; }
+.ah-cart-drawer .ah-line__price { font-size: 14px; }
+.ah-cart-drawer .ah-qty--sm { height: 34px; }
+.ah-cart-drawer .ah-qty--sm button { width: 30px; font-size: 16px; }
+.ah-cart-drawer .ah-qty--sm input { width: 26px; font-size: 13.5px; }
+.ah-cart-drawer .ah-line__remove { font-size: 12.5px; }

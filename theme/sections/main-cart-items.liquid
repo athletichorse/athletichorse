@@ -31,7 +31,13 @@
               {%- if item.image -%}{{ item.image | image_url: width: 240 | image_tag: alt: item.product.title, loading: 'lazy' }}{%- endif -%}
             </a>
             <div class="ah-line__info">
-              <a href="{{ item.url }}" class="ah-line__title">{{ item.product.title }}</a>
+              <div class="ah-line__top">
+                <a href="{{ item.url }}" class="ah-line__title">{{ item.product.title }}</a>
+                <span class="ah-line__price">
+                  {%- if item.original_line_price != item.final_line_price -%}<s class="ah-price__was">{%- render 'money', cents: item.original_line_price -%}</s> {% endif -%}
+                  {%- render 'money', cents: item.final_line_price -%}
+                </span>
+              </div>
               {%- unless item.product.has_only_default_variant -%}<span class="ah-line__variant">{{ item.variant.title }}</span>{%- endunless -%}
               {%- for discount in item.line_level_discount_allocations -%}
                 <span class="ah-line__variant" style="color:var(--brand)">{{ discount.discount_application.title }} (−{%- render 'money', cents: discount.amount -%})</span>
@@ -48,12 +54,8 @@
                   <input type="number" name="updates[]" value="{{ item.quantity }}" min="0"{% if line_max %} max="{{ line_max }}"{% endif %} aria-label="{{ 'sections.cart.quantity' | t }}">
                   <button type="button" data-qty-step="1" aria-label="{{ 'sections.product.increase' | t }}"{% if line_max and item.quantity >= line_max %} disabled title="{{ 'sections.product.max_in_cart' | t }}"{% endif %}>+</button>
                 </div>
-                <span class="ah-line__price">
-                  {%- if item.original_line_price != item.final_line_price -%}<s class="ah-price__was">{%- render 'money', cents: item.original_line_price -%}</s> {% endif -%}
-                  {%- render 'money', cents: item.final_line_price -%}
-                </span>
+                <a href="{{ item.url_to_remove }}" class="ah-line__remove">{{ 'sections.cart.remove' | t }}</a>
               </div>
-              <a href="{{ item.url_to_remove }}" class="ah-line__remove">{{ 'sections.cart.remove' | t }}</a>
             </div>
           </div>
         {%- endfor -%}
