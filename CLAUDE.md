@@ -45,5 +45,10 @@ Work branch: `claude/epic-thompson-9cypg1`. Theme source lives in `theme/`.
 - Size labels are mixed after the babasaleh import (~74 products Small/Medium/Large, ~7 S/M/L; owner's descriptions say "S, M, L"). Ask which style before changing.
 - Arabic colour names differ: Baby Blue أزرق فاتح vs أزرق سماوي, Fuchsia فوشي vs فوشيا. Ask which to use.
 - ~580 imported babasaleh products are still DRAFT (categories, SEO, Arabic done).
-- **Meta Ads (set up 10 Nov 2026, owner chose direct API, not a connector):** Meta app "Alhisan Claude" (Marketing API use case, unpublished — fine for own assets) in business "BABA SALEH Business Manager"; Employee system user "claude alhisan" with the Athletic Horse ad account + Page assigned (a separate "Claude" system user belongs to another page — never touch it). Env vars `META_ACCESS_TOKEN` (never-expiring system user token; never print) and `META_AD_ACCOUNT_ID` (`act_…`). Call `https://graph.facebook.com/v23.0/...` with `-H "Authorization: Bearer $META_ACCESS_TOKEN"`. First check: `/me`, `/$META_AD_ACCOUNT_ID?fields=name,currency,account_status,amount_spent`, `/me/accounts`. Create campaigns PAUSED; ask owner before any budget/spend.
-- TODO: no Meta pixel yet — set up via Shopify "Facebook & Instagram" channel. Google Ads not connected yet (needs developer token approval).
+- **Meta Ads (set up 10 Nov 2026, owner chose direct API, not a connector):** Meta app "Alhisan Claude" (Marketing API, unpublished — fine for own assets) in business "BABA SALEH Business Manager" (ID 133031524489610); Employee system user "claude alhisan" (ID 122102649585541449). It reaches ONLY:
+  - Ad account **Alhisan Alriyadi `act_2406438510179727`** (SAR, Asia/Riyadh, VISA attached, created 10 Nov 2026).
+  - Page **Athletic Horse** `1095169633685157`, Instagram `17841422441194926`.
+  - Never use Baba Saleh's "Mina Morcos" ad account (EGP/Cairo) or its pixels — separate business, owner wants no overlap.
+  - Token: network secret on host `graph.facebook.com` (proxy injects the Bearer header — just `curl https://graph.facebook.com/v23.0/...`); also env var `META_ACCESS_TOKEN`. Never print it.
+  - Create campaigns PAUSED; ask owner before any budget/spend.
+- TODO: no Meta pixel for Athletic Horse yet — set up via Shopify "Facebook & Instagram" channel (create a new pixel/dataset, not a Baba Saleh one). Google Ads not connected yet (needs developer token approval).
