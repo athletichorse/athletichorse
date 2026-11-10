@@ -22,7 +22,8 @@ Work branch: `claude/epic-thompson-9cypg1`. Theme source lives in `theme/`.
   curl -sS "https://sfypqe-qu.myshopify.com/admin/api/2026-10/graphql.json" \
     -H "X-Shopify-Access-Token: $TOKEN" -H 'Content-Type: application/json' -d '{"query":"{ shop { name } }"}'
   ```
-  Confirm with the owner in the current conversation before publishing a theme or editing the live theme.
+  **Shortcut:** `tools/shopify_admin.sh '<graphql>'` (or `@body.json`) does the exchange, caches the token and refreshes it automatically. Use this — the app credentials are permanent environment variables on the "Athletic Horse" cloud environment, so every session there has access.
+- **Standing approval (owner, 10 Nov 2026):** when the owner asks for a store or theme edit — including the live theme or publishing a theme — just do it with the app token; no extra confirmation needed. Still ask first for anything the owner did not ask for, anything that spends money, and deleting products / removing collection memberships.
 - Theme file uploads: `stagedUploadsCreate` → PUT file → `themeFilesUpsert` (unpublished themes via MCP; live theme via the app token).
 
 ## Themes
