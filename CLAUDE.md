@@ -51,4 +51,6 @@ Work branch: `claude/epic-thompson-9cypg1`. Theme source lives in `theme/`.
   - Never use Baba Saleh's "Mina Morcos" ad account (EGP/Cairo) or its pixels — separate business, owner wants no overlap.
   - Token: network secret on host `graph.facebook.com` (proxy injects the Bearer header — just `curl https://graph.facebook.com/v23.0/...`); also env var `META_ACCESS_TOKEN`. Never print it.
   - Create campaigns PAUSED; ask owner before any budget/spend.
-- TODO: no Meta pixel for Athletic Horse yet — set up via Shopify "Facebook & Instagram" channel (create a new pixel/dataset, not a Baba Saleh one). Google Ads not connected yet (needs developer token approval).
+  - Pixel/dataset **`1515344367094468`** (created by the Shopify "Facebook & Instagram" channel, CAPI on; named "BABA SALEH Business Manager's pixel" like two Baba Saleh pixels — always use the ID), connected to the ad account.
+  - Catalog **`1106955718915628`** "Shopify Product Catalog (sfypqe-qu.myshopify.com)", synced by the channel. Ignore the older "Products from sfypqe-qu.myshopify.com" catalog and all Baba Saleh catalogs.
+- Shopify "Facebook & Instagram" channel installed 10 Nov 2026 (publication 232470216954). Google Ads not connected yet (needs developer token approval).
