@@ -1,0 +1,150 @@
+{%- comment -%}
+  11.11 Mega Sale: hero with countdown, plus two rails from one collection —
+  "Biggest discounts" (highest % off first) and "Lowest prices" (cheapest first).
+  Shows only between start_ts and end_ts (Unix seconds). Countdown JS hides it at the end too,
+  in case a cached page is served after the sale.
+{%- endcomment -%}
+{%- liquid
+  assign now_ts = 'now' | date: '%s' | plus: 0
+  assign start_ts = section.settings.start_ts | plus: 0
+  assign end_ts = section.settings.end_ts | plus: 0
+  assign live = false
+  if now_ts >= start_ts and now_ts < end_ts
+    assign live = true
+  endif
+  if request.design_mode
+    assign live = true
+  endif
+  assign coll = collections[section.settings.collection]
+-%}
+{%- if live and coll and coll.products_count > 0 -%}
+{%- liquid
+  comment
+    The collection is sorted manually, highest discount first, so the top in-stock product carries the headline discount.
+  endcomment
+  assign max_off = 0
+  for p in coll.products limit: 10
+    if p.available and p.compare_at_price > p.price
+      assign p_off = p.compare_at_price | minus: p.price | times: 100.0 | divided_by: p.compare_at_price | round
+      if p_off > max_off
+        assign max_off = p_off
+      endif
+    endif
+  endfor
+  assign shop_url = coll.url
+  assign cheap_url = coll.url | append: '?sort_by=price-ascending'
+-%}
+<section class="ah-1111" data-ah-mega data-end="{{ end_ts }}">
+  <div class="ah-1111__hero">
+    <div class="container ah-1111__inner">
+      <div class="ah-1111__copy">
+        <span class="ah-1111__pill">{%- render 'icon', name: 'sale' -%}{{ 'sections.mega_sale.pill' | t }}</span>
+        <h2 class="ah-1111__title"><span class="ah-1111__num" dir="ltr">11.11</span><span class="ah-1111__word">{{ 'sections.mega_sale.title' | t }}</span></h2>
+        <p class="ah-1111__sub">{{ 'sections.mega_sale.subtitle_html' | t: percent: max_off }}</p>
+        <div class="ah-1111__ctas">
+          <a href="{{ shop_url }}" class="ah-btn ah-1111__btn">{{ 'sections.mega_sale.cta_discount' | t }}</a>
+          <a href="{{ cheap_url }}" class="ah-btn ah-1111__btn ah-1111__btn--ghost">{{ 'sections.mega_sale.cta_cheapest' | t }}</a>
+        </div>
+      </div>
+      <div class="ah-1111__clock" aria-live="off">
+        <span class="ah-1111__clock-label">{{ 'sections.mega_sale.ends_in' | t }}</span>
+        <div class="ah-1111__units">
+          <span class="ah-1111__unit"><b data-u="d">00</b><small>{{ 'sections.mega_sale.days' | t }}</small></span>
+          <span class="ah-1111__unit"><b data-u="h">00</b><small>{{ 'sections.mega_sale.hours' | t }}</small></span>
+          <span class="ah-1111__unit"><b data-u="m">00</b><small>{{ 'sections.mega_sale.minutes' | t }}</small></span>
+          <span class="ah-1111__unit"><b data-u="s">00</b><small>{{ 'sections.mega_sale.seconds' | t }}</small></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {%- if section.settings.show_rails -%}
+    <div class="ah-section ah-1111__rail">
+      <div class="container" data-rail>
+        <div class="ah-section__head">
+          <div>
+            <span class="ah-eyebrow">{{ 'sections.mega_sale.rail_discount_eyebrow' | t }}</span>
+            <h2 class="ah-section__title">{{ 'sections.mega_sale.rail_discount' | t }}</h2>
+          </div>
+          <div class="ah-section__head-end">
+            <a href="{{ shop_url }}" class="ah-link-arrow">{{ 'sections.featured_collection.view_all' | t }}</a>
+            <div class="ah-rail__nav">
+              <button type="button" class="ah-rail__btn" data-rail-prev aria-label="{{ 'general.pagination.previous' | t }}">{%- render 'icon', name: 'chevron' -%}</button>
+              <button type="button" class="ah-rail__btn" data-rail-next aria-label="{{ 'general.pagination.next' | t }}">{%- render 'icon', name: 'chevron' -%}</button>
+            </div>
+          </div>
+        </div>
+        <div class="ah-rail">
+          <ul class="ah-rail__track" data-rail-track role="list">
+            {%- for product in coll.products limit: section.settings.product_count -%}
+              {%- if product.available -%}<li>{%- render 'product-card', product: product -%}</li>{%- endif -%}
+            {%- endfor -%}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="ah-section ah-section--surface ah-1111__rail">
+      <div class="container" data-rail>
+        <div class="ah-section__head">
+          <div>
+            <span class="ah-eyebrow">{{ 'sections.mega_sale.rail_price_eyebrow' | t }}</span>
+            <h2 class="ah-section__title">{{ 'sections.mega_sale.rail_price' | t }}</h2>
+          </div>
+          <div class="ah-section__head-end">
+            <a href="{{ cheap_url }}" class="ah-link-arrow">{{ 'sections.featured_collection.view_all' | t }}</a>
+            <div class="ah-rail__nav">
+              <button type="button" class="ah-rail__btn" data-rail-prev aria-label="{{ 'general.pagination.previous' | t }}">{%- render 'icon', name: 'chevron' -%}</button>
+              <button type="button" class="ah-rail__btn" data-rail-next aria-label="{{ 'general.pagination.next' | t }}">{%- render 'icon', name: 'chevron' -%}</button>
+            </div>
+          </div>
+        </div>
+        <div class="ah-rail">
+          <ul class="ah-rail__track" data-rail-track role="list">
+            {%- paginate coll.products by 100 -%}
+              {%- assign by_price = coll.products | where: 'available' | sort: 'price' -%}
+              {%- for product in by_price limit: section.settings.product_count -%}
+                <li>{%- render 'product-card', product: product -%}</li>
+              {%- endfor -%}
+            {%- endpaginate -%}
+          </ul>
+        </div>
+      </div>
+    </div>
+  {%- endif -%}
+</section>
+<script>
+  (function () {
+    var el = document.currentScript.previousElementSibling;
+    if (!el || !el.hasAttribute('data-ah-mega')) return;
+    var end = parseInt(el.getAttribute('data-end'), 10) * 1000;
+    var units = {};
+    el.querySelectorAll('[data-u]').forEach(function (b) { units[b.getAttribute('data-u')] = b; });
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function tick() {
+      var left = Math.floor((end - Date.now()) / 1000);
+      if (left <= 0) { el.hidden = true; return; }
+      units.d.textContent = pad(Math.floor(left / 86400));
+      units.h.textContent = pad(Math.floor(left % 86400 / 3600));
+      units.m.textContent = pad(Math.floor(left % 3600 / 60));
+      units.s.textContent = pad(left % 60);
+      setTimeout(tick, 1000);
+    }
+    tick();
+  })();
+</script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "11.11 Mega Sale",
+  "settings": [
+    { "type": "collection", "id": "collection", "label": "Sale collection", "info": "Use manual sort, highest discount first." },
+    { "type": "text", "id": "start_ts", "label": "Start (Unix seconds)", "default": "1794258000", "info": "1794258000 = 10 Nov 2026 00:00 Riyadh" },
+    { "type": "text", "id": "end_ts", "label": "End (Unix seconds)", "default": "1795208400", "info": "1795208400 = 21 Nov 2026 00:00 Riyadh (sale runs through 20 Nov)" },
+    { "type": "checkbox", "id": "show_rails", "label": "Show product rails", "default": true },
+    { "type": "range", "id": "product_count", "label": "Products per rail", "min": 4, "max": 24, "step": 1, "default": 16 }
+  ],
+  "presets": [{ "name": "11.11 Mega Sale" }]
+}
+{% endschema %}

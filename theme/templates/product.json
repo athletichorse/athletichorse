@@ -1,0 +1,25 @@
+{
+  "sections": {
+    "main-product": {
+      "type": "main-product",
+      "settings": {
+        "show_dynamic_checkout": true
+      }
+    },
+    "fbt": {
+      "type": "product-fbt",
+      "settings": {}
+    },
+    "recommendations": {
+      "type": "product-recommendations",
+      "settings": {
+        "limit": 10
+      }
+    }
+  },
+  "order": [
+    "main-product",
+    "fbt",
+    "recommendations"
+  ]
+}

@@ -1,0 +1,71 @@
+{%- capture riyal -%}{%- render 'riyal' -%}{%- endcapture -%}
+{%- capture items -%}
+  {%- for block in section.blocks -%}
+    {%- liquid
+      assign text = block.settings.text
+      if text == blank
+        assign key = 'sections.ticker.' | append: block.settings.preset
+        assign text = key | t
+      endif
+    -%}
+    <li class="ah-ticker__item" {{ block.shopify_attributes }}>
+      {%- render 'icon', name: block.settings.icon -%}<span class="ah-ticker__text">{{ text | replace: '[riyal]', riyal }}</span>
+    </li>
+  {%- endfor -%}
+{%- endcapture -%}
+<div class="ah-ticker ah-ticker--{{ section.settings.color }}">
+  <div class="ah-ticker__track">
+    <ul class="ah-ticker__list" role="list">{{ items }}</ul>
+    <ul class="ah-ticker__list" role="list" aria-hidden="true">{{ items }}</ul>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Promo ticker",
+  "settings": [
+    {
+      "type": "select", "id": "color", "label": "Color",
+      "options": [
+        { "value": "lime", "label": "Neon lime" },
+        { "value": "brand", "label": "Brand green" },
+        { "value": "dark", "label": "Dark" }
+      ],
+      "default": "lime"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "item",
+      "name": "Message",
+      "settings": [
+        {
+          "type": "select", "id": "preset", "label": "Message",
+          "options": [
+            { "value": "cod", "label": "Cash on delivery" },
+            { "value": "free_delivery", "label": "Delivery across KSA" },
+            { "value": "returns", "label": "Returns window" },
+            { "value": "authentic", "label": "100% authentic" },
+            { "value": "teams", "label": "Team & bulk orders" }
+          ],
+          "default": "cod"
+        },
+        { "type": "text", "id": "text", "label": "Custom text", "info": "Overrides the translated message." },
+        {
+          "type": "select", "id": "icon", "label": "Icon",
+          "options": [
+            { "value": "cash", "label": "Cash" },
+            { "value": "truck", "label": "Truck" },
+            { "value": "return", "label": "Returns" },
+            { "value": "shield", "label": "Shield" },
+            { "value": "trophy", "label": "Trophy" },
+            { "value": "new", "label": "Star" }
+          ],
+          "default": "cash"
+        }
+      ]
+    }
+  ],
+  "presets": [{ "name": "Promo ticker", "blocks": [{ "type": "item" }] }]
+}
+{% endschema %}

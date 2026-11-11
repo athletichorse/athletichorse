@@ -1,0 +1,16 @@
+{%- comment -%}
+  Product description with country-of-origin lines removed (the store never shows "Made in Egypt").
+  Accepts: product
+{%- endcomment -%}
+{%- liquid
+  assign d = product.description
+  assign phrases = 'Made in Egypt|Made In Egypt|MADE IN EGYPT|made in Egypt|made in egypt|صنع في مصر|مصنوع في مصر|صُنع في مصر|بلد المنشأ: مصر|Country of origin: Egypt' | split: '|'
+  for ph in phrases
+    assign li = '<li>' | append: ph | append: '</li>'
+    assign d = d | remove: li
+    assign li = '<li>' | append: ph | append: '.</li>'
+    assign d = d | remove: li
+    assign d = d | remove: ph
+  endfor
+  echo d
+-%}

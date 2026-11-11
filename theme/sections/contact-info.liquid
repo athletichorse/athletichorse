@@ -1,0 +1,123 @@
+<div class="container">
+  {%- render 'breadcrumbs', current: page.title -%}
+  <div class="ah-page-head">
+    <h1 class="ah-page-head__title">{% if section.settings.heading != blank %}{{ section.settings.heading }}{% else %}{{ 'sections.contact.heading' | t }}{% endif %}</h1>
+    <p class="ah-page-head__desc">{% if section.settings.text != blank %}{{ section.settings.text }}{% else %}{{ 'sections.contact.text' | t }}{% endif %}</p>
+  </div>
+
+  <div class="ah-contact">
+    <div class="ah-channels">
+      {%- if section.settings.whatsapp_number != blank -%}
+        <a href="https://wa.me/{{ section.settings.whatsapp_number }}" class="ah-channel ah-channel--wa" target="_blank" rel="noopener noreferrer">
+          <span class="ah-channel__icon">{%- render 'icon', name: 'chat' -%}</span>
+          <span><strong>{{ 'sections.contact.whatsapp_support' | t }}</strong><span dir="ltr">{{ section.settings.whatsapp_display | default: section.settings.whatsapp_number }}</span></span>
+        </a>
+      {%- endif -%}
+      {%- if section.settings.bulk_number != blank -%}
+        <a href="https://wa.me/{{ section.settings.bulk_number }}?text={{ 'sections.contact.bulk_message' | t | url_encode }}" class="ah-channel ah-channel--wa" target="_blank" rel="noopener noreferrer">
+          <span class="ah-channel__icon">{%- render 'icon', name: 'whatsapp' -%}</span>
+          <span><strong>{{ 'sections.contact.whatsapp_bulk' | t }}</strong><span dir="ltr">{{ section.settings.bulk_display | default: section.settings.bulk_number }}</span></span>
+        </a>
+      {%- endif -%}
+      {%- if settings.store_phone != blank -%}
+        <a href="tel:{{ settings.store_phone | remove: ' ' }}" class="ah-channel">
+          <span class="ah-channel__icon">{%- render 'icon', name: 'phone' -%}</span>
+          <span><strong>{{ 'sections.contact.phone_label' | t }}</strong><span dir="ltr">{{ settings.store_phone }}</span></span>
+        </a>
+      {%- endif -%}
+      {%- assign contact_email = section.settings.email | default: settings.store_email -%}
+      {%- if contact_email != blank -%}
+        <a href="mailto:{{ contact_email }}" class="ah-channel">
+          <span class="ah-channel__icon">{%- render 'icon', name: 'mail' -%}</span>
+          <span><strong>{{ 'sections.contact.email' | t }}</strong><span>{{ contact_email }}</span></span>
+        </a>
+      {%- endif -%}
+      {%- liquid
+        assign address = section.settings.address
+        if request.locale.iso_code == 'ar' and section.settings.address_ar != blank
+          assign address = section.settings.address_ar
+        endif
+      -%}
+      {%- if address != blank -%}
+        <a href="{{ section.settings.maps_url | default: '#' }}" class="ah-channel" target="_blank" rel="noopener noreferrer">
+          <span class="ah-channel__icon">{%- render 'icon', name: 'pin' -%}</span>
+          <span><strong>{{ 'sections.contact.visit' | t }}</strong><span>{{ address }}</span></span>
+        </a>
+      {%- endif -%}
+      {%- if settings.store_hours != blank -%}
+        <div class="ah-channel">
+          <span class="ah-channel__icon">{%- render 'icon', name: 'clock' -%}</span>
+          <span><strong>{{ 'sections.contact.hours_label' | t }}</strong><span>{{ settings.store_hours }}</span></span>
+        </div>
+      {%- endif -%}
+      <div style="margin-top:8px">
+        <strong style="display:block;margin-bottom:10px;color:var(--ink)">{{ 'sections.contact.follow' | t }}</strong>
+        {%- render 'social-links', class: 'social-row', include_whatsapp: false -%}
+      </div>
+    </div>
+
+    {%- form 'contact', class: 'ah-form' -%}
+      <h2 style="font-size:22px">{{ 'sections.contact.form_heading' | t }}</h2>
+      {%- if form.posted_successfully? -%}
+        <p class="ah-alert ah-alert--success" role="status">{{ 'sections.contact.form_success' | t }}</p>
+      {%- endif -%}
+      {%- if form.errors -%}
+        <p class="ah-alert ah-alert--error" role="alert">{{ 'sections.contact.form_error' | t }}</p>
+      {%- endif -%}
+      <div class="ah-form__row">
+        <div class="ah-field">
+          <label for="ContactName">{{ 'sections.contact.name' | t }}</label>
+          <input class="ah-input" type="text" id="ContactName" name="contact[name]" value="{{ form.name }}" autocomplete="name" required>
+        </div>
+        <div class="ah-field">
+          <label for="ContactPhone">{{ 'sections.contact.phone' | t }}</label>
+          <input class="ah-input" type="tel" id="ContactPhone" name="contact[phone]" value="{{ form.phone }}" autocomplete="tel" dir="ltr">
+        </div>
+      </div>
+      <div class="ah-field">
+        <label for="ContactEmail">{{ 'sections.contact.email' | t }}</label>
+        <input class="ah-input" type="email" id="ContactEmail" name="contact[email]" value="{{ form.email }}" autocomplete="email" required>
+      </div>
+      <div class="ah-field">
+        <label for="ContactBody">{{ 'sections.contact.message' | t }}</label>
+        <textarea class="ah-textarea" id="ContactBody" name="contact[body]" rows="5" required>{{ form.body }}</textarea>
+      </div>
+      <button type="submit" class="ah-btn ah-btn--lg ah-btn--block">{{ 'sections.contact.submit' | t }}</button>
+    {%- endform -%}
+  </div>
+
+  {%- if section.settings.map_query != blank -%}
+    <div class="ah-map">
+      <iframe title="{{ 'sections.contact.map_title' | t | escape }}" src="https://maps.google.com/maps?q={{ section.settings.map_query | url_encode }}&hl={{ request.locale.iso_code }}&z=15&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+      <div class="ah-map__card">
+        <strong>{{ 'sections.contact.store_name' | t }}</strong>
+        {%- if address != blank -%}<span>{{ address }}</span>{%- endif -%}
+        {%- if settings.store_hours != blank -%}<span>{{ settings.store_hours }}</span>{%- endif -%}
+        {%- if section.settings.maps_url != blank -%}
+          <a href="{{ section.settings.maps_url }}" class="ah-btn" target="_blank" rel="noopener noreferrer">{%- render 'icon', name: 'pin' -%}{{ 'sections.contact.directions' | t }}</a>
+        {%- endif -%}
+      </div>
+    </div>
+  {%- endif -%}
+</div>
+
+{% schema %}
+{
+  "name": "Contact",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading" },
+    { "type": "textarea", "id": "text", "label": "Text" },
+    { "type": "text", "id": "whatsapp_number", "label": "WhatsApp number", "info": "Digits only with country code, e.g. 966573873497" },
+    { "type": "text", "id": "whatsapp_display", "label": "WhatsApp display text" },
+    { "type": "text", "id": "bulk_number", "label": "Bulk orders WhatsApp", "info": "Digits only with country code, e.g. 966541770519" },
+    { "type": "text", "id": "bulk_display", "label": "Bulk orders display text" },
+    { "type": "text", "id": "email", "label": "Contact email", "info": "Defaults to the store email in theme settings." },
+    { "type": "textarea", "id": "address", "label": "Store address" },
+    { "type": "textarea", "id": "address_ar", "label": "Store address (Arabic)" },
+    { "type": "url", "id": "maps_url", "label": "Google Maps link" },
+    { "type": "text", "id": "map_query", "label": "Map search (business name and city)", "info": "Shown as an embedded Google map." },
+    { "type": "url", "id": "linktree_url", "label": "Linktree / general social link" }
+  ],
+  "presets": [{ "name": "Contact" }]
+}
+{% endschema %}

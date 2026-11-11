@@ -1,0 +1,6 @@
+{%- comment -%}
+  Stock limit per cart line ({ line key: units in stock }), fetched by the cart drawer through the
+  Section Rendering API so the + button can be dimmed once the basket holds all available units.
+  Only lines whose variant tracks inventory and stops selling at zero are listed.
+{%- endcomment -%}
+<script type="application/json" data-cart-limits>{"_":0{%- for item in cart.items -%}{%- if item.variant.inventory_management == 'shopify' and item.variant.inventory_policy == 'deny' -%},{{ item.key | json }}:{{ item.variant.inventory_quantity | at_least: 0 }}{%- endif -%}{%- endfor -%}}</script>

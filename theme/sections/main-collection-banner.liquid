@@ -1,0 +1,31 @@
+{%- liquid
+  assign banner_image = nil
+  if section.settings.show_image and collection.image
+    assign banner_image = collection.image
+  endif
+-%}
+<div class="container">
+  {%- render 'breadcrumbs', current: collection.title -%}
+</div>
+
+{%- if banner_image -%}
+  <div class="ah-page-head ah-page-head--banner">
+    {{ banner_image | image_url: width: 1800 | image_tag: loading: 'eager', fetchpriority: 'high', widths: '750,1100,1500,1800', sizes: '100vw', alt: '' }}
+    <div class="container">
+      <h1 class="ah-page-head__title">{{ collection.title }}</h1>
+    </div>
+  </div>
+{%- else -%}
+  <div class="container ah-page-head">
+    <h1 class="ah-page-head__title">{{ collection.title }}</h1>
+  </div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Collection banner",
+  "settings": [
+    { "type": "checkbox", "id": "show_image", "label": "Show collection image as banner", "default": false }
+  ]
+}
+{% endschema %}

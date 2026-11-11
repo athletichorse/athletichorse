@@ -1,0 +1,37 @@
+{%- comment -%}
+  Accepts:
+    class            (optional) - wrapper <div> class. If blank, icons are output with no wrapper.
+    item_class       (optional) - class applied to each <a> icon.
+    include_whatsapp (optional bool, default true)
+{%- endcomment -%}
+{%- assign show_whatsapp = true -%}
+{%- if include_whatsapp == false -%}{%- assign show_whatsapp = false -%}{%- endif -%}
+
+{%- capture icons -%}
+  {%- if settings.social_snapchat_link != blank -%}
+    <a href="{{ settings.social_snapchat_link }}" class="{{ item_class }} ah-social--snapchat ah-social--hot" aria-label="Snapchat" target="_blank" rel="noopener noreferrer">{%- render 'icon', name: 'snapchat' -%}</a>
+  {%- endif -%}
+  {%- if settings.social_tiktok_link != blank -%}
+    <a href="{{ settings.social_tiktok_link }}" class="{{ item_class }} ah-social--tiktok ah-social--hot" aria-label="TikTok" target="_blank" rel="noopener noreferrer">{%- render 'icon', name: 'tiktok' -%}</a>
+  {%- endif -%}
+  {%- if settings.social_instagram_link != blank -%}
+    <a href="{{ settings.social_instagram_link }}" class="{{ item_class }} ah-social--instagram" aria-label="Instagram" target="_blank" rel="noopener noreferrer">{%- render 'icon', name: 'instagram' -%}</a>
+  {%- endif -%}
+  {%- if settings.social_facebook_link != blank -%}
+    <a href="{{ settings.social_facebook_link }}" class="{{ item_class }} ah-social--facebook" aria-label="Facebook" target="_blank" rel="noopener noreferrer">{%- render 'icon', name: 'facebook' -%}</a>
+  {%- endif -%}
+  {%- if settings.social_x_link != blank -%}
+    <a href="{{ settings.social_x_link }}" class="{{ item_class }} ah-social--x" aria-label="X" target="_blank" rel="noopener noreferrer">{%- render 'icon', name: 'x' -%}</a>
+  {%- endif -%}
+  {%- if show_whatsapp and settings.social_whatsapp_number != blank -%}
+    <a href="https://wa.me/{{ settings.social_whatsapp_number }}" class="{{ item_class }} ah-social--whatsapp" aria-label="WhatsApp" target="_blank" rel="noopener noreferrer">{%- render 'icon', name: 'whatsapp' -%}</a>
+  {%- endif -%}
+{%- endcapture -%}
+
+{%- if icons != blank -%}
+  {%- if class != blank -%}
+    <div class="{{ class }}">{{ icons }}</div>
+  {%- else -%}
+    {{ icons }}
+  {%- endif -%}
+{%- endif -%}

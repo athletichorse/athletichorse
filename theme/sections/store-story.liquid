@@ -1,0 +1,45 @@
+{%- liquid
+  assign heading = section.settings.heading
+  if heading == blank
+    assign heading = 'sections.story.heading' | t
+  endif
+  assign text = section.settings.text
+  if text == blank
+    assign text = 'sections.story.text_html' | t
+  endif
+-%}
+<section class="ah-section ah-section--dark">
+  <div class="container ah-story">
+    <div class="ah-story__copy">
+      <span class="ah-eyebrow ah-eyebrow--light">{{ 'sections.story.eyebrow' | t }}</span>
+      <h2 class="ah-section__title">{{ heading }}</h2>
+      <div class="ah-story__text">{{ text }}</div>
+      <div class="ah-story__stats">
+        <div class="ah-stat"><b>{{ section.settings.stat_1 }}</b><span>{{ 'sections.story.stat_1' | t }}</span></div>
+        <div class="ah-stat"><b>{{ section.settings.stat_2 }}</b><span>{{ 'sections.story.stat_2' | t }}</span></div>
+        <div class="ah-stat"><b>{{ 'sections.story.stat_3_value' | t }}</b><span>{{ 'sections.story.stat_3' | t }}</span></div>
+      </div>
+      <a href="{{ section.settings.link | default: routes.collections_url }}" class="ah-btn ah-btn--highlight">{{ 'sections.story.cta' | t }}</a>
+    </div>
+    {%- if section.settings.image != blank -%}
+      <div class="ah-story__media">
+        {{ section.settings.image | image_url: width: 1200 | image_tag: loading: 'lazy', widths: '600,900,1200', sizes: '(min-width: 990px) 50vw, 100vw', alt: heading }}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Brand story",
+  "settings": [
+    { "type": "image_picker", "id": "image", "label": "Image" },
+    { "type": "text", "id": "heading", "label": "Heading", "info": "Leave blank to use the translated default." },
+    { "type": "richtext", "id": "text", "label": "Text", "info": "Leave blank to use the translated default (SEO-optimised in English and Arabic)." },
+    { "type": "text", "id": "stat_1", "label": "Stat 1 value", "default": "50+" },
+    { "type": "text", "id": "stat_2", "label": "Stat 2 value", "default": "1000+" },
+    { "type": "url", "id": "link", "label": "Button link" }
+  ],
+  "presets": [{ "name": "Brand story" }]
+}
+{% endschema %}

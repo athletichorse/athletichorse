@@ -1,0 +1,5 @@
+{%- comment -%}
+  Price with the Saudi Riyal symbol. Accepts: cents (required)
+{%- endcomment -%}
+{%- assign amount = cents | money_without_currency | remove: '.00' -%}
+<span class="ah-money">{%- render 'riyal' -%}<span class="ah-money__num">{{ amount }}</span></span>

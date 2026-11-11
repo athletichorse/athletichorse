@@ -1,0 +1,25 @@
+{%- comment -%} One row of "Frequently bought together". Accepts: item (product), current (bool) {%- endcomment -%}
+{%- assign v = item.selected_or_first_available_variant -%}
+<div class="ah-fbt__item{% if current %} is-current{% endif %}" data-fbt-item>
+  <label class="ah-fbt__check">
+    <input type="checkbox" checked {% if current %}disabled{% endif %} data-fbt-check aria-label="{{ item.title | escape }}">
+    <span aria-hidden="true"></span>
+  </label>
+  <a href="{{ item.url }}" class="ah-fbt__media"{% if current %} tabindex="-1"{% endif %}>
+    {%- if item.featured_media -%}{{ item.featured_media | image_url: width: 240 | image_tag: loading: 'lazy', alt: item.title, width: 120, height: 120 }}{%- endif -%}
+  </a>
+  <div class="ah-fbt__info">
+    {%- if current -%}<span class="ah-fbt__this">{{ 'sections.product.fbt_this_item' | t }}</span>{%- endif -%}
+    <a href="{{ item.url }}" class="ah-fbt__name">{{ item.title }}</a>
+    {%- if item.has_only_default_variant -%}
+      <input type="hidden" value="{{ v.id }}" data-fbt-variant data-price="{{ v.price }}">
+    {%- else -%}
+      <select class="ah-fbt__select" data-fbt-variant aria-label="{{ item.title | escape }}"{% if current %} data-fbt-mirror{% endif %}>
+        {%- for variant in item.variants -%}
+          {%- if variant.available -%}<option value="{{ variant.id }}" data-price="{{ variant.price }}" {% if variant.id == v.id %}selected{% endif %}>{{ variant.title }}</option>{%- endif -%}
+        {%- endfor -%}
+      </select>
+    {%- endif -%}
+    {%- render 'price', product: item, variant: v, show_save: false -%}
+  </div>
+</div>

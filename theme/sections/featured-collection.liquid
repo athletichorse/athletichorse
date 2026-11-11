@@ -1,0 +1,47 @@
+{%- liquid
+  assign coll = collections[section.settings.collection]
+  if product and section.settings.collection == blank
+    assign coll = product.collections.first
+  endif
+-%}
+{%- if coll and coll.products_count > 0 -%}
+<section class="ah-section{% if section.settings.surface %} ah-section--surface{% endif %}">
+  <div class="container">
+    <div class="ah-section__head">
+      <div>
+        <h2 class="ah-section__title">
+          {%- if section.settings.heading != blank -%}{{ section.settings.heading }}
+          {%- elsif product -%}{{ 'sections.featured_collection.you_might_also_like' | t }}
+          {%- else -%}{{ coll.title }}{%- endif -%}
+        </h2>
+        {%- if section.settings.text != blank -%}<p class="ah-section__desc">{{ section.settings.text }}</p>{%- endif -%}
+      </div>
+      <a href="{{ coll.url }}" class="ah-link-arrow">{{ 'sections.featured_collection.view_all' | t }}</a>
+    </div>
+    <ul class="ah-grid" role="list" style="--grid-cols: {{ section.settings.columns }}">
+      {%- assign shown = 0 -%}
+      {%- for item in coll.products limit: 24 -%}
+        {%- if item.id == product.id -%}{%- continue -%}{%- endif -%}
+        {%- if shown >= section.settings.limit -%}{%- break -%}{%- endif -%}
+        <li>{%- render 'product-card', product: item -%}</li>
+        {%- assign shown = shown | plus: 1 -%}
+      {%- endfor -%}
+    </ul>
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Product grid",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading" },
+    { "type": "textarea", "id": "text", "label": "Text" },
+    { "type": "collection", "id": "collection", "label": "Collection", "info": "On product pages, leave blank to show the product's own collection." },
+    { "type": "range", "id": "limit", "label": "Products to show", "min": 4, "max": 16, "step": 1, "default": 8 },
+    { "type": "range", "id": "columns", "label": "Columns on desktop", "min": 3, "max": 5, "step": 1, "default": 4 },
+    { "type": "checkbox", "id": "surface", "label": "Grey background", "default": false }
+  ],
+  "presets": [{ "name": "Product grid" }]
+}
+{% endschema %}

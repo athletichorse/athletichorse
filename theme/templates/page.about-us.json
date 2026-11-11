@@ -1,0 +1,86 @@
+{
+  "sections": {
+    "about-us": {
+      "type": "about-us",
+      "settings": {
+        "image": "shopify://shop_images/photo-1528162841823-9e55a8cc2f58.jpg",
+        "image_2": "shopify://shop_images/photo-1530549387789-4c1017266635.jpg",
+        "image_3": "shopify://shop_images/photo-1571019613454-1cb2f99b2d8b.jpg",
+        "image_story": "shopify://shop_images/photo-1622659097509-4d56de14539e.jpg",
+        "google_rating": "5.0",
+        "maps_url": "https://share.google/B3QeRfIAdghP2ynlt"
+      },
+      "blocks": {
+        "s0": {
+          "type": "sport",
+          "settings": {
+            "collection": "football-equipment",
+            "label": ""
+          }
+        },
+        "s1": {
+          "type": "sport",
+          "settings": {
+            "collection": "water-sports",
+            "label": ""
+          }
+        },
+        "s2": {
+          "type": "sport",
+          "settings": {
+            "collection": "gym-equipment",
+            "label": ""
+          }
+        },
+        "s3": {
+          "type": "sport",
+          "settings": {
+            "collection": "taekwondo-martial-arts-equipment",
+            "label": ""
+          }
+        },
+        "s4": {
+          "type": "sport",
+          "settings": {
+            "collection": "racket-equipment",
+            "label": ""
+          }
+        },
+        "s5": {
+          "type": "sport",
+          "settings": {
+            "collection": "basketball-equipment",
+            "label": ""
+          }
+        },
+        "s6": {
+          "type": "sport",
+          "settings": {
+            "collection": "kids",
+            "label": ""
+          }
+        },
+        "s7": {
+          "type": "sport",
+          "settings": {
+            "collection": "women",
+            "label": ""
+          }
+        }
+      },
+      "block_order": [
+        "s0",
+        "s1",
+        "s2",
+        "s3",
+        "s4",
+        "s5",
+        "s6",
+        "s7"
+      ]
+    }
+  },
+  "order": [
+    "about-us"
+  ]
+}
