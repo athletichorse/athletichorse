@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+:root {
+  --brand: #0f6b4f; /* Saudi green */
+  --ink: #1b1f23;
+  --paper: #ffffff;
+}
+
+html, body { background: #f5f6f7; color: var(--ink); }
+body {
+  font-family: "Segoe UI", Tahoma, "Noto Sans Arabic", "Noto Kufi Arabic", system-ui, sans-serif;
+}
+
+@layer components {
+.card { @apply rounded-xl border border-gray-200 bg-white p-4 shadow-sm; }
+.btn { @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50; }
+.btn-primary { @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50 bg-[var(--brand)] text-white hover:opacity-90; }
+.btn-ghost { @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50 border border-gray-300 bg-white hover:bg-gray-50; }
+.input { @apply w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none; }
+.label { @apply mb-1 block text-sm font-medium text-gray-700; }
+.table { @apply w-full text-sm; }
+.table th { @apply border-b bg-gray-50 px-3 py-2 text-start font-semibold; }
+.table td { @apply border-b px-3 py-2; }
+}
+
+/* ---------- Print ---------- */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  .card { box-shadow: none; border: 0; padding: 0; }
+}
+html[data-print="a4"] { --print-width: 210mm; }
+html[data-print="receipt80"] { --print-width: 80mm; }
+@media print {
+  html[data-print="receipt80"] body { width: 80mm; font-size: 11px; }
+  html[data-print="receipt80"] main { padding: 2mm !important; }
+}
