@@ -45,8 +45,8 @@
 
 ## Full settings & features list (second brief) — one PR each
 - ✅ A. Settings & permissions: new keys (no-receipt returns, sell without customer, closed shifts, restock requests, all-locations stock, add items, sale prices, labels, website orders, salespeople, payroll), cashier settings (receipt footer, paper/print width, no selling below zero, attendance rules, overtime), manager PIN lock (5 wrong → 15 min), till staff see only Cashier + Stores, customer required unless allowed
-- 🟡 B. Products: wholesale price, reorder level, sale price for a period (used by the cashier between its dates), names/prices file with old → new preview, barcode labels (Zebra 40×25, Xprinter 38×25, custom; standard/classic look)
-- ⬜ C. Stock: transfers sent → in transit → received, write-off reasons, count sheet, restock requests, shortages report
+- ✅ B. Products: wholesale price, reorder level, sale price for a period (used by the cashier between its dates), names/prices file with old → new preview, barcode labels (Zebra 40×25, Xprinter 38×25, custom; standard/classic look)
+- 🟡 C. Stock: transfers sent → in transit → received (arrived box per line, shortages/extras kept), write-off reasons, count sheet (every item, sortable), restock requests + quick request page, shortages report (=, ≠, >, ≥, <, ≤ or reorder level), prices and values on every document, all-locations stock view
 - ⬜ D. Cashier: expenses, end of day, merge/edit quotations, return slips at Collect, customer receipt link, credit limit & statements, receipt discount, camera scan
 - ⬜ E. Reports & dashboard
 - ⬜ F. Salespeople, attendance, payroll, commission on the 15th
