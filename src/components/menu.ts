@@ -9,9 +9,9 @@ type Entry = { key: keyof Dict["menu"]; href: string; icon: IconName; perms: Per
 /** Main menu, in the business's order (Home sits on top as the dashboard). `soon` = not built yet. */
 const MAIN: Entry[] = [
   { key: "home", href: "/", icon: "home", perms: null },
-  { key: "pos", href: "/pos", icon: "pos", perms: ["pos.collect", "pos.desk", "pos.quick_sale"], soon: true },
+  { key: "pos", href: "/pos", icon: "pos", perms: ["pos.collect", "pos.desk", "pos.quick_sale"] },
   { key: "stock", href: "/stock", icon: "stock", perms: ["stock.view"] },
-  { key: "sales", href: "/sales", icon: "sales", perms: ["sales.view"], soon: true },
+  { key: "sales", href: "/sales", icon: "sales", perms: ["sales.view"] },
   { key: "products", href: "/products", icon: "products", perms: ["products.view"] },
   { key: "customers", href: "/customers", icon: "customers", perms: ["customers.view"] },
   { key: "staff", href: "/staff", icon: "staff", perms: ["staff.view"] },
