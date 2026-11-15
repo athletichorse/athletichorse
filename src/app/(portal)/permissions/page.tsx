@@ -35,15 +35,14 @@ export default async function PermissionsPage({ searchParams }: { searchParams: 
   }
   const ov = new Map(overrides.map((o) => [o.permission, o.allowed]));
   const showForm = tab === "role" || Boolean(person);
-  const tabCls = (on: boolean) => `rounded-md px-3 py-1.5 text-sm ${on ? "bg-[var(--brand)] text-white" : "border bg-white"}`;
+  const tabCls = (on: boolean) => `rounded-full px-4 py-1.5 text-sm font-medium transition ${on ? "bg-[var(--brand)] text-white" : "border border-[var(--line)] bg-white text-gray-700 hover:bg-gray-50"}`;
 
   return (
     <>
       <PageHeader title={t.perms.title} t={t} filename="permissions" />
-      <p className="mb-1 text-sm text-gray-500">{t.perms.ownerNote}</p>
-      <p className="mb-3 text-sm text-gray-500">{t.perms.approvalNote}</p>
-      {sp.err && <p className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{sp.err}</p>}
-      {sp.ok && <p className="mb-3 rounded bg-green-50 p-2 text-sm text-green-700">{t.saved}</p>}
+      <div className="mb-4 rounded-lg border border-[var(--line)] bg-white px-4 py-3 text-sm text-gray-600">{t.perms.ownerNote} {t.perms.approvalNote}</div>
+      {sp.err && <p className="alert-err">{sp.err}</p>}
+      {sp.ok && <p className="alert-ok">{t.saved}</p>}
 
       <div className="no-print mb-3 flex flex-wrap gap-2">
         <Link href="/permissions" className={tabCls(tab === "role")}>{t.perms.byRole}</Link>
@@ -60,8 +59,8 @@ export default async function PermissionsPage({ searchParams }: { searchParams: 
         <form action={tab === "role" ? saveRolePermissionsAction : saveUserPermissionsAction} className="space-y-4">
           {tab === "role" ? <input type="hidden" name="role" value={role} /> : <input type="hidden" name="user_id" value={person!.id} />}
           {Object.entries(PERMISSION_GROUPS).map(([g, keys]) => (
-            <div key={g} className="card overflow-x-auto">
-              <h2 className="mb-2 font-semibold">{t.perms.groups[g as keyof typeof t.perms.groups]}</h2>
+            <div key={g} className="card overflow-x-auto p-0">
+              <h2 className="px-5 pt-5 pb-3 font-semibold text-gray-900">{t.perms.groups[g as keyof typeof t.perms.groups]}</h2>
               <table className="table" data-export={g === "pos" ? "" : undefined}>
                 <thead><tr><th>{t.perms.permission}</th><th>{t.perms.default}</th><th className="no-print"></th></tr></thead>
                 <tbody>
@@ -86,7 +85,7 @@ export default async function PermissionsPage({ searchParams }: { searchParams: 
               </table>
             </div>
           ))}
-          <button className="btn-primary no-print">{t.save}</button>
+          <div className="no-print sticky bottom-4 flex justify-end"><button className="btn-primary shadow-lg">{t.save}</button></div>
         </form>
       )}
     </>

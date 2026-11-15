@@ -6,31 +6,67 @@ import { saveCompanyAction } from "@/app/actions/company";
 
 export default async function CompanyPage({ searchParams }: { searchParams: Promise<{ err?: string; ok?: string }> }) {
   await requirePermission("settings.edit");
-  const { t } = await getDict();
+  const { t, locale } = await getDict();
   const sp = await searchParams;
-  const [{ data: c }, { data: rate }] = await Promise.all([
+  const [{ data: c }, { data: settings }, { data: locs }] = await Promise.all([
     db().from("company").select("*").eq("id", 1).maybeSingle(),
-    db().from("settings").select("value").eq("key", "vat_rate").maybeSingle(),
+    db().from("settings").select("key, value").in("key", ["vat_rate", "website_stock_location"]),
+    db().from("locations").select("id, name_ar, name_en, kind").eq("active", true).order("kind").order("code"),
   ]);
+  const get = (k: string) => settings?.find((x) => x.key === k)?.value;
   const err = sp.err === "vat" ? t.company.badVat : sp.err === "cr" ? t.company.badCr : sp.err;
-  const field = ({ name, label, ltr, value }: { name: string; label: string; ltr?: boolean; value?: string | null }) => (
-    <div><label className="label">{label}</label><input name={name} defaultValue={value ?? ""} className="input" dir={ltr ? "ltr" : undefined} /></div>
+
+  const field = ({ name, label, ltr, value, hint }: { name: string; label: string; ltr?: boolean; value?: string | null; hint?: string }) => (
+    <div>
+      <label className="label" htmlFor={name}>{label}</label>
+      <input id={name} name={name} defaultValue={value ?? ""} className="input" dir={ltr ? "ltr" : undefined} />
+      {hint && <p className="hint">{hint}</p>}
+    </div>
   );
+
   return (
     <>
       <PageHeader title={t.company.title} t={t} />
-      {err && <p className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{err}</p>}
-      {sp.ok && <p className="mb-3 rounded bg-green-50 p-2 text-sm text-green-700">{t.saved}</p>}
-      <form action={saveCompanyAction} className="card grid gap-3 md:grid-cols-2">
-        {field({ name: "legal_name_ar", label: t.company.legalNameAr, value: c?.legal_name_ar })}
-        {field({ name: "legal_name_en", label: t.company.legalNameEn, value: c?.legal_name_en, ltr: true })}
-        {field({ name: "vat_number", label: t.company.vatNumber, value: c?.vat_number, ltr: true })}
-        {field({ name: "cr_number", label: t.company.crNumber, value: c?.cr_number, ltr: true })}
-        {field({ name: "address_ar", label: t.company.addressAr, value: c?.address_ar })}
-        {field({ name: "address_en", label: t.company.addressEn, value: c?.address_en, ltr: true })}
-        {field({ name: "logo_url", label: t.company.logoUrl, value: c?.logo_url, ltr: true })}
-        {field({ name: "vat_rate", label: t.company.vatRate, value: String(rate?.value ?? "15.00"), ltr: true })}
-        <button className="btn-primary no-print md:col-span-2">{t.save}</button>
+      {err && <p className="alert-err">{err}</p>}
+      {sp.ok && <p className="alert-ok">{t.saved}</p>}
+      <form action={saveCompanyAction} className="space-y-6">
+        <section className="card">
+          <h2 className="card-title">{t.company.sectionLegal}</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {field({ name: "legal_name_en", label: t.company.legalNameEn, value: c?.legal_name_en, ltr: true })}
+            {field({ name: "legal_name_ar", label: t.company.legalNameAr, value: c?.legal_name_ar })}
+            {field({ name: "cr_number", label: t.company.crNumber, value: c?.cr_number, ltr: true, hint: t.company.crHint })}
+            {field({ name: "logo_url", label: t.company.logoUrl, value: c?.logo_url, ltr: true })}
+            {field({ name: "address_en", label: t.company.addressEn, value: c?.address_en, ltr: true })}
+            {field({ name: "address_ar", label: t.company.addressAr, value: c?.address_ar })}
+          </div>
+        </section>
+
+        <section className="card">
+          <h2 className="card-title">{t.company.sectionTax}</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {field({ name: "vat_number", label: t.company.vatNumber, value: c?.vat_number, ltr: true, hint: t.company.vatHint })}
+            {field({ name: "vat_rate", label: t.company.vatRate, value: String(get("vat_rate") ?? "15.00"), ltr: true })}
+          </div>
+        </section>
+
+        <section className="card" id="online">
+          <h2 className="card-title">{t.company.sectionOnline}</h2>
+          <div className="max-w-md">
+            <label className="label" htmlFor="website_stock_location">{t.company.websiteStock}</label>
+            <select id="website_stock_location" name="website_stock_location" className="input" defaultValue={typeof get("website_stock_location") === "string" ? (get("website_stock_location") as string) : ""}>
+              <option value="">—</option>
+              {locs?.map((l) => (
+                <option key={l.id} value={l.id}>{locale === "ar" ? l.name_ar : l.name_en || l.name_ar}</option>
+              ))}
+            </select>
+            <p className="hint">{t.company.websiteStockHint}</p>
+          </div>
+        </section>
+
+        <div className="no-print flex justify-end">
+          <button className="btn-primary">{t.save}</button>
+        </div>
       </form>
     </>
   );

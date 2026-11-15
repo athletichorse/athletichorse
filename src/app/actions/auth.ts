@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { authClient } from "@/lib/supabase/server";
 import { db } from "@/lib/supabase/admin";
@@ -39,4 +39,11 @@ export async function switchLocaleAction() {
   (await cookies()).set(LOCALE_COOKIE, next, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
   const s = await getStaff();
   if (s) await db().from("profiles").update({ locale: next }).eq("id", s.id);
+  // Fresh request so the whole page re-renders in the new language.
+  const ref = (await headers()).get("referer");
+  let path = "/";
+  try {
+    if (ref) path = new URL(ref).pathname + new URL(ref).search;
+  } catch {}
+  redirect(path.startsWith("/") ? path : "/");
 }

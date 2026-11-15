@@ -32,6 +32,16 @@ export async function saveCompanyAction(form: FormData) {
   if (error) return back(error.message);
   const { error: e2 } = await db().from("settings").upsert({ key: "vat_rate", value: Number(rate).toFixed(2) });
   if (e2) return back(e2.message);
+
+  const web = String(form.get("website_stock_location") ?? "");
+  if (web) {
+    const { data: loc } = await db().from("locations").select("id").eq("id", web).eq("active", true).maybeSingle();
+    if (!loc) return back("website location");
+    const { error: e3 } = await db().from("settings").upsert({ key: "website_stock_location", value: web });
+    if (e3) return back(e3.message);
+  } else {
+    await db().from("settings").delete().eq("key", "website_stock_location");
+  }
   revalidatePath("/company");
   back();
 }

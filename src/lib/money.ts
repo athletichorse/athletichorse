@@ -66,7 +66,7 @@ export function formatDecimal(h: Halalas): string {
 }
 
 /** Display: "1,234.50 ر.س" / "SAR 1,234.50". */
-export function formatSAR(h: Halalas, locale: "ar" | "en" = "ar"): string {
+export function formatSAR(h: Halalas, locale: "ar" | "en" = "en"): string {
   const [i, f] = formatDecimal(h).split(".");
   const neg = i.startsWith("-");
   const grouped = (neg ? i.slice(1) : i).replace(/\B(?=(\d{3})+(?!\d))/g, ",");

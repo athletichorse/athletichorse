@@ -17,7 +17,7 @@ function readCommon(form: FormData) {
     full_name: String(form.get("full_name") ?? "").trim(),
     role,
     branch_id: String(form.get("branch_id") ?? "") || null,
-    locale: form.get("locale") === "en" ? "en" : "ar",
+    locale: form.get("locale") === "ar" ? "ar" : "en",
     phone,
     phoneInvalid: Boolean(phoneRaw) && !phone,
   };

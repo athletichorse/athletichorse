@@ -5,12 +5,12 @@ import { getStaff } from "./auth";
 
 export const LOCALE_COOKIE = "locale";
 
-/** Staff profile locale → cookie → Arabic. */
+/** Logged-in staff: their profile language. Otherwise the cookie. Default: English. */
 export async function getLocale(): Promise<Locale> {
-  const c = (await cookies()).get(LOCALE_COOKIE)?.value;
-  if (isLocale(c)) return c;
   const s = await getStaff();
-  return s?.locale ?? "ar";
+  if (s) return s.locale;
+  const c = (await cookies()).get(LOCALE_COOKIE)?.value;
+  return isLocale(c) ? c : "en";
 }
 
 export async function getDict() {

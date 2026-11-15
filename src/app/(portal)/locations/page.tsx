@@ -14,63 +14,100 @@ export default async function LocationsPage({ searchParams }: { searchParams: Pr
   const locs = (data ?? []) as Loc[];
   const name = (l?: Loc) => (l ? (locale === "ar" ? l.name_ar : l.name_en || l.name_ar) : "—");
   const parents = locs.filter((l) => l.kind !== "sub_store");
+  const kindBadge = (k: Loc["kind"]) => (k === "branch" ? "badge-green" : k === "warehouse" ? "badge-blue" : "badge-gray");
 
   const fields = (l?: Loc) => (
-    <>
+    <div className="grid gap-4 sm:grid-cols-2">
       {l && <input type="hidden" name="id" value={l.id} />}
-      <input name="code" defaultValue={l?.code} placeholder={t.locations.code} className="input" required dir="ltr" />
-      <select name="kind" defaultValue={l?.kind ?? "branch"} className="input">
-        {(["branch", "warehouse", "sub_store"] as const).map((k) => <option key={k} value={k}>{t.locations.kinds[k]}</option>)}
-      </select>
-      <input name="name_ar" defaultValue={l?.name_ar} placeholder={t.locations.nameAr} className="input" required />
-      <input name="name_en" defaultValue={l?.name_en} placeholder={t.locations.nameEn} className="input" dir="ltr" />
-      <input name="address_ar" defaultValue={l?.address_ar} placeholder={t.locations.addressAr} className="input" />
-      <input name="address_en" defaultValue={l?.address_en} placeholder={t.locations.addressEn} className="input" dir="ltr" />
-      <select name="parent_id" defaultValue={l?.parent_id ?? ""} className="input" aria-label={t.locations.parent}>
-        <option value="">{t.locations.parent}: —</option>
-        {parents.filter((p) => p.id !== l?.id).map((p) => <option key={p.id} value={p.id}>{name(p)}</option>)}
-      </select>
-      <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="uses_pos" defaultChecked={l?.uses_pos} /> {t.locations.usesPos}</label>
-      {l && <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="active" defaultChecked={l.active} /> {t.active}</label>}
-    </>
+      <div>
+        <label className="label">{t.locations.code}</label>
+        <input name="code" defaultValue={l?.code} placeholder="BR03" className="input" required dir="ltr" autoCapitalize="characters" />
+      </div>
+      <div>
+        <label className="label">{t.locations.kind}</label>
+        <select name="kind" defaultValue={l?.kind ?? "branch"} className="input">
+          {(["branch", "warehouse", "sub_store"] as const).map((k) => <option key={k} value={k}>{t.locations.kinds[k]}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="label">{t.locations.nameEn}</label>
+        <input name="name_en" defaultValue={l?.name_en} className="input" dir="ltr" />
+      </div>
+      <div>
+        <label className="label">{t.locations.nameAr}</label>
+        <input name="name_ar" defaultValue={l?.name_ar} className="input" dir="rtl" required />
+      </div>
+      <div>
+        <label className="label">{t.locations.addressEn}</label>
+        <input name="address_en" defaultValue={l?.address_en} className="input" dir="ltr" />
+      </div>
+      <div>
+        <label className="label">{t.locations.addressAr}</label>
+        <input name="address_ar" defaultValue={l?.address_ar} className="input" dir="rtl" />
+      </div>
+      <div>
+        <label className="label">{t.locations.parent}</label>
+        <select name="parent_id" defaultValue={l?.parent_id ?? ""} className="input">
+          <option value="">—</option>
+          {parents.filter((p) => p.id !== l?.id).map((p) => <option key={p.id} value={p.id}>{name(p)}</option>)}
+        </select>
+      </div>
+      <div className="flex flex-col justify-end gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2"><input type="checkbox" name="uses_pos" defaultChecked={l?.uses_pos} className="h-4 w-4 accent-[var(--brand)]" /> {t.locations.usesPos}</label>
+        {l && <label className="flex items-center gap-2"><input type="checkbox" name="active" defaultChecked={l.active} className="h-4 w-4 accent-[var(--brand)]" /> {t.active}</label>}
+      </div>
+    </div>
   );
 
   return (
     <>
       <PageHeader title={t.locations.title} t={t} filename="locations" />
-      {sp.err && <p className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{sp.err}</p>}
-      {sp.ok && <p className="mb-3 rounded bg-green-50 p-2 text-sm text-green-700">{t.saved}</p>}
-      <div className="card overflow-x-auto">
-        <table className="table" data-export>
-          <thead><tr><th>{t.locations.code}</th><th>{t.locations.nameAr}</th><th>{t.locations.nameEn}</th><th>{t.locations.kind}</th><th>{t.locations.parent}</th><th>{t.locations.usesPos}</th><th>{t.active}</th></tr></thead>
-          <tbody>
-            {locs.map((l) => (
-              <tr key={l.id}>
-                <td dir="ltr" className="text-start">{l.code}</td><td>{l.name_ar}</td><td>{l.name_en}</td>
-                <td>{t.locations.kinds[l.kind]}</td><td>{name(locs.find((p) => p.id === l.parent_id))}</td>
-                <td>{l.uses_pos ? t.yes : t.no}</td><td>{l.active ? t.yes : t.no}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {sp.err && <p className="alert-err">{sp.err}</p>}
+      {sp.ok && <p className="alert-ok">{t.saved}</p>}
+
+      <div className="card mb-6 overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <table className="table" data-export>
+            <thead><tr><th>{t.locations.code}</th><th>{t.locations.nameEn}</th><th>{t.locations.nameAr}</th><th>{t.locations.kind}</th><th>{t.locations.parent}</th><th>{t.locations.usesPos}</th><th>{t.home.status}</th></tr></thead>
+            <tbody>
+              {locs.map((l) => (
+                <tr key={l.id}>
+                  <td className="font-mono text-xs text-gray-500">{l.code}</td>
+                  <td className="font-medium">{l.name_en}</td>
+                  <td dir="rtl" className="text-start">{l.name_ar}</td>
+                  <td><span className={kindBadge(l.kind)}>{t.locations.kinds[l.kind]}</span></td>
+                  <td>{name(locs.find((p) => p.id === l.parent_id))}</td>
+                  <td>{l.uses_pos ? t.yes : t.no}</td>
+                  <td>{l.active ? <span className="badge-green">{t.active}</span> : <span className="badge-gray">{t.inactive}</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div className="no-print mt-4 grid gap-4 lg:grid-cols-2">
-        <form action={saveLocationAction} className="card grid grid-cols-2 gap-2">
-          <h2 className="col-span-2 font-semibold">{t.add}</h2>
+
+      <div className="no-print grid gap-6 lg:grid-cols-2">
+        <form action={saveLocationAction} className="card">
+          <h2 className="card-title">{t.add}</h2>
           {fields()}
-          <button className="btn-primary col-span-2">{t.add}</button>
+          <div className="mt-5 flex justify-end"><button className="btn-primary">{t.add}</button></div>
         </form>
-        <div className="card space-y-2">
-          <h2 className="font-semibold">{t.edit}</h2>
-          {locs.map((l) => (
-            <details key={l.id} className="rounded border p-2">
-              <summary className="cursor-pointer text-sm">{l.code} — {name(l)}</summary>
-              <form action={saveLocationAction} className="mt-2 grid grid-cols-2 gap-2">
-                {fields(l)}
-                <button className="btn-primary col-span-2">{t.save}</button>
-              </form>
-            </details>
-          ))}
+        <div className="card">
+          <h2 className="card-title">{t.edit}</h2>
+          <div className="space-y-2">
+            {locs.map((l) => (
+              <details key={l.id} className="rounded-xl border border-[var(--line)]">
+                <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm">
+                  <span className="font-medium text-gray-900">{name(l)}</span>
+                  <span className="font-mono text-xs text-gray-500">{l.code} ▾</span>
+                </summary>
+                <form action={saveLocationAction} className="border-t border-[var(--line)] p-4">
+                  {fields(l)}
+                  <div className="mt-5 flex justify-end"><button className="btn-primary">{t.save}</button></div>
+                </form>
+              </details>
+            ))}
+          </div>
         </div>
       </div>
     </>

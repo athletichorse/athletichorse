@@ -6,30 +6,76 @@ import { ROLES } from "@/lib/permissions";
 import { PageHeader } from "@/components/PageHeader";
 import { createStaffAction, updateStaffAction } from "@/app/actions/staff";
 
+type Row = { id: string; username: string; full_name: string; role: string; branch_id: string | null; locale: string; phone: string | null; active: boolean };
+
 export default async function StaffPage({ searchParams }: { searchParams: Promise<{ err?: string; ok?: string }> }) {
   const me = await requirePermission("staff.view");
   const { t, locale } = await getDict();
   const sp = await searchParams;
   const canEdit = me.perms.has("staff.edit");
   const [{ data: staff }, { data: locs }] = await Promise.all([
-    db().from("profiles").select("id, username, full_name, role, branch_id, locale, phone, active").order("username"),
-    db().from("locations").select("id, name_ar, name_en").eq("kind", "branch").order("code"),
+    db().from("profiles").select("id, username, full_name, role, branch_id, locale, phone, active").order("full_name"),
+    db().from("locations").select("id, name_ar, name_en").eq("active", true).order("code"),
   ]);
-  const branchName = (id: string | null) => {
+  const rows = (staff ?? []) as Row[];
+  const locName = (id: string | null) => {
     const b = locs?.find((l) => l.id === id);
     return b ? (locale === "ar" ? b.name_ar : b.name_en || b.name_ar) : "—";
   };
+  const roleLabel = (r: string) => t.roles[r as keyof typeof t.roles] ?? r;
   const roles = ROLES.filter((r) => r !== "owner" || me.role === "owner");
-  const branchSelect = (value?: string | null) => (
-    <select name="branch_id" defaultValue={value ?? ""} className="input">
-      <option value="">{t.staff.noBranch}</option>
-      {locs?.map((l) => <option key={l.id} value={l.id}>{locale === "ar" ? l.name_ar : l.name_en || l.name_ar}</option>)}
-    </select>
-  );
-  const roleSelect = (value?: string) => (
-    <select name="role" defaultValue={value ?? "cashier"} className="input">
-      {(value === "owner" ? ROLES : roles).map((r) => <option key={r} value={r}>{t.roles[r]}</option>)}
-    </select>
+
+  const uattrs = { autoCapitalize: "none", autoCorrect: "off", spellCheck: false } as const;
+  const fields = (s?: Row) => (
+    <div className="grid gap-4 sm:grid-cols-2">
+      {!s && (
+        <div>
+          <label className="label">{t.staff.username}</label>
+          <input name="username" className="input" required dir="ltr" {...uattrs} />
+        </div>
+      )}
+      <div>
+        <label className="label">{t.staff.fullName}</label>
+        <input name="full_name" defaultValue={s?.full_name} className="input" required />
+      </div>
+      <div>
+        <label className="label">{t.staff.role}</label>
+        <select name="role" defaultValue={s?.role ?? "cashier"} className="input">
+          {(s?.role === "owner" ? ROLES : roles).map((r) => <option key={r} value={r}>{t.roles[r]}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="label">{t.staff.branch}</label>
+        <select name="branch_id" defaultValue={s?.branch_id ?? ""} className="input">
+          <option value="">{t.staff.noBranch}</option>
+          {locs?.map((l) => <option key={l.id} value={l.id}>{locale === "ar" ? l.name_ar : l.name_en || l.name_ar}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="label">{t.staff.phone}</label>
+        <input name="phone" defaultValue={s?.phone ?? ""} placeholder="05XXXXXXXX" className="input" dir="ltr" inputMode="tel" />
+      </div>
+      <div>
+        <label className="label">{t.staff.locale}</label>
+        <select name="locale" className="input" defaultValue={s?.locale ?? "en"}>
+          <option value="en">English</option>
+          <option value="ar">العربية</option>
+        </select>
+      </div>
+      <div>
+        <label className="label">{t.staff.password}</label>
+        <input name="password" type="password" className="input" required={!s} minLength={8} dir="ltr" autoComplete="new-password" />
+      </div>
+      <div>
+        <label className="label">{t.staff.pin}</label>
+        <input name="pin" className="input" inputMode="numeric" dir="ltr" autoComplete="off" />
+      </div>
+      {s && (
+        <label className="flex items-center gap-2 text-sm text-gray-700 sm:col-span-2">
+          <input type="checkbox" name="active" defaultChecked={s.active} className="h-4 w-4 accent-[var(--brand)]" /> {t.active}
+        </label>
+      )}
+    </div>
   );
 
   return (
@@ -37,65 +83,56 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
       <PageHeader title={t.staff.title} t={t} filename="staff">
         {me.perms.has("permissions.edit") && <Link className="btn-ghost no-print" href="/permissions">{t.staff.permissionsLink}</Link>}
       </PageHeader>
-      {sp.err && <p className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{sp.err === "phone" ? t.staff.badPhone : sp.err}</p>}
-      {sp.ok && <p className="mb-3 rounded bg-green-50 p-2 text-sm text-green-700">{t.saved}</p>}
+      {sp.err && <p className="alert-err">{sp.err === "phone" ? t.staff.badPhone : sp.err}</p>}
+      {sp.ok && <p className="alert-ok">{t.saved}</p>}
 
-      <div className="card overflow-x-auto">
-        <table className="table" data-export>
-          <thead>
-            <tr><th>{t.staff.username}</th><th>{t.staff.fullName}</th><th>{t.staff.role}</th><th>{t.staff.branch}</th><th>{t.staff.phone}</th><th>{t.active}</th></tr>
-          </thead>
-          <tbody>
-            {staff?.map((s) => (
-              <tr key={s.id}>
-                <td dir="ltr" className="text-start">{s.username}</td>
-                <td>{s.full_name}</td>
-                <td>{t.roles[s.role as keyof typeof t.roles] ?? s.role}</td>
-                <td>{branchName(s.branch_id)}</td>
-                <td dir="ltr" className="text-start">{s.phone ?? ""}</td>
-                <td>{s.active ? t.yes : t.no}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="card mb-6 overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <table className="table" data-export>
+            <thead>
+              <tr><th>{t.staff.fullName}</th><th>{t.staff.username}</th><th>{t.staff.role}</th><th>{t.staff.branch}</th><th>{t.staff.phone}</th><th>{t.home.status}</th></tr>
+            </thead>
+            <tbody>
+              {rows.map((s) => (
+                <tr key={s.id}>
+                  <td className="font-medium">{s.full_name}</td>
+                  <td dir="ltr" className="text-start font-mono text-xs text-gray-500">{s.username}</td>
+                  <td><span className={s.role === "owner" ? "badge-blue" : "badge-gray"}>{roleLabel(s.role)}</span></td>
+                  <td>{locName(s.branch_id)}</td>
+                  <td dir="ltr" className="text-start">{s.phone ?? ""}</td>
+                  <td>{s.active ? <span className="badge-green">{t.active}</span> : <span className="badge-gray">{t.inactive}</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {canEdit && (
-        <div className="no-print mt-4 grid gap-4 lg:grid-cols-2">
-          <form action={createStaffAction} className="card space-y-2">
-            <h2 className="font-semibold">{t.staff.newStaff}</h2>
-            <div className="grid grid-cols-2 gap-2">
-              <input name="username" placeholder={t.staff.username} className="input" autoCapitalize="none" autoCorrect="off" spellCheck={false} required dir="ltr" />
-              <input name="full_name" placeholder={t.staff.fullName} className="input" required />
-              {roleSelect()}
-              {branchSelect()}
-              <input name="phone" placeholder="05XXXXXXXX" className="input" dir="ltr" />
-              <select name="locale" className="input" defaultValue="ar"><option value="ar">العربية</option><option value="en">English</option></select>
-              <input name="password" type="password" placeholder={t.staff.password} className="input" required minLength={8} dir="ltr" />
-              <input name="pin" placeholder={t.staff.pin} className="input" inputMode="numeric" dir="ltr" />
-            </div>
-            <button className="btn-primary">{t.add}</button>
+        <div className="no-print grid gap-6 lg:grid-cols-2">
+          <form action={createStaffAction} className="card">
+            <h2 className="card-title">{t.staff.newStaff}</h2>
+            {fields()}
+            <div className="mt-5 flex justify-end"><button className="btn-primary">{t.add}</button></div>
           </form>
 
-          <div className="card space-y-3">
-            <h2 className="font-semibold">{t.edit}</h2>
-            {staff?.filter((s) => s.role !== "owner" || me.role === "owner").map((s) => (
-              <details key={s.id} className="rounded border p-2">
-                <summary className="cursor-pointer text-sm">{s.full_name} <span dir="ltr">({s.username})</span></summary>
-                <form action={updateStaffAction} className="mt-2 grid grid-cols-2 gap-2">
-                  <input type="hidden" name="id" value={s.id} />
-                  <input name="full_name" defaultValue={s.full_name} className="input" required />
-                  {roleSelect(s.role)}
-                  {branchSelect(s.branch_id)}
-                  <input name="phone" defaultValue={s.phone ?? ""} placeholder="05XXXXXXXX" className="input" dir="ltr" />
-                  <select name="locale" className="input" defaultValue={s.locale}><option value="ar">العربية</option><option value="en">English</option></select>
-                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="active" defaultChecked={s.active} /> {t.active}</label>
-                  <input name="password" type="password" placeholder={t.staff.password} className="input" dir="ltr" />
-                  <input name="pin" placeholder={t.staff.pin} className="input" inputMode="numeric" dir="ltr" />
-                  <button className="btn-primary col-span-2">{t.save}</button>
-                </form>
-              </details>
-            ))}
+          <div className="card">
+            <h2 className="card-title">{t.edit}</h2>
+            <div className="space-y-2">
+              {rows.filter((s) => s.role !== "owner" || me.role === "owner").map((s) => (
+                <details key={s.id} className="group rounded-xl border border-[var(--line)]">
+                  <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm">
+                    <span className="font-medium text-gray-900">{s.full_name}</span>
+                    <span className="text-xs text-gray-500">{roleLabel(s.role)} ▾</span>
+                  </summary>
+                  <form action={updateStaffAction} className="border-t border-[var(--line)] p-4">
+                    <input type="hidden" name="id" value={s.id} />
+                    {fields(s)}
+                    <div className="mt-5 flex justify-end"><button className="btn-primary">{t.save}</button></div>
+                  </form>
+                </details>
+              ))}
+            </div>
           </div>
         </div>
       )}
