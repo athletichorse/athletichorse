@@ -97,7 +97,7 @@ export async function updateStaffAction(form: FormData) {
     const locErr = await saveLocations(id, form);
     if (locErr) return back(locErr);
   }
-  if (!active) await db().auth.admin.signOut(id).catch(() => undefined);
+  // Inactive staff are refused on their next request by requireStaff() (profile.active = false).
   revalidatePath("/staff");
   back();
 }

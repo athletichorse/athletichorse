@@ -35,10 +35,14 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const { data, count } = await query.order("name_en").range((page - 1) * PER_PAGE, page * PER_PAGE - 1);
   const rows = (data ?? []) as Row[];
 
-  const [{ data: lastRun }, { data: missingAgg }] = await Promise.all([
+  const [{ data: lastRun }, { data: missingAgg }, { data: webLoc }] = await Promise.all([
     db().from("sync_runs").select("started_at, finished_at, status, counts, error").order("started_at", { ascending: false }).limit(1).maybeSingle(),
     db().from("product_list").select("missing_sku").eq("active", true).gt("missing_sku", 0),
+    db().from("settings").select("value").eq("key", "website_stock_location").maybeSingle(),
   ]);
+  const { data: webLocation } = typeof webLoc?.value === "string"
+    ? await db().from("locations").select("name_en, name_ar").eq("id", webLoc.value).maybeSingle()
+    : { data: null };
   const missingTotal = (missingAgg ?? []).reduce((n, r) => n + Number(r.missing_sku), 0);
   const total = count ?? 0;
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
@@ -90,6 +94,9 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
           </div>
           {lastRun?.status === "error" && <p className="mt-1 text-sm text-red-600">{lastRun.error}</p>}
           <p className="hint">{t.products.syncDaily}</p>
+          <p className="mt-2 text-sm text-gray-700">
+            {t.home.websiteStock}: <b>{webLocation ? (locale === "ar" ? webLocation.name_ar : webLocation.name_en || webLocation.name_ar) : t.home.notSet}</b>
+          </p>
         </div>
         {canEdit && (
           <form action={syncNowAction}>
