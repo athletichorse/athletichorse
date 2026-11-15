@@ -52,7 +52,21 @@ describe("fetchAllProducts", () => {
     const all = await fetchAllProducts("athletic-horse.com", fakeFetch([full, [product(999)]]));
     expect(all).toHaveLength(251);
   });
-  it("fails the whole sync if any page fails (never half-imports)", async () => {
+  it("retries a page that fails once, then carries on", async () => {
+    let calls = 0;
+    const flaky = (async () => {
+      calls++;
+      if (calls === 1) throw new TypeError("fetch failed");
+      return Response.json({ products: [product(1)] });
+    }) as typeof fetch;
+    expect(await fetchAllProducts("athletic-horse.com", flaky)).toHaveLength(1);
+    expect(calls).toBe(2);
+  });
+  it("gives a clear message when the website blocks the request", async () => {
+    const blocked = (async () => new Response("Forbidden", { status: 403 })) as typeof fetch;
+    await expect(fetchAllProducts("athletic-horse.com", blocked)).rejects.toThrow(/Website returned 403 on page 1/);
+  });
+  it("fails the whole sync if any page fails (never half-imports)", { timeout: 15000 }, async () => {
     const full = Array.from({ length: 250 }, (_, i) => product(i + 1));
     await expect(fetchAllProducts("athletic-horse.com", fakeFetch([full, full], 2))).rejects.toThrow(/503/);
   });

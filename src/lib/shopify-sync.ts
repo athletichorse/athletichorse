@@ -9,7 +9,20 @@ export type SyncResult = { ok: boolean; runId?: string; counts?: Record<string, 
  * Each SQL call is one transaction and every step is an upsert, so re-running is always safe.
  */
 export async function runShopifySync(trigger: "manual" | "daily", userId: string | null): Promise<SyncResult> {
-  // Don't start a second sync while one is running (started in the last 10 minutes).
+  const started = await startShopifySync(trigger, userId);
+  if (!started.ok || !started.runId) return started;
+  return finishShopifySync(started.runId);
+}
+
+/** Records a new run (status "running"). Refuses if another run is in progress. */
+export async function startShopifySync(trigger: "manual" | "daily", userId: string | null): Promise<SyncResult> {
+  // Runs stuck in "running" for over 10 minutes were cut off (e.g. a timeout): close them.
+  await db()
+    .from("sync_runs")
+    .update({ status: "error", finished_at: new Date().toISOString(), error: "Stopped before finishing (timed out)" })
+    .eq("status", "running")
+    .lt("started_at", new Date(Date.now() - 10 * 60_000).toISOString());
+
   const { data: running } = await db()
     .from("sync_runs")
     .select("id")
@@ -24,7 +37,12 @@ export async function runShopifySync(trigger: "manual" | "daily", userId: string
     .select("id")
     .single();
   if (e0 || !run) return { ok: false, error: e0?.message ?? "Could not start sync" };
+  return { ok: true, runId: run.id };
+}
 
+/** Does the work for a run created by startShopifySync and records the outcome. */
+export async function finishShopifySync(runId: string): Promise<SyncResult> {
+  const run = { id: runId };
   try {
     const { data: setting } = await db().from("settings").select("value").eq("key", "shopify_store_url").maybeSingle();
     const storeUrl = typeof setting?.value === "string" ? setting.value : "https://athletic-horse.com";
