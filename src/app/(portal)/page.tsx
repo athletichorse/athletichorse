@@ -14,7 +14,7 @@ export default async function Home() {
     db().from("products").select("id", { count: "exact", head: true }).eq("active", true),
     db().from("products").select("id", { count: "exact", head: true }).eq("active", true).not("shopify_product_id", "is", null),
     db().from("product_list").select("missing_sku").eq("active", true).gt("missing_sku", 0),
-    db().from("sync_runs").select("started_at, status, error").order("started_at", { ascending: false }).limit(1).maybeSingle(),
+    db().from("sync_runs").select("started_at, status, error").eq("source", "shopify").order("started_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   const catalog = {
     products: products.count ?? 0,

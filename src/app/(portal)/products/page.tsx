@@ -36,7 +36,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const rows = (data ?? []) as Row[];
 
   const [{ data: lastRun }, { data: missingAgg }, { data: webLoc }] = await Promise.all([
-    db().from("sync_runs").select("started_at, finished_at, status, counts, error").order("started_at", { ascending: false }).limit(1).maybeSingle(),
+    db().from("sync_runs").select("started_at, finished_at, status, counts, error").eq("source", "shopify").order("started_at", { ascending: false }).limit(1).maybeSingle(),
     db().from("product_list").select("missing_sku").eq("active", true).gt("missing_sku", 0),
     db().from("settings").select("value").eq("key", "website_stock_location").maybeSingle(),
   ]);

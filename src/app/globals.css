@@ -60,3 +60,12 @@ body {
   .table td.cell-media { display: block; float: inline-start; width: auto; margin-inline-end: 12px; padding: 0; }
   .table td > input, .table td > select { max-width: 62%; }
 }
+
+/* ---------- 80 mm receipt ---------- */
+@media print {
+  @page { margin: 4mm; }
+  html[data-print="receipt80"] { width: 80mm; }
+  html[data-print="receipt80"] .receipt { max-width: 80mm; padding: 0; }
+  html[data-print="receipt80"] aside, html[data-print="receipt80"] header.no-print { display: none !important; }
+  html[data-print="receipt80"] .lg\:ps-64 { padding: 0 !important; }
+}

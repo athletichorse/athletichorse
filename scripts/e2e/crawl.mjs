@@ -45,7 +45,7 @@ async function checkPage(page, path, label) {
 }
 
 const browser = await chromium.launch();
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/staff", "/locations", "/company", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/customers", "/stock-log", "/audit"];
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/staff", "/locations", "/company", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales?tab=returns", "/sales?tab=website", "/customers", "/stock-log", "/audit"];
 
 // ---------------------------------------------------------------- 1. setup + flows (desktop, English)
 console.log("\n== Setup and main flows (desktop, English)");
@@ -326,6 +326,99 @@ await page.goto(BASE + "/audit", { waitUntil: "networkidle" });
 const auditTxt = await page.locator("table").innerText();
 for (const a of ["stock.receipt", "customer.create", "staff.create", "company.update"]) if (!auditTxt.includes(a)) fail("audit", `missing ${a}`);
 ok("audit log records stock, customers, staff and company changes");
+
+
+// ---------------------------------------------------------------- cashier
+where = "pos";
+await page.goto(BASE + "/pos", { waitUntil: "networkidle" });
+await page.locator("select").first().selectOption({ label: "Riyadh Branch" });
+await page.locator('input[inputmode="decimal"]').first().fill("100");
+await page.click('button:text-is("Open shift")');
+await page.waitForSelector("text=Shift open since", { timeout: 20000 });
+ok("open a shift with 100 SAR in the drawer");
+
+async function scan(code) {
+  const box = page.locator('input[placeholder*="Scan barcode"]');
+  await box.fill(code);
+  await box.press("Enter");
+  await page.waitForSelector(`td:has-text("${code}")`, { timeout: 15000 }).catch(() => {});
+}
+await scan("E2E-ROPE-1");
+await scan("E2E-ROPE-1"); // second scan → qty 2
+await page.waitForFunction(() => document.querySelector("main table tbody tr input")?.value === "2", null, { timeout: 10000 }).catch(() => {});
+const qtyVal = await page.locator("main table tbody tr input").first().inputValue();
+if (qtyVal !== "2") fail("pos", `scanning twice should give qty 2, got ${qtyVal}`); else ok("scan adds items; scanning again increases the quantity");
+const totalTxt = await page.locator("main aside").innerText();
+if (!/70\.00/.test(totalTxt)) fail("pos", `total should be 70.00 (2 × 35): ${totalTxt.replace(/\s+/g, " ").slice(0, 160)}`); else ok("cart total 70.00 incl. VAT (net 60.87 + VAT 9.13)");
+await page.locator('input[placeholder*="Customer mobile"]').fill("0551234567");
+await page.click('button:text-is("Find")');
+await page.waitForSelector("text=+966551234567", { timeout: 10000 }).catch(() => fail("pos", "customer not found by mobile"));
+await page.locator('label:has-text("Cash given") + input').fill("100");
+await page.click('button:has-text("Pay SAR")');
+await page.waitForSelector(".alert-ok, .alert-err", { timeout: 20000 });
+const saleMsg = await page.locator(".alert-ok, .alert-err").first().innerText();
+if (!/Sale complete — invoice BR01-\d{6}/.test(saleMsg) || !/Change: 30\.00/.test(saleMsg)) fail("pos", `sale: ${saleMsg}`);
+else ok(`sale posted (${saleMsg.match(/BR01-\d{6}/)[0]}), change 30.00 from 100`);
+const invoiceNo = saleMsg.match(/BR01-\d{6}/)?.[0];
+const receiptHref = await page.locator('a:has-text("Print receipt")').getAttribute("href");
+const rp = await ctx.newPage();
+watch(rp, () => "receipt");
+await rp.goto(BASE + receiptHref.replace("?print=1", ""), { waitUntil: "networkidle" });
+const rTxt = await rp.locator("article").innerText();
+// 310122393500003 = the VAT no. set in the company step above
+for (const s of ["فاتورة ضريبية مبسطة", "Simplified Tax Invoice", "310122393500003", invoiceNo, "70.00", "9.13"]) if (!rTxt.includes(s)) fail("receipt", `missing "${s}"`);
+if ((await rp.locator("article svg").count()) < 2) fail("receipt", "QR code or barcode missing");
+else ok("80 mm receipt: bilingual title, VAT no., totals, ZATCA QR and Code 128 barcode");
+await rp.close();
+
+// quotation at the desk → collect at the cashier
+await page.click('button:text-is("Quotation")');
+await scan("E2E-ROPE-1");
+await page.click('button:text-is("Save quotation")');
+await page.waitForSelector(".alert-ok, .alert-err", { timeout: 20000 });
+const qMsg = await page.locator(".alert-ok, .alert-err").first().innerText();
+const qNo = qMsg.match(/number (\d+)/)?.[1];
+if (!qNo) fail("pos", `quotation: ${qMsg}`); else ok(`desk quotation saved (#${qNo})`);
+await page.click('button:text-is("Collect")');
+await page.locator('input[placeholder="Quotation #"]').fill(qNo ?? "0");
+await page.click('button:text-is("Load")');
+await page.waitForSelector("table tbody tr", { timeout: 15000 });
+await page.click('button:has-text("Pay SAR")');
+await page.waitForSelector(".alert-ok, .alert-err", { timeout: 20000 });
+const cMsg = await page.locator(".alert-ok, .alert-err").first().innerText();
+if (!/Sale complete/.test(cMsg)) fail("pos", `collect: ${cMsg}`); else ok("quotation collected at the cashier → invoice");
+
+// return with receipt
+await page.click('button:text-is("Return")');
+await page.locator('input[placeholder*="Invoice number"]').fill(invoiceNo ?? "");
+await page.click('button:text-is("Find")');
+await page.waitForSelector("table tbody tr", { timeout: 15000 });
+await page.locator("table tbody tr input").first().fill("1");
+await page.click('button:text-is("Refund")');
+await page.waitForSelector(".alert-ok, .alert-err", { timeout: 20000 });
+const rMsg = await page.locator(".alert-ok, .alert-err").first().innerText();
+if (!/credit note BR01-CN-\d{6}/.test(rMsg) || !/35\.00/.test(rMsg)) fail("pos", `return: ${rMsg}`); else ok("return with receipt → credit note, refund 35.00");
+
+// cash out, close shift
+await page.click('button:has-text("Cash out")');
+await page.locator('input[placeholder="Amount"]').fill("10");
+await page.locator('input[placeholder="Reason"]').fill("e2e");
+await page.click('section >> button:text-is("Save")');
+await page.waitForSelector(".alert-ok, .alert-err", { timeout: 15000 });
+ok("cash out recorded");
+await page.click('button:text-is("Close shift")');
+// expected: 100 + 70 + 35 (quotation, paid cash) − 35 (refund) − 10 (cash out) = 160
+await page.locator('input[placeholder*="Counted cash"]').fill("160");
+await page.locator('section >> button:text-is("Close shift")').click();
+await page.waitForSelector("text=Shift closed", { timeout: 15000 });
+const closeTxt = await page.locator(".alert-ok").first().innerText();
+if (!/Expected cash 160\.00/.test(closeTxt) || !/Difference 0\.00/.test(closeTxt)) fail("pos", `close: ${closeTxt}`); else ok("close shift: expected 160.00 = counted, difference 0.00");
+
+// sales list
+await page.goto(BASE + "/sales", { waitUntil: "networkidle" });
+if (!(await page.locator("table").innerText()).includes(invoiceNo ?? "-")) fail("sales", "invoice not in the list"); else ok("Sales lists the invoice");
+await page.goto(BASE + "/sales?tab=returns", { waitUntil: "networkidle" });
+if (!/BR01-CN-/.test(await page.locator("table").innerText())) fail("sales", "credit note not in Returns"); else ok("Sales → Returns lists the credit note");
 
 // language switch + logout + login
 where = "language";
