@@ -45,7 +45,7 @@ export const getStaff = cache(async (): Promise<Staff | null> => {
     fullName: p.full_name,
     role: p.role,
     branchId: p.branch_id,
-    locale: p.locale === "en" ? "en" : "ar",
+    locale: p.locale === "ar" ? "ar" : "en",
     perms: resolvePermissions(p.role, rp ?? [], up ?? []),
   };
 });

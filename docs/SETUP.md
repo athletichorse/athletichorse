@@ -18,3 +18,10 @@
 ## 3. First owner — المالك الأول
 Open `https://<your-app>.vercel.app/setup`, type the SETUP_SECRET, create the owner.
 The page locks itself after the first account. Then delete `SETUP_SECRET` in Vercel.
+
+## 4. Daily website sync
+Add one more Vercel environment variable, type **Secret**:
+- `CRON_SECRET` = any long random text (at least 16 characters)
+
+Vercel then calls `/api/cron/shopify-sync` every day at 00:00 UTC (03:00 Riyadh), using `vercel.json`.
+The **Sync with website now** button on the Products page runs the same sync on demand.

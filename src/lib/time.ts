@@ -18,7 +18,7 @@ export function isWeekend(d: Date = new Date(), weekendDays: readonly number[] =
   return weekendDays.includes(riyadhWeekday(d));
 }
 
-export function formatDateTime(d: Date, locale: "ar" | "en" = "ar"): string {
+export function formatDateTime(d: Date, locale: "ar" | "en" = "en"): string {
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-GB", {
     timeZone: TZ,
     dateStyle: "medium",
@@ -27,7 +27,7 @@ export function formatDateTime(d: Date, locale: "ar" | "en" = "ar"): string {
 }
 
 /** Hijri (Umm al-Qura) date, e.g. "٢٢ جمادى الأولى ١٤٤٨ هـ". */
-export function formatHijri(d: Date, locale: "ar" | "en" = "ar"): string {
+export function formatHijri(d: Date, locale: "ar" | "en" = "en"): string {
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-islamic-umalqura-nu-latn" : "en-u-ca-islamic-umalqura", {
     timeZone: TZ,
     day: "numeric",

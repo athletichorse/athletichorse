@@ -9,7 +9,7 @@ export function SetupForm({ t, branches }: { t: Dict; branches: { id: string; na
   const err = state?.error;
   const msg = err === "badSecret" ? t.setup.badSecret : err === "done" ? t.setup.done : err ? t.setup.error + err : null;
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} className="space-y-4">
       <div><label className="label">{t.setup.secret}</label><input className="input" name="secret" type="password" required dir="ltr" /></div>
       <div><label className="label">{t.login.username}</label><input className="input" name="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} required dir="ltr" /></div>
       <div><label className="label">{t.setup.fullName}</label><input className="input" name="full_name" required /></div>
@@ -21,7 +21,7 @@ export function SetupForm({ t, branches }: { t: Dict; branches: { id: string; na
           {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
       </div>
-      {msg && <p className="text-sm text-red-600">{msg}</p>}
+      {msg && <p className="alert-err">{msg}</p>}
       <button className="btn-primary w-full" disabled={pending}>{t.setup.submit}</button>
     </form>
   );
