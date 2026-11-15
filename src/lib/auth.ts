@@ -16,6 +16,8 @@ export type Staff = {
   fullName: string;
   role: Role;
   branchId: string | null;
+  /** Locations this person may see / work at: "all", or a list of location ids. */
+  locations: "all" | string[];
   locale: Locale;
   perms: Set<PermissionKey>;
 };
@@ -34,10 +36,17 @@ export const getStaff = cache(async (): Promise<Staff | null> => {
     .maybeSingle();
   if (!p || !p.active || !isRole(p.role)) return null;
 
-  const [{ data: rp }, { data: up }] = await Promise.all([
+  const [{ data: rp }, { data: up }, { data: extra }, { data: sl }] = await Promise.all([
     db().from("role_permissions").select("permission, allowed").eq("role", p.role),
     db().from("user_permissions").select("permission, allowed").eq("user_id", uid),
+    // Tolerant of databases that don't have migration 0005 yet (errors → defaults).
+    db().from("profiles").select("all_locations").eq("id", uid).maybeSingle(),
+    db().from("staff_locations").select("location_id").eq("user_id", uid),
   ]);
+  const allLocations = p.role === "owner" || extra?.all_locations === true;
+  const locations = allLocations
+    ? ("all" as const)
+    : [...new Set([p.branch_id, ...(sl ?? []).map((r) => r.location_id)].filter((x): x is string => Boolean(x)))];
 
   return {
     id: p.id,
@@ -45,6 +54,7 @@ export const getStaff = cache(async (): Promise<Staff | null> => {
     fullName: p.full_name,
     role: p.role,
     branchId: p.branch_id,
+    locations,
     locale: p.locale === "ar" ? "ar" : "en",
     perms: resolvePermissions(p.role, rp ?? [], up ?? []),
   };
@@ -75,4 +85,9 @@ export async function assertPermission(key: PermissionKey): Promise<Staff> {
   const s = await requireStaff();
   if (!s.perms.has(key)) throw new ForbiddenError(key);
   return s;
+}
+
+/** True when this person may see / work at the given location. */
+export function canUseLocation(s: Pick<Staff, "locations">, locationId: string): boolean {
+  return s.locations === "all" || s.locations.includes(locationId);
 }

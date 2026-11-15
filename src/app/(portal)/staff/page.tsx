@@ -13,11 +13,20 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
   const { t, locale } = await getDict();
   const sp = await searchParams;
   const canEdit = me.perms.has("staff.edit");
-  const [{ data: staff }, { data: locs }] = await Promise.all([
+  const [{ data: staff }, { data: locs }, { data: allFlags }, { data: links }] = await Promise.all([
     db().from("profiles").select("id, username, full_name, role, branch_id, locale, phone, active").order("full_name"),
     db().from("locations").select("id, name_ar, name_en").eq("active", true).order("code"),
+    db().from("profiles").select("id, all_locations"),
+    db().from("staff_locations").select("user_id, location_id"),
   ]);
   const rows = (staff ?? []) as Row[];
+  const isAll = (r: Row) => r.role === "owner" || Boolean(allFlags?.find((f) => f.id === r.id)?.all_locations);
+  const extraIds = (r: Row) => (links ?? []).filter((l) => l.user_id === r.id).map((l) => l.location_id);
+  const locSummary = (r: Row) => {
+    if (isAll(r)) return t.staff.allLocations;
+    const ids = [...new Set([r.branch_id, ...extraIds(r)].filter(Boolean))] as string[];
+    return ids.length ? ids.map(locName).join(", ") : "—";
+  };
   const locName = (id: string | null) => {
     const b = locs?.find((l) => l.id === id);
     return b ? (locale === "ar" ? b.name_ar : b.name_en || b.name_ar) : "—";
@@ -70,6 +79,23 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
         <label className="label">{t.staff.pin}</label>
         <input name="pin" className="input" inputMode="numeric" dir="ltr" autoComplete="off" />
       </div>
+      {s?.role !== "owner" && (
+        <fieldset className="rounded-xl border border-[var(--line)] p-3 sm:col-span-2">
+          <legend className="px-1 text-sm font-medium text-gray-700">{t.staff.worksAt}</legend>
+          <label className="flex items-center gap-2 py-1 text-sm font-medium text-gray-900">
+            <input type="checkbox" name="all_locations" defaultChecked={s ? isAll(s) : false} className="h-4 w-4 accent-[var(--brand)]" /> {t.staff.allLocations}
+          </label>
+          <div className="mt-1 grid grid-cols-2 gap-x-4">
+            {locs?.map((l) => (
+              <label key={l.id} className="flex items-center gap-2 py-1 text-sm text-gray-700">
+                <input type="checkbox" name="locations" value={l.id} defaultChecked={s ? extraIds(s).includes(l.id) || s.branch_id === l.id : false} className="h-4 w-4 accent-[var(--brand)]" />
+                {locale === "ar" ? l.name_ar : l.name_en || l.name_ar}
+              </label>
+            ))}
+          </div>
+          <p className="hint">{t.staff.worksAtHint}</p>
+        </fieldset>
+      )}
       {s && (
         <label className="flex items-center gap-2 text-sm text-gray-700 sm:col-span-2">
           <input type="checkbox" name="active" defaultChecked={s.active} className="h-4 w-4 accent-[var(--brand)]" /> {t.active}
@@ -90,7 +116,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
         <div className="overflow-x-auto">
           <table className="table" data-export>
             <thead>
-              <tr><th>{t.staff.fullName}</th><th>{t.staff.username}</th><th>{t.staff.role}</th><th>{t.staff.branch}</th><th>{t.staff.phone}</th><th>{t.home.status}</th></tr>
+              <tr><th>{t.staff.fullName}</th><th>{t.staff.username}</th><th>{t.staff.role}</th><th>{t.staff.branch}</th><th>{t.staff.locations}</th><th>{t.staff.phone}</th><th>{t.home.status}</th></tr>
             </thead>
             <tbody>
               {rows.map((s) => (
@@ -99,6 +125,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
                   <td data-label={t.staff.username} dir="ltr" className="text-start font-mono text-xs text-gray-500">{s.username}</td>
                   <td data-label={t.staff.role}><span className={s.role === "owner" ? "badge-blue" : "badge-gray"}>{roleLabel(s.role)}</span></td>
                   <td data-label={t.staff.branch}>{locName(s.branch_id)}</td>
+                  <td data-label={t.staff.locations}>{locSummary(s)}</td>
                   <td data-label={t.staff.phone} dir="ltr" className="text-start">{s.phone ?? "—"}</td>
                   <td data-label={t.home.status}>{s.active ? <span className="badge-green">{t.active}</span> : <span className="badge-gray">{t.inactive}</span>}</td>
                 </tr>

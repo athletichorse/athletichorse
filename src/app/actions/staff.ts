@@ -23,6 +23,20 @@ function readCommon(form: FormData) {
   };
 }
 
+/** Saves "all locations" + the list of extra locations for one person. */
+async function saveLocations(userId: string, form: FormData) {
+  const all = form.get("all_locations") === "on";
+  const ids = form.getAll("locations").map(String).filter((x) => /^[0-9a-f-]{36}$/i.test(x));
+  const { error } = await db().from("profiles").update({ all_locations: all }).eq("id", userId);
+  if (error) return error.message;
+  await db().from("staff_locations").delete().eq("user_id", userId);
+  if (!all && ids.length) {
+    const { error: e2 } = await db().from("staff_locations").insert([...new Set(ids)].map((location_id) => ({ user_id: userId, location_id })));
+    if (e2) return e2.message;
+  }
+  return null;
+}
+
 export async function createStaffAction(form: FormData) {
   const actor = await assertPermission("staff.edit");
   const c = readCommon(form);
@@ -47,6 +61,8 @@ export async function createStaffAction(form: FormData) {
     return back(e2.message);
   }
   if (pin) await db().rpc("set_staff_pin", { p_user: data.user.id, p_pin: pin });
+  const locErr = await saveLocations(data.user.id, form);
+  if (locErr) return back(locErr);
   revalidatePath("/staff");
   back();
 }
@@ -77,6 +93,10 @@ export async function updateStaffAction(form: FormData) {
     if (e) return back(e.message);
   }
   if (pin) await db().rpc("set_staff_pin", { p_user: id, p_pin: pin });
+  if (target.role !== "owner") {
+    const locErr = await saveLocations(id, form);
+    if (locErr) return back(locErr);
+  }
   if (!active) await db().auth.admin.signOut(id).catch(() => undefined);
   revalidatePath("/staff");
   back();
