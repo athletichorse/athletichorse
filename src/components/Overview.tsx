@@ -41,7 +41,8 @@ export function Overview({ s, t, locale, now, locs, staff, webLocId, catalog }: 
   const name = (l?: Loc) => (l ? (locale === "ar" ? l.name_ar : l.name_en || l.name_ar) : "—");
   const myBranch = locs.find((l) => l.id === s.branchId);
   const webLoc = locs.find((l) => l.id === webLocId);
-  const shortcuts = buildNav(t, s.perms).main.filter((i) => i.href !== "/");
+  const nav = buildNav(t, s.perms);
+  const shortcuts = [...nav.main, ...nav.admin].filter((i) => i.href !== "/" && !i.soon);
   const kindBadge = (k: Loc["kind"]) => (k === "branch" ? "badge-green" : k === "warehouse" ? "badge-blue" : "badge-gray");
 
   return (

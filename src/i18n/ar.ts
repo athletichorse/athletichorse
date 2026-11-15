@@ -12,6 +12,7 @@ const ar = {
   no: "لا",
   active: "نشط",
   inactive: "موقوف",
+  soon: "قريبًا",
   comingSoonTitle: "قريبًا",
   comingSoon: "قريبًا — ستُضاف هذه الشاشة في تحديث قادم.",
   forbidden: "ليس لديك صلاحية لهذه الصفحة.",

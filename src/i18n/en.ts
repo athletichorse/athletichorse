@@ -14,6 +14,7 @@ const en: Dict = {
   no: "No",
   active: "Active",
   inactive: "Inactive",
+  soon: "Soon",
   comingSoonTitle: "Coming soon",
   comingSoon: "Coming soon — this screen will be added in a later update.",
   forbidden: "You don't have permission for this page.",

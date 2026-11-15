@@ -22,7 +22,7 @@ export default async function PortalLayout({ children }: { children: React.React
         admin={admin}
         company={company}
         user={{ name: staff.fullName, role: t.roles[staff.role] }}
-        labels={{ admin: t.nav.admin, openMenu: t.nav.openMenu, closeMenu: t.nav.closeMenu, switchLang: t.switchLang, logout: t.logout }}
+        labels={{ admin: t.nav.admin, openMenu: t.nav.openMenu, closeMenu: t.nav.closeMenu, switchLang: t.switchLang, logout: t.logout, soon: t.soon }}
         switchLocale={switchLocaleAction}
         logout={logoutAction}
       />

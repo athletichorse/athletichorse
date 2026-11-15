@@ -9,14 +9,14 @@ import type { NavItem } from "./menu";
 type Props = {
   main: NavItem[];
   admin: NavItem[];
-  labels: { admin: string; openMenu: string; closeMenu: string; switchLang: string; logout: string };
+  labels: { admin: string; openMenu: string; closeMenu: string; switchLang: string; logout: string; soon: string };
   company: string;
   user: { name: string; role: string };
   switchLocale: () => Promise<void>;
   logout: () => Promise<void>;
 };
 
-function Links({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => void }) {
+function Links({ items, onNavigate, soon }: { items: NavItem[]; onNavigate?: () => void; soon: string }) {
   const path = usePathname();
   return (
     <ul className="space-y-0.5">
@@ -32,7 +32,8 @@ function Links({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => voi
               }`}
             >
               <Icon name={i.icon} />
-              {i.label}
+              <span className="flex-1">{i.label}</span>
+              {i.soon && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-gray-500 uppercase">{soon}</span>}
             </Link>
           </li>
         );
@@ -51,11 +52,11 @@ function Panel({ p, onNavigate }: { p: Props; onNavigate?: () => void }) {
         <div className="min-w-0 truncate text-sm font-semibold text-gray-900">{p.company}</div>
       </div>
       <nav className="flex-1 overflow-y-auto px-3 pb-4">
-        <Links items={p.main} onNavigate={onNavigate} />
+        <Links items={p.main} onNavigate={onNavigate} soon={p.labels.soon} />
         {p.admin.length > 0 && (
           <>
             <div className="mt-6 mb-2 px-3 text-xs font-semibold tracking-wide text-gray-400 uppercase">{p.labels.admin}</div>
-            <Links items={p.admin} onNavigate={onNavigate} />
+            <Links items={p.admin} onNavigate={onNavigate} soon={p.labels.soon} />
           </>
         )}
       </nav>
