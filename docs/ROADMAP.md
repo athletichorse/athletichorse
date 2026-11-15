@@ -25,6 +25,7 @@
 3. ✅ Locations: branches, warehouses, sub-stores, kind, uses-POS
 4. ✅ Products: SKU (= barcode), extra codes, name ar/en, group + sub-group, unit, cost, VAT-incl price, active, service, variants (colour/size/weight)
    - ✅ **Website (athletic-horse.com, Shopify) import: names, prices, variants, options, images, synced daily at 3:00 Riyadh + "Sync now"**
+   - ✅ **Upload file (رفع ملف)**: Excel product import with currency conversion, merges with website items, re-import never duplicates
    - ⬜ Push stock to the website from the Jeddah branch (needs a Shopify Admin API token; comes with step 5)
 5. ⬜ Stock: `stock_levels` + append-only `stock_movements`; changes only in SQL functions, one transaction, idempotent by `client_id`
 6. ⬜ POS: shifts with cash count, desk quotation → cashier, quick sale, customers (number required, serial no.), salesperson, split payments, returns with/without receipt, 80 mm receipt with ZATCA QR + Code 128; server recomputes all totals
