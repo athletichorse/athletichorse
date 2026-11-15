@@ -36,7 +36,9 @@ body {
 }
 
 /* ---------- Print ---------- */
+.print-header { display: none; }
 @media print {
+  html:not([data-print="receipt80"]) .print-header { display: flex; }
   .no-print { display: none !important; }
   body { background: #fff; }
   .card { box-shadow: none; border: 0; padding: 0; }

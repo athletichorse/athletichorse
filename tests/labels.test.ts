@@ -22,6 +22,11 @@ describe("barcode labels", () => {
     expect(html).not.toContain("350.00 SAR");
     expect(html).toContain('class="lb classic"');
   });
+  it("puts the website logo on each sticker unless turned off", () => {
+    expect(labelsDocument([item], { w: 40, h: 25 }).html).toContain('<img class="lg" src="/brand/logo.png"');
+    expect(labelsDocument([item], { w: 40, h: 25, showLogo: false }).html).not.toContain('class="lg"');
+    expect(labelsDocument([item], { w: 40, h: 25, logo: 'x" onerror="alert(1)' }).html).toContain('src="/brand/logo.png"');
+  });
   it("keeps sizes in a safe range", () => {
     expect(normalizeSettings({ w: 1, h: 999, scale: 10 })).toMatchObject({ w: 15, h: 120, scale: 50, margin: 1 });
   });

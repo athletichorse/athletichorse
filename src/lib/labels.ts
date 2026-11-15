@@ -13,7 +13,9 @@ export const LABEL_PRESETS: Record<Exclude<LabelPreset, "custom">, { w: number; 
 
 export type LabelSettings = {
   w: number; h: number; margin: number; scale: number;
-  style: "standard" | "classic"; showName: boolean; showPrice: boolean;
+  style: "standard" | "classic"; showName: boolean; showPrice: boolean; showLogo: boolean;
+  /** Logo image URL (the website logo). */
+  logo?: string;
 };
 export type LabelItem = { sku: string; name: string; options: string; price: string; qty: number };
 
@@ -24,7 +26,8 @@ export function normalizeSettings(s: Partial<LabelSettings>): LabelSettings {
   return {
     w: clamp(Number(s.w), 15, 120), h: clamp(Number(s.h), 10, 120), margin: clamp(Number(s.margin ?? 1), 0, 10),
     scale: clamp(Number(s.scale ?? 100), 50, 150), style: s.style === "classic" ? "classic" : "standard",
-    showName: s.showName !== false, showPrice: s.showPrice !== false,
+    showName: s.showName !== false, showPrice: s.showPrice !== false, showLogo: s.showLogo !== false,
+    logo: typeof s.logo === "string" && /^(https:\/\/|\/)[^"'<>\s]+$/.test(s.logo) ? s.logo : "/brand/logo.png",
   };
 }
 
@@ -33,10 +36,11 @@ export function labelBody(it: LabelItem, s: LabelSettings): string {
   const name = `${it.name}${it.options ? ` · ${it.options}` : ""}`;
   const bar = code128Svg(it.sku, 40, 1);
   const price = `${it.price} SAR`;
+  const logo = s.showLogo ? `<img class="lg" src="${esc(s.logo ?? "/brand/logo.png")}" alt="">` : "";
   if (s.style === "classic") {
-    return `<div class="lb classic">${s.showName ? `<div class="nm">${esc(name)}</div>` : ""}<div class="bc">${bar}</div><div class="row"><span class="sku">${esc(it.sku)}</span>${s.showPrice ? `<span class="pr">${esc(price)}</span>` : ""}</div></div>`;
+    return `<div class="lb classic">${logo}${s.showName ? `<div class="nm">${esc(name)}</div>` : ""}<div class="bc">${bar}</div><div class="row"><span class="sku">${esc(it.sku)}</span>${s.showPrice ? `<span class="pr">${esc(price)}</span>` : ""}</div></div>`;
   }
-  return `<div class="lb">${s.showName ? `<div class="nm">${esc(name)}</div>` : ""}${s.showPrice ? `<div class="pr">${esc(price)}</div>` : ""}<div class="bc">${bar}</div><div class="sku">${esc(it.sku)}</div></div>`;
+  return `<div class="lb">${logo}${s.showName ? `<div class="nm">${esc(name)}</div>` : ""}${s.showPrice ? `<div class="pr">${esc(price)}</div>` : ""}<div class="bc">${bar}</div><div class="sku">${esc(it.sku)}</div></div>`;
 }
 
 /** Full printable document: one page per sticker (qty copies of each item). */
@@ -52,9 +56,10 @@ body{font-family:Arial,Helvetica,sans-serif;color:#000}
 .pg{width:${s.w}mm;height:${s.h}mm;padding:${s.margin}mm;overflow:hidden;page-break-after:always;break-after:page;display:flex}
 .pg:last-child{page-break-after:auto;break-after:auto}
 .lb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;transform:scale(${k});transform-origin:center}
+.lg{height:${Math.max(2.5, s.h * 0.16).toFixed(1)}mm;width:auto;max-width:90%;object-fit:contain;margin-bottom:.3mm}
 .nm{font-size:7.5pt;line-height:1.1;max-height:2.2em;overflow:hidden;width:100%}
 .pr{font-size:10pt;font-weight:700;margin:.4mm 0}
-.bc{width:100%;height:${Math.max(5, s.h * 0.38).toFixed(1)}mm}.bc svg{width:100%;height:100%}
+.bc{width:100%;height:${Math.max(5, s.h * (s.showLogo ? 0.3 : 0.38)).toFixed(1)}mm}.bc svg{width:100%;height:100%}
 .sku{font-size:7pt;letter-spacing:.5px;font-family:monospace}
 .classic{border:0.3mm solid #000;border-radius:1mm;padding:.6mm}
 .classic .row{display:flex;justify-content:space-between;width:100%;align-items:baseline}

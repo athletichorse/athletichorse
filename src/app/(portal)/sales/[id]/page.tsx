@@ -50,10 +50,8 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
       {sp.print && <AutoPrint mode="receipt80" />}
       <article className="receipt mx-auto bg-white p-3 text-[12px] leading-snug text-black" dir="rtl" style={{ maxWidth: `${ps.receipt_width_mm}mm` }}>
         <header className="text-center">
-          {company?.logo_url && /^https:\/\//.test(company.logo_url) && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={company.logo_url} alt="" className="mx-auto mb-1 h-12 w-auto" />
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={company?.logo_url && /^https:\/\//.test(company.logo_url) ? company.logo_url : "/brand/logo.png"} alt="" className="mx-auto mb-1 h-12 w-auto" />
           <div className="text-[14px] font-bold">{company?.legal_name_ar}</div>
           <div className="font-semibold" dir="ltr">{company?.legal_name_en}</div>
           <div>{loc?.name_ar} · {loc?.address_ar || company?.address_ar}</div>

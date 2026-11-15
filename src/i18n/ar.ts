@@ -125,6 +125,7 @@ const ar = {
       style: "الشكل",
       styleNew: "عادي",
       styleOld: "الملصق القديم",
+      showLogo: "الشعار",
       showName: "الاسم",
       showPrice: "السعر",
       print: "طباعة الملصقات",

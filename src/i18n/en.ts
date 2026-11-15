@@ -127,6 +127,7 @@ const en: Dict = {
       style: "Look",
       styleNew: "Standard",
       styleOld: "Classic (old sticker)",
+      showLogo: "Logo",
       showName: "Name",
       showPrice: "Price",
       print: "Print labels",
