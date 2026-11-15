@@ -130,10 +130,10 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                 const img = thumb(r.image_url, 96);
                 return (
                   <tr key={r.id} className="hover:bg-gray-50">
-                    <td>
+                    <td className="cell-media">
                       {img ? <img src={img} alt="" loading="lazy" className="h-10 w-10 rounded-lg border border-[var(--line)] object-cover" /> : <div className="h-10 w-10 rounded-lg bg-gray-100" />}
                     </td>
-                    <td>
+                    <td className="cell-title">
                       <Link href={`/products/${r.id}`} className="font-medium text-gray-900 hover:text-[var(--brand)]">
                         {locale === "ar" && r.name_ar ? r.name_ar : r.name_en}
                       </Link>
@@ -142,10 +142,10 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                         <span className={r.shopify_product_id ? "badge-blue" : "badge-gray"}>{r.shopify_product_id ? t.products.fromWebsite : t.products.portal}</span>
                       </div>
                     </td>
-                    <td className="text-gray-600">{(locale === "ar" ? r.group_ar || r.group_en : r.group_en) ?? t.products.none}</td>
-                    <td>{r.variant_count}</td>
-                    <td className="whitespace-nowrap">{price(r)}</td>
-                    <td>{r.missing_sku > 0 ? <span className="badge bg-amber-50 text-amber-700">{r.missing_sku} {t.products.missingSku.toLowerCase()}</span> : <span className="badge-green">OK</span>}</td>
+                    <td data-label={t.products.group} className="text-gray-600">{(locale === "ar" ? r.group_ar || r.group_en : r.group_en) ?? t.products.none}</td>
+                    <td data-label={t.products.variants}>{r.variant_count}</td>
+                    <td data-label={t.products.price} className="whitespace-nowrap">{price(r)}</td>
+                    <td data-label={t.products.sku}>{r.missing_sku > 0 ? <span className="badge bg-amber-50 text-amber-700">{r.missing_sku} {t.products.missingSku.toLowerCase()}</span> : <span className="badge-green">OK</span>}</td>
                   </tr>
                 );
               })}

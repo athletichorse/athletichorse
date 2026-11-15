@@ -71,6 +71,7 @@ const ar = {
     company: "بيانات الشركة",
     locations: "الفروع والمخازن",
     permissions: "الصلاحيات",
+    fromWebsite: "على الموقع",
     overview: "نظرة عامة على الشركة",
     overviewHint: "كل الفروع والمخازن في مكان واحد.",
     branches: "الفروع",

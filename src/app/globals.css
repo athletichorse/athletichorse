@@ -45,3 +45,18 @@ body {
   html[data-print="receipt80"] body { width: 80mm; font-size: 11px; }
   html[data-print="receipt80"] main { padding: 2mm !important; }
 }
+
+/* ---------- Tables become cards on phones ----------
+   Each <td> carries data-label (its column name); .cell-title is the row's heading. */
+@media (max-width: 639px) {
+  .table thead { display: none; }
+  .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+  .table tr { border-bottom: 1px solid var(--line); padding: 12px 16px; }
+  .table tr:last-child { border-bottom: 0; }
+  .table td { border: 0 !important; padding: 3px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: end; min-width: 0 !important; }
+  .table td::before { content: attr(data-label); flex-shrink: 0; font-size: 12px; font-weight: 500; color: var(--muted); text-align: start; }
+  .table td:not([data-label])::before, .table td[data-label=""]::before { content: none; }
+  .table td.cell-title { display: block; padding-bottom: 6px; text-align: start; font-weight: 600; }
+  .table td.cell-media { display: block; float: inline-start; width: auto; margin-inline-end: 12px; padding: 0; }
+  .table td > input, .table td > select { max-width: 62%; }
+}

@@ -69,9 +69,9 @@ export default async function PermissionsPage({ searchParams }: { searchParams: 
                     const locked = k === "permissions.edit" && me.role !== "owner";
                     return (
                       <tr key={k}>
-                        <td>{t.perms.keys[k]}<div className="text-xs text-gray-400" dir="ltr">{k}</div></td>
-                        <td>{baseline.has(k) ? `✓ ${t.perms.allow}` : `✗ ${t.perms.deny}`}</td>
-                        <td className="no-print">
+                        <td className="cell-title">{t.perms.keys[k]}<div className="text-xs text-gray-400" dir="ltr">{k}</div></td>
+                        <td data-label={t.perms.default}>{baseline.has(k) ? `✓ ${t.perms.allow}` : `✗ ${t.perms.deny}`}</td>
+                        <td data-label={t.perms.permission} className="no-print">
                           <select name={`p:${k}`} defaultValue={cur} className="input" disabled={locked}>
                             <option value="">{t.perms.default}</option>
                             <option value="1">{t.perms.allow}</option>

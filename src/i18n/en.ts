@@ -73,6 +73,7 @@ const en: Dict = {
     company: "Company details",
     locations: "Branches & warehouses",
     permissions: "Permissions",
+    fromWebsite: "On the website",
     overview: "Business overview",
     overviewHint: "Every branch and warehouse in one place.",
     branches: "Branches",
