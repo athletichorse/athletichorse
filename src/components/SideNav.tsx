@@ -42,6 +42,11 @@ function Links({ items, onNavigate, soon }: { items: NavItem[]; onNavigate?: () 
   );
 }
 
+/** Logging out: forget the Cashier page saved for offline use on this device. */
+function forgetSavedPages() {
+  try { void caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith("pages-")).map((k) => caches.delete(k)))); } catch { /* no Cache API */ }
+}
+
 /** Plain link (full page load) so switching language works even on an outdated tab. */
 function LangLink({ to, label }: { to: "ar" | "en"; label: string }) {
   const path = usePathname();
@@ -55,11 +60,9 @@ function LangLink({ to, label }: { to: "ar" | "en"; label: string }) {
 function Panel({ p, onNavigate }: { p: Props; onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 px-5 py-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--brand)] text-sm font-bold text-white">
-          {p.company.trim().charAt(0).toUpperCase() || "S"}
-        </div>
-        <div className="min-w-0 truncate text-sm font-semibold text-gray-900">{p.company}</div>
+      <div className="px-5 py-5">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/logo.png" alt={p.company} className="h-10 w-auto max-w-[190px]" />
       </div>
       <nav className="flex-1 overflow-y-auto px-3 pb-4">
         <Links items={p.main} onNavigate={onNavigate} soon={p.labels.soon} />
@@ -77,7 +80,7 @@ function Panel({ p, onNavigate }: { p: Props; onNavigate?: () => void }) {
         </div>
         <div className="flex gap-1">
           <LangLink to={p.otherLocale} label={p.labels.switchLang} />
-          <form action={p.logout} className="flex-1">
+          <form action={p.logout} className="flex-1" onSubmit={forgetSavedPages}>
             <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100">
               <Icon name="logout" className="h-4 w-4" /> {p.labels.logout}
             </button>
@@ -101,7 +104,8 @@ export function SideNav(p: Props) {
         <button onClick={() => setOpen(true)} aria-label={p.labels.openMenu} className="rounded-lg p-1.5 text-gray-700 hover:bg-gray-100">
           <Icon name="menu" className="h-6 w-6" />
         </button>
-        <div className="min-w-0 truncate text-sm font-semibold">{p.company}</div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/logo.png" alt={p.company} className="h-8 w-auto" />
       </header>
 
       {open && (

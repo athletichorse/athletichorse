@@ -1,10 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Dict, Locale } from "@/i18n";
 import { computeTotals, formatDecimal, formatSAR, rateToBp, toHalalas, toMilliQty } from "@/lib/money";
 import { formatDateTime } from "@/lib/time";
+import { looksOffline } from "@/lib/offline";
+import { useOfflineTill, type OfflineTill } from "./useOfflineTill";
+import { OfflineBar, printTempReceipt } from "./OfflineBar";
 import { searchVariantsAction, type VariantHit } from "@/app/actions/stock";
 import {
   cashMovementAction, closeShiftAction, findCustomerAction, findInvoiceForReturnAction, loadQuotationAction, openShiftAction,
@@ -15,7 +18,8 @@ type Line = { variantId: string; name: string; options: string; sku: string | nu
 type Method = { code: string; name: string; kind: string };
 type Props = {
   t: Dict; locale: Locale; me: { id: string; name: string };
-  locations: { id: string; name: string }[];
+  locations: { id: string; name: string; code: string }[];
+  company: string; canManageOffline: boolean;
   shift: { id: string; locationId: string; openedAt: string; openingCash: string } | null;
   methods: Method[]; people: { id: string; name: string }[]; vatRate: string;
   quotes: { no: number; total: string; at: string }[];
@@ -72,6 +76,16 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
   const [mgr, setMgr] = useState({ u: "", p: "" });
   const [closeRes, setCloseRes] = useState<{ expected: string; difference: string } | null>(null);
   const cashId = useRef(uuid());
+  const off = useOfflineTill({ locale, branchCode: p.locations.find((l) => l.id === s.locationId)?.code ?? "POS", shiftId: s.id });
+  // Open on the screen chosen for this device (once, when its setting has been read).
+  const screenApplied = useRef(false);
+  useEffect(() => {
+    if (!off.loaded || screenApplied.current) return;
+    screenApplied.current = true;
+    if (off.screen && p.tabs.includes(off.screen)) p.setTab(off.screen);
+  }, [off.loaded, off.screen, p]);
+  /** A server call that fails because there is no connection shows a clear message instead of doing nothing. */
+  const tryOnline = async (fn: () => Promise<void>) => { try { await fn(); } catch (e) { p.setMsg({ ok: false, text: looksOffline(e) ? t.pos.offline.needsOnline : String(e) }); } };
 
   return (
     <div className="space-y-4">
@@ -84,6 +98,9 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
         {p.can.shift && <button className="btn-ghost" onClick={() => setPanel(panel === "close" ? "" : "close")}>{t.pos.closeShift}</button>}
       </div>
 
+      <OfflineBar t={t} locale={locale} off={off} canManage={p.canManageOffline} err={err}
+        screens={p.tabs.filter((k) => k !== "returns").map((k) => ({ key: k as "sell" | "desk" | "collect", label: k === "sell" ? t.pos.sell : k === "desk" ? t.pos.desk : t.pos.collect }))} />
+
       {panel === "cash" && (
         <section className="card grid gap-3 sm:grid-cols-2">
           <select className="input" value={cashKind} onChange={(e) => setCashKind(e.target.value as "cash_out" | "cash_in")}>
@@ -92,20 +109,21 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
           <input className="input" dir="ltr" inputMode="decimal" placeholder={t.pos.amount} value={amount} onChange={(e) => setAmount(e.target.value)} />
           <input className="input sm:col-span-2" placeholder={t.pos.reason} value={reason} onChange={(e) => setReason(e.target.value)} />
           {cashKind === "cash_out" && p.approval.cashOut && <Approval t={t} mgr={mgr} setMgr={setMgr} />}
-          <button className="btn-primary sm:col-span-2" onClick={async () => {
+          <button className="btn-primary sm:col-span-2" onClick={() => tryOnline(async () => {
             const r = await cashMovementAction({ clientId: cashId.current, shiftId: s.id, kind: cashKind, amount, reason, approverUsername: mgr.u, approverPin: mgr.p });
             if (r.ok) { cashId.current = uuid(); setAmount(""); setReason(""); setMgr({ u: "", p: "" }); setPanel(""); p.setMsg({ ok: true, text: t.saved }); }
             else p.setMsg({ ok: false, text: err(r.error) });
-          }}>{t.save}</button>
+          })}>{t.save}</button>
         </section>
       )}
       {panel === "close" && (
         <section className="card grid gap-3 sm:grid-cols-2">
           <input className="input" dir="ltr" inputMode="decimal" placeholder={t.pos.countedCash} value={amount} onChange={(e) => setAmount(e.target.value)} />
-          <button className="btn-primary" onClick={async () => {
+          <button className="btn-primary" onClick={() => tryOnline(async () => {
+            if (off.pendingFor(s.id) > 0) return p.setMsg({ ok: false, text: t.pos.offline.closeBlocked });
             const r = await closeShiftAction({ shiftId: s.id, counted: amount });
             if (r.ok) setCloseRes({ expected: r.expected, difference: r.difference }); else p.setMsg({ ok: false, text: err(r.error) });
-          }}>{t.pos.closeShift}</button>
+          })}>{t.pos.closeShift}</button>
           {closeRes && (
             <div className="alert-ok sm:col-span-2">
               {t.pos.shiftClosed}: {t.pos.expected} {closeRes.expected} · {t.pos.difference} {closeRes.difference}
@@ -129,8 +147,8 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
         ))}
       </div>
 
-      {(p.tab === "sell" || p.tab === "desk") && <SaleView key={p.tab} {...p} mode={p.tab} />}
-      {p.tab === "collect" && <SaleView key="collect" {...p} mode="collect" />}
+      {(p.tab === "sell" || p.tab === "desk") && <SaleView key={p.tab} {...p} mode={p.tab} off={off} />}
+      {p.tab === "collect" && <SaleView key="collect" {...p} mode="collect" off={off} />}
       {p.tab === "returns" && <ReturnView {...p} />}
     </div>
   );
@@ -146,7 +164,7 @@ function Approval({ t, mgr, setMgr }: { t: Dict; mgr: { u: string; p: string }; 
   );
 }
 
-function ItemSearch({ t, locale, onPick }: { t: Dict; locale: Locale; onPick: (h: VariantHit) => void }) {
+function ItemSearch({ t, locale, onPick, off }: { t: Dict; locale: Locale; onPick: (h: VariantHit) => void; off?: OfflineTill }) {
   const [term, setTerm] = useState("");
   const [hits, setHits] = useState<VariantHit[] | null>(null);
   const ref = useRef<HTMLInputElement>(null);
@@ -157,7 +175,12 @@ function ItemSearch({ t, locale, onPick }: { t: Dict; locale: Locale; onPick: (h
         onKeyDown={async (e) => {
           if (e.key !== "Enter") return;
           e.preventDefault();
-          const r = await searchVariantsAction(term, locale);
+          let r: VariantHit[];
+          if (off?.enabled && !navigator.onLine) r = off.searchLocal(term);
+          else {
+            try { r = await searchVariantsAction(term, locale); }
+            catch { r = off?.enabled ? off.searchLocal(term) : []; }
+          }
           if (r.length === 1 || r[0]?.exact) pick(r[0]); else setHits(r);
         }} />
       {hits && (
@@ -175,7 +198,7 @@ function ItemSearch({ t, locale, onPick }: { t: Dict; locale: Locale; onPick: (h
   );
 }
 
-function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; setMsg: (m: { ok: boolean; text: string; href?: string } | null) => void; err: (c: string) => string; router: ReturnType<typeof useRouter> }) {
+function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTill; setMsg: (m: { ok: boolean; text: string; href?: string } | null) => void; err: (c: string) => string; router: ReturnType<typeof useRouter> }) {
   const { t, locale, mode, err } = p;
   const s = p.shift!;
   const [lines, setLines] = useState<Line[]>([]);
@@ -220,10 +243,34 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; setMsg: (m: { 
   }
   function reset() { setLines([]); setCustomer(null); setPhone(""); setCustName(""); setPayments([]); setCashGiven(""); setMgr({ u: "", p: "" }); setQuoteId(null); setQuoteNo(""); clientId.current = uuid(); }
 
+  /** No connection: keep the sale on this device with a temporary number; it is sent automatically later. */
+  function saveOffline(cart: { variantId: string; qty: string; unitPrice: string; discount: string }[]) {
+    const o = t.pos.offline;
+    if (!p.off.enabled || mode !== "sell") return p.setMsg({ ok: false, text: p.off.enabled ? o.needsOnline : o.notEnabled });
+    if (changed && p.approval.discount) return p.setMsg({ ok: false, text: o.noApprovalOffline });
+    if (pays.some((x) => p.methods.find((m) => m.code === x.method)?.kind === "on_account")) return p.setMsg({ ok: false, text: o.noAccountOffline });
+    const sale = p.off.save({
+      clientId: clientId.current, createdAt: new Date().toISOString(), locationId: s.locationId, shiftId: s.id, total: formatDecimal(totalH),
+      payload: { salespersonId: salesperson, customerId: customer?.id, lines: cart, payments: pays, cashTendered: cashGiven || undefined },
+      lines: lines.map((l) => ({ name: l.options ? `${l.name} - ${l.options}` : l.name, qty: l.qty, price: l.price, discount: l.discount })),
+    });
+    const branch = p.locations.find((l) => l.id === s.locationId)?.name ?? "";
+    p.setMsg({ ok: true, text: `${o.savedOffline} ${sale.tempNo}${cashGiven && changeH > 0n ? ` · ${t.pos.change}: ${formatDecimal(changeH)}` : ""}` });
+    printTempReceipt(sale, { t, locale, company: p.company, branch });
+    reset();
+  }
+
   async function submit() {
     setBusy(true);
     p.setMsg(null);
     const cart = lines.map((l) => ({ variantId: l.variantId, qty: l.qty, unitPrice: l.price, discount: l.discount }));
+    if (mode === "sell" && p.off.enabled && !navigator.onLine) { setBusy(false); return saveOffline(cart); }
+    try { await submitOnline(cart); } catch (e) {
+      if (looksOffline(e)) saveOffline(cart); else p.setMsg({ ok: false, text: String(e) });
+    } finally { setBusy(false); }
+  }
+
+  async function submitOnline(cart: { variantId: string; qty: string; unitPrice: string; discount: string }[]) {
     if (mode === "desk") {
       const r = await saveQuotationAction({ clientId: clientId.current, locationId: s.locationId, salespersonId: salesperson, customerId: customer?.id, lines: cart, approverUsername: mgr.u, approverPin: mgr.p });
       setBusy(false);
@@ -270,7 +317,7 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; setMsg: (m: { 
             )}
           </div>
         ) : (
-          <ItemSearch t={t} locale={locale} onPick={add} />
+          <ItemSearch t={t} locale={locale} onPick={add} off={p.off} />
         )}
         {lines.length === 0 ? <p className="py-8 text-center text-sm text-gray-500">{t.pos.cartEmpty}</p> : (
           <table className="table">

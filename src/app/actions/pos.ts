@@ -341,3 +341,38 @@ export async function quickAddCustomerAction(phoneRaw: string, name: string): Pr
   await audit(s.id, "customer.create", "customer", data.id, { customer_no: data.customer_no, from: "pos" });
   return { ok: true, customer: { id: data.id, customerNo: data.customer_no, name: data.name, phone: data.phone } };
 }
+
+// ---------------------------------------------------------------- offline till
+/** The device's copy of the price list: every active item with its barcode, extra codes and VAT-inclusive price. */
+export async function posCatalogAction(locale: "ar" | "en" = "en"): Promise<PosResult<{ items: { v: string; n: string; o: string; s: string | null; c: string[]; p: string; x: boolean }[] }>> {
+  const s = await requireStaff();
+  if (!has(s, "pos.collect", "pos.quick_sale")) return { ok: false, error: "forbidden" };
+  const PAGE = 1000;
+  const rows: Record<string, unknown>[] = [];
+  for (let from = 0; from < 50_000; from += PAGE) {
+    const { data, error } = await db().from("variant_search")
+      .select("variant_id, sku, price, option1, option2, option3, name_en, name_ar, is_service")
+      .eq("active", true).eq("product_active", true).order("variant_id").range(from, from + PAGE - 1);
+    if (error) return { ok: false, error: "bad_request" };
+    rows.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
+  }
+  const codes = new Map<string, string[]>();
+  for (let from = 0; from < 100_000; from += PAGE) {
+    const { data } = await db().from("product_codes").select("variant_id, code").order("code").range(from, from + PAGE - 1);
+    for (const c of data ?? []) codes.set(c.variant_id, [...(codes.get(c.variant_id) ?? []), c.code]);
+    if (!data || data.length < PAGE) break;
+  }
+  return {
+    ok: true,
+    items: rows.map((r) => ({
+      v: String(r.variant_id),
+      n: String((locale === "ar" && r.name_ar) || r.name_en || r.name_ar),
+      o: [r.option1, r.option2, r.option3].filter(Boolean).join(" / "),
+      s: (r.sku as string) ?? null,
+      c: codes.get(String(r.variant_id)) ?? [],
+      p: fmt(r.price),
+      x: Boolean(r.is_service),
+    })),
+  };
+}
