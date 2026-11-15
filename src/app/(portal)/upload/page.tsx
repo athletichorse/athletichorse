@@ -1,5 +1,17 @@
-import { ComingSoon } from "@/components/ComingSoon";
+import { requirePermission } from "@/lib/auth";
+import { getDict } from "@/lib/locale";
+import { PageHeader } from "@/components/PageHeader";
+import { ProductUpload } from "@/components/ProductUpload";
 
-export default function Page() {
-  return <ComingSoon perm="upload.import" title={(t) => t.menu.upload} icon="upload" />;
+export const maxDuration = 300;
+
+export default async function UploadPage() {
+  await requirePermission("upload.import");
+  const { t } = await getDict();
+  return (
+    <>
+      <PageHeader title={t.upload.title} subtitle={t.upload.subtitle} t={t} />
+      <ProductUpload t={t} />
+    </>
+  );
 }

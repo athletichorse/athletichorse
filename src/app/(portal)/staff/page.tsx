@@ -95,12 +95,12 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
             <tbody>
               {rows.map((s) => (
                 <tr key={s.id}>
-                  <td className="font-medium">{s.full_name}</td>
-                  <td dir="ltr" className="text-start font-mono text-xs text-gray-500">{s.username}</td>
-                  <td><span className={s.role === "owner" ? "badge-blue" : "badge-gray"}>{roleLabel(s.role)}</span></td>
-                  <td>{locName(s.branch_id)}</td>
-                  <td dir="ltr" className="text-start">{s.phone ?? ""}</td>
-                  <td>{s.active ? <span className="badge-green">{t.active}</span> : <span className="badge-gray">{t.inactive}</span>}</td>
+                  <td className="cell-title font-medium">{s.full_name}</td>
+                  <td data-label={t.staff.username} dir="ltr" className="text-start font-mono text-xs text-gray-500">{s.username}</td>
+                  <td data-label={t.staff.role}><span className={s.role === "owner" ? "badge-blue" : "badge-gray"}>{roleLabel(s.role)}</span></td>
+                  <td data-label={t.staff.branch}>{locName(s.branch_id)}</td>
+                  <td data-label={t.staff.phone} dir="ltr" className="text-start">{s.phone ?? "—"}</td>
+                  <td data-label={t.home.status}>{s.active ? <span className="badge-green">{t.active}</span> : <span className="badge-gray">{t.inactive}</span>}</td>
                 </tr>
               ))}
             </tbody>

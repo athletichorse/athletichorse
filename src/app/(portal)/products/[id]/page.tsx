@@ -69,15 +69,15 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
                     const vc = (codes ?? []).filter((c) => c.variant_id === v.id).map((c) => c.code).join(", ");
                     return (
                       <tr key={v.id}>
-                        <td>{img ? <img src={img} alt="" loading="lazy" className="h-9 w-9 rounded-md border border-[var(--line)] object-cover" /> : <div className="h-9 w-9 rounded-md bg-gray-100" />}</td>
-                        <td className="font-medium whitespace-nowrap">{optionLabel(v)}</td>
-                        <td className="min-w-[170px]">
+                        <td className="cell-media">{img ? <img src={img} alt="" loading="lazy" className="h-9 w-9 rounded-md border border-[var(--line)] object-cover" /> : <div className="h-9 w-9 rounded-md bg-gray-100" />}</td>
+                        <td className="cell-title font-medium whitespace-nowrap">{optionLabel(v)}</td>
+                        <td data-label={t.products.sku} className="min-w-[170px]">
                           <input name={`sku:${v.id}`} defaultValue={v.sku ?? ""} placeholder={v.shopify_sku ? `${t.products.fromWebsite}: ${v.shopify_sku}` : ""} className={`input font-mono ${v.sku ? "" : "border-amber-300 bg-amber-50"}`} dir="ltr" autoCapitalize="none" />
                         </td>
-                        <td className="min-w-[160px]">
+                        <td data-label={t.products.codes} className="min-w-[160px]">
                           <input name={`codes:${v.id}`} defaultValue={vc} placeholder={t.products.codesHint} className="input font-mono" dir="ltr" autoCapitalize="none" />
                         </td>
-                        <td className="min-w-[120px]">
+                        <td data-label={t.products.price} className="min-w-[120px]">
                           {v.shopify_variant_id === null ? (
                             <input name={`price:${v.id}`} defaultValue={v.price} className="input" dir="ltr" inputMode="decimal" />
                           ) : (
@@ -85,9 +85,9 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
                           )}
                         </td>
                         {seeCost && (
-                          <td className="min-w-[110px]"><input name={`cost:${v.id}`} defaultValue={v.cost ?? ""} className="input" dir="ltr" inputMode="decimal" /></td>
+                          <td data-label={t.products.cost} className="min-w-[110px]"><input name={`cost:${v.id}`} defaultValue={v.cost ?? ""} className="input" dir="ltr" inputMode="decimal" /></td>
                         )}
-                        <td><input type="checkbox" name={`active:${v.id}`} defaultChecked={v.active} className="h-4 w-4 accent-[var(--brand)]" /></td>
+                        <td data-label={t.active}><input type="checkbox" name={`active:${v.id}`} defaultChecked={v.active} className="h-4 w-4 accent-[var(--brand)]" /></td>
                       </tr>
                     );
                   })}

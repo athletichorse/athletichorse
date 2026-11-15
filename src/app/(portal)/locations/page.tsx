@@ -68,17 +68,17 @@ export default async function LocationsPage({ searchParams }: { searchParams: Pr
       <div className="card mb-6 overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="table" data-export>
-            <thead><tr><th>{t.locations.code}</th><th>{t.locations.nameEn}</th><th>{t.locations.nameAr}</th><th>{t.locations.kind}</th><th>{t.locations.parent}</th><th>{t.locations.usesPos}</th><th>{t.home.status}</th></tr></thead>
+            <thead><tr><th>{t.locations.nameEn}</th><th>{t.locations.code}</th><th>{t.locations.nameAr}</th><th>{t.locations.kind}</th><th>{t.locations.parent}</th><th>{t.locations.usesPos}</th><th>{t.home.status}</th></tr></thead>
             <tbody>
               {locs.map((l) => (
                 <tr key={l.id}>
-                  <td className="font-mono text-xs text-gray-500">{l.code}</td>
-                  <td className="font-medium">{l.name_en}</td>
-                  <td dir="rtl" className="text-start">{l.name_ar}</td>
-                  <td><span className={kindBadge(l.kind)}>{t.locations.kinds[l.kind]}</span></td>
-                  <td>{name(locs.find((p) => p.id === l.parent_id))}</td>
-                  <td>{l.uses_pos ? t.yes : t.no}</td>
-                  <td>{l.active ? <span className="badge-green">{t.active}</span> : <span className="badge-gray">{t.inactive}</span>}</td>
+                  <td className="cell-title font-medium">{name(l)}</td>
+                  <td data-label={t.locations.code} className="font-mono text-xs text-gray-500">{l.code}</td>
+                  <td data-label={t.locations.nameAr} dir="rtl" className="text-start">{l.name_ar}</td>
+                  <td data-label={t.locations.kind}><span className={kindBadge(l.kind)}>{t.locations.kinds[l.kind]}</span></td>
+                  <td data-label={t.locations.parent}>{name(locs.find((p) => p.id === l.parent_id))}</td>
+                  <td data-label={t.locations.usesPos}>{l.uses_pos ? t.yes : t.no}</td>
+                  <td data-label={t.home.status}>{l.active ? <span className="badge-green">{t.active}</span> : <span className="badge-gray">{t.inactive}</span>}</td>
                 </tr>
               ))}
             </tbody>
