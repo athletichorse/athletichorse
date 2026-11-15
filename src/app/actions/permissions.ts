@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertPermission } from "@/lib/auth";
 import { db } from "@/lib/supabase/admin";
+import { audit } from "@/lib/audit";
 import { PERMISSION_KEYS, isRole } from "@/lib/permissions";
 
 /** Form fields "p:<key>" = "" (default) | "1" (allow) | "0" (deny). */
@@ -29,6 +30,7 @@ export async function saveRolePermissionsAction(form: FormData) {
     const { error } = await db().from("role_permissions").upsert(set.map((s) => ({ ...s, role, updated_by: actor.id, updated_at: new Date().toISOString() })));
     if (error) redirect(`/permissions?role=${role}&err=${encodeURIComponent(error.message)}`);
   }
+  await audit(actor.id, "permissions.role", "role", role, { set, clear });
   revalidatePath("/permissions");
   redirect(`/permissions?role=${role}&ok=1`);
 }
@@ -44,6 +46,7 @@ export async function saveUserPermissionsAction(form: FormData) {
     const { error } = await db().from("user_permissions").upsert(set.map((s) => ({ ...s, user_id: userId, updated_by: actor.id, updated_at: new Date().toISOString() })));
     if (error) redirect(`/permissions?tab=user&user=${userId}&err=${encodeURIComponent(error.message)}`);
   }
+  await audit(actor.id, "permissions.user", "profile", userId, { set, clear });
   revalidatePath("/permissions");
   redirect(`/permissions?tab=user&user=${userId}&ok=1`);
 }

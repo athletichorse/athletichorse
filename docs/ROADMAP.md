@@ -27,7 +27,8 @@
    - ✅ **Website (athletic-horse.com, Shopify) import: names, prices, variants, options, images, synced daily at 3:00 Riyadh + "Sync now"**
    - ✅ **Upload file (رفع ملف)**: Excel product import with currency conversion, merges with website items, re-import never duplicates
    - ⬜ Push stock to the website from the Jeddah branch (needs a Shopify Admin API token; comes with step 5)
-5. ⬜ Stock: `stock_levels` + append-only `stock_movements`; changes only in SQL functions, one transaction, idempotent by `client_id`
+5. ✅ Stock: `stock_levels` + append-only `stock_movements` + `stock_docs`; changes only in `post_stock_doc()` (one transaction, idempotent by `client_id`); receipts, transfers, write-offs, counts; manager username+PIN approval; Stores + Stock log screens
+   - ✅ Customers (serial customer no., Saudi mobile required, unique) · ✅ Audit log (append-only)
 6. ⬜ POS: shifts with cash count, desk quotation → cashier, quick sale, customers (number required, serial no.), salesperson, split payments, returns with/without receipt, 80 mm receipt with ZATCA QR + Code 128; server recomputes all totals
 7. ⬜ Offline PWA: service worker, manifest/icons, queued sales with temporary numbers, auto-send, per-device offline screen
 8. 🟡 Layout: menu in the agreed order ✅, print/export menu (80 mm, A4, Excel, PDF) on every page ✅; proper 80 mm/A4 print layouts come with receipts and reports

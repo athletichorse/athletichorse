@@ -4,12 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertPermission } from "@/lib/auth";
 import { db } from "@/lib/supabase/admin";
+import { audit } from "@/lib/audit";
 
 const KINDS = ["branch", "warehouse", "sub_store"] as const;
 const back = (err?: string) => redirect(err ? `/locations?err=${encodeURIComponent(err)}` : "/locations?ok=1");
 
 export async function saveLocationAction(form: FormData) {
-  await assertPermission("locations.edit");
+  const staff = await assertPermission("locations.edit");
   const id = String(form.get("id") ?? "") || null;
   const kind = String(form.get("kind") ?? "");
   if (!(KINDS as readonly string[]).includes(kind)) return back("kind");
@@ -31,6 +32,7 @@ export async function saveLocationAction(form: FormData) {
 
   const { error } = id ? await db().from("locations").update(row).eq("id", id) : await db().from("locations").insert(row);
   if (error) return back(error.message);
+  await audit(staff.id, id ? "location.update" : "location.create", "location", id, { code: row.code, kind: row.kind, active: row.active });
   revalidatePath("/locations");
   back();
 }

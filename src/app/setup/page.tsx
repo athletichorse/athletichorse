@@ -14,7 +14,7 @@ export default async function SetupPage() {
   const { data } = await db().from("locations").select("id, name_ar, name_en").eq("kind", "branch").eq("active", true).order("code");
   const branches = (data ?? []).map((b) => ({ id: b.id, name: locale === "ar" ? b.name_ar : b.name_en || b.name_ar }));
   return (
-    <AuthCard t={t} title={t.setup.title} subtitle={t.setup.intro}>
+    <AuthCard t={t} title={t.setup.title} subtitle={t.setup.intro} path="/setup">
       <SetupForm t={t} branches={branches} />
     </AuthCard>
   );

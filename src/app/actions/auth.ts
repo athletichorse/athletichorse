@@ -1,11 +1,11 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { authClient } from "@/lib/supabase/server";
 import { db } from "@/lib/supabase/admin";
-import { getStaff, usernameToEmail } from "@/lib/auth";
-import { LOCALE_COOKIE, getLocale } from "@/lib/locale";
+import { usernameToEmail } from "@/lib/auth";
+import { LOCALE_COOKIE } from "@/lib/locale";
 
 export type FormState = { error?: string; ok?: boolean } | undefined;
 
@@ -31,19 +31,4 @@ export async function logoutAction() {
   const supa = await authClient();
   await supa.auth.signOut();
   redirect("/login");
-}
-
-/** Toggles ar ⇄ en; saves to the profile when logged in. */
-export async function switchLocaleAction() {
-  const next = (await getLocale()) === "ar" ? "en" : "ar";
-  (await cookies()).set(LOCALE_COOKIE, next, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
-  const s = await getStaff();
-  if (s) await db().from("profiles").update({ locale: next }).eq("id", s.id);
-  // Fresh request so the whole page re-renders in the new language.
-  const ref = (await headers()).get("referer");
-  let path = "/";
-  try {
-    if (ref) path = new URL(ref).pathname + new URL(ref).search;
-  } catch {}
-  redirect(path.startsWith("/") ? path : "/");
 }

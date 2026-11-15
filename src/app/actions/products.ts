@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertPermission } from "@/lib/auth";
 import { db } from "@/lib/supabase/admin";
+import { audit } from "@/lib/audit";
 import { formatDecimal, toHalalas } from "@/lib/money";
 import { after } from "next/server";
 import { finishShopifySync, startShopifySync } from "@/lib/shopify-sync";
@@ -84,6 +85,7 @@ export async function saveProductAction(form: FormData) {
       if (e2) return back(friendly(e2.message));
     }
   }
+  await audit(staff.id, "product.update", "product", id, { variants: (variants ?? []).length });
   revalidatePath("/products");
   back();
 }
@@ -113,6 +115,7 @@ export async function createProductAction(form: FormData) {
     await db().from("products").delete().eq("id", created.id);
     return back(friendly(e2.message));
   }
+  await audit(staff.id, "product.create", "product", created.id, { sku });
   revalidatePath("/products");
   redirect(`/products/${created.id}?ok=1`);
 }
@@ -147,6 +150,7 @@ export async function saveGroupAction(form: FormData) {
 export async function syncNowAction() {
   const staff = await assertPermission("products.edit");
   const r = await startShopifySync("manual", staff.id);
+  if (r.ok) await audit(staff.id, "products.sync", "sync_run", r.runId ?? null);
   if (!r.ok || !r.runId) redirect(`/products?err=${encodeURIComponent(r.error ?? "sync")}`);
   const runId = r.runId;
   after(async () => {

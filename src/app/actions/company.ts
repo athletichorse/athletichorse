@@ -4,12 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertPermission } from "@/lib/auth";
 import { db } from "@/lib/supabase/admin";
+import { audit } from "@/lib/audit";
 import { isValidCrNumber, isValidVatNumber, toLatinDigits } from "@/lib/saudi";
 
 const back = (err?: string) => redirect(err ? `/company?err=${encodeURIComponent(err)}` : "/company?ok=1");
 
 export async function saveCompanyAction(form: FormData) {
-  await assertPermission("settings.edit");
+  const staff = await assertPermission("settings.edit");
   const vat = toLatinDigits(String(form.get("vat_number") ?? "").trim());
   const cr = toLatinDigits(String(form.get("cr_number") ?? "").trim());
   const rate = toLatinDigits(String(form.get("vat_rate") ?? "").trim());
@@ -42,6 +43,7 @@ export async function saveCompanyAction(form: FormData) {
   } else {
     await db().from("settings").delete().eq("key", "website_stock_location");
   }
+  await audit(staff.id, "company.update", "company", "1", { vat_number: vat || null, website_stock_location: web || null });
   revalidatePath("/company");
   back();
 }

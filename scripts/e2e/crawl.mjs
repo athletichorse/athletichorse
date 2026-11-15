@@ -45,7 +45,7 @@ async function checkPage(page, path, label) {
 }
 
 const browser = await chromium.launch();
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/staff", "/locations", "/company", "/permissions", "/upload", "/pos", "/stock", "/sales", "/customers", "/stock-log", "/audit"];
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/staff", "/locations", "/company", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/customers", "/stock-log", "/audit"];
 
 // ---------------------------------------------------------------- 1. setup + flows (desktop, English)
 console.log("\n== Setup and main flows (desktop, English)");
@@ -80,7 +80,8 @@ const seen = new Set();
 for (const r of ROUTES) {
   await page.goto(BASE + r, { waitUntil: "networkidle" });
   const hrefs = await page.$$eval("a[href^='/']", (as) => as.map((a) => a.getAttribute("href")));
-  for (const h of hrefs) seen.add(h.split("#")[0]);
+  // /lang links change this browser's language; they are tested separately below.
+  for (const h of hrefs) if (!h.startsWith("/lang")) seen.add(h.split("#")[0]);
 }
 for (const h of seen) {
   const res = await page.request.get(BASE + h, { maxRedirects: 0 });
@@ -242,14 +243,98 @@ if (process.env.XLSX) {
   else if (/Import finished/.test(t)) ok("Excel upload: " + (t.match(/New products\s*\n?\s*(\d+)/)?.[0] || "").replace(/\s+/g, " "));
 }
 
+
+// ---------------------------------------------------------------- stock
+async function stockDoc(pg, kind, sku, qty, { to, mgr } = {}) {
+  await pg.goto(BASE + `/stock/new?kind=${kind}`, { waitUntil: "networkidle" });
+  if (to) await pg.locator("select").nth(1).selectOption({ label: to });
+  const box = pg.locator('input[placeholder*="SKU"]').first();
+  await box.fill(sku);
+  await box.press("Enter");
+  await pg.waitForSelector("table tbody tr", { timeout: 15000 });
+  await pg.locator("table tbody tr input").first().fill(String(qty));
+  if (mgr) {
+    await pg.locator('input[autocapitalize="none"]').last().fill(mgr.u);
+    await pg.locator('input[type="password"]').last().fill(mgr.p);
+  }
+  await pg.click('button:text-is("Post")');
+  await pg.waitForSelector(".alert-ok, .alert-err", { timeout: 20000 });
+  return (await pg.locator(".alert-ok, .alert-err").first().innerText()).trim();
+}
+where = "stock";
+const m1 = await stockDoc(page, "receipt", "E2E-ROPE-1", 10);
+if (!/Posted/.test(m1)) fail("stock", `receipt: ${m1}`); else ok("stock receipt (scan by SKU) posts");
+const m2 = await stockDoc(page, "transfer", "E2E-ROPE-1", 4, { to: "Jeddah Branch" });
+if (!/Posted/.test(m2)) fail("stock", `transfer: ${m2}`); else ok("stock transfer to Jeddah posts");
+const m3 = await stockDoc(page, "write_off", "E2E-ROPE-1", 1);
+if (!/Posted/.test(m3)) fail("stock", `write-off: ${m3}`); else ok("write-off posts");
+const m4 = await stockDoc(page, "count", "E2E-ROPE-1", 7);
+if (!/Posted/.test(m4)) fail("stock", `count: ${m4}`); else ok("stock count posts");
+await page.goto(BASE + "/stock?q=e2e-rope", { waitUntil: "networkidle" });
+const stockTxt = await page.locator("table").innerText();
+if (!/Riyadh Branch[\s\S]*7|7[\s\S]*Riyadh/.test(stockTxt) || !/Jeddah Branch/.test(stockTxt)) fail("stock", `levels look wrong: ${stockTxt.replace(/\s+/g, " ").slice(0, 200)}`);
+else ok("stock levels: Riyadh 7 after count, Jeddah holds the transfer");
+await page.goto(BASE + "/stock-log", { waitUntil: "networkidle" });
+const logTxt = await page.locator("table").innerText();
+for (const k of ["Receipt", "Transfer out", "Transfer in", "Write-off", "Count"]) if (!logTxt.includes(k)) fail("stock log", `missing ${k}`);
+ok("stock log lists every movement");
+
+// warehouse user needs a manager's PIN for receipts
+where = "approval";
+await page.goto(BASE + "/staff");
+const wForm = page.locator("form").filter({ has: page.locator('button:text-is("Add")') }).first();
+await wForm.locator('input[name="username"]').fill("store1");
+await wForm.locator('input[name="full_name"]').fill("Store Keeper");
+await wForm.locator('select[name="role"]').selectOption("warehouse");
+await wForm.locator('select[name="branch_id"]').selectOption({ label: "Main Warehouse" });
+await wForm.locator('input[name="password"]').fill("store-pass-1");
+await Promise.all([page.waitForURL(/ok=1|err=/, { waitUntil: "commit" }), wForm.locator('button:text-is("Add")').click()]);
+const wctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+const wp = await wctx.newPage();
+watch(wp, () => where);
+await wp.goto(BASE + "/login");
+await wp.fill('input[name="username"]', "store1");
+await wp.fill('input[name="password"]', "store-pass-1");
+await Promise.all([wp.waitForURL(BASE + "/", { waitUntil: "commit" }), wp.click('form:has(input[name="password"]) button')]);
+const a1 = await stockDoc(wp, "receipt", "E2E-ROPE-1", 2);
+if (!/manager/i.test(a1)) fail("approval", `receipt without PIN was not stopped: ${a1}`); else ok("warehouse receipt without manager PIN is refused");
+const a2 = await stockDoc(wp, "receipt", "E2E-ROPE-1", 2, { mgr: { u: "owner", p: "0000" } });
+if (!/wrong/i.test(a2)) fail("approval", `wrong PIN accepted: ${a2}`); else ok("wrong manager PIN is refused");
+const a3 = await stockDoc(wp, "receipt", "E2E-ROPE-1", 2, { mgr: { u: "owner", p: "2580" } });
+if (!/Posted/.test(a3)) fail("approval", `right PIN refused: ${a3}`); else ok("receipt with the manager's username + PIN posts");
+await wctx.close();
+
+// customers
+where = "customers";
+await page.goto(BASE + "/customers");
+const cForm = page.locator("form").filter({ has: page.locator('button:text-is("Add")') }).first();
+await cForm.locator('input[name="phone"]').fill("0551234567");
+await cForm.locator('input[name="name"]').fill("Test Customer");
+await Promise.all([page.waitForURL(/ok=1|err=/, { waitUntil: "commit" }), cForm.locator('button:text-is("Add")').click()]);
+if (!(await page.locator("table").innerText()).includes("+966551234567")) fail("customers", "new customer not listed");
+else ok("add a customer (mobile normalised, customer # given)");
+await page.goto(BASE + "/customers");
+const cForm2 = page.locator("form").filter({ has: page.locator('button:text-is("Add")') }).first();
+await cForm2.locator('input[name="phone"]').fill("+966 55 123 4567");
+await Promise.all([page.waitForURL(/err=/, { waitUntil: "commit" }), cForm2.locator('button:text-is("Add")').click()]);
+if (!/already exists/.test(await page.locator(".alert-err").innerText())) fail("customers", "duplicate mobile not refused");
+else ok("duplicate customer mobile is refused");
+
+// audit
+where = "audit";
+await page.goto(BASE + "/audit", { waitUntil: "networkidle" });
+const auditTxt = await page.locator("table").innerText();
+for (const a of ["stock.receipt", "customer.create", "staff.create", "company.update"]) if (!auditTxt.includes(a)) fail("audit", `missing ${a}`);
+ok("audit log records stock, customers, staff and company changes");
+
 // language switch + logout + login
 where = "language";
 await page.goto(BASE + "/");
-await page.click("aside >> text=العربية");
+await Promise.all([page.waitForNavigation({ waitUntil: "load" }), page.click("aside >> text=العربية")]);
 await page.waitForFunction(() => document.documentElement.lang === "ar", null, { timeout: 15000 }).catch(() => {});
 if ((await page.locator("html").getAttribute("dir")) !== "rtl") fail("language", "switch to Arabic did not change direction");
 else ok("switch to Arabic");
-await page.click("aside >> text=English");
+await Promise.all([page.waitForNavigation({ waitUntil: "load" }), page.click("aside >> text=English")]);
 await page.waitForFunction(() => document.documentElement.lang === "en", null, { timeout: 15000 }).catch(() => {});
 if ((await page.locator("html").getAttribute("lang")) !== "en") fail("language", "switch back to English failed");
 else ok("switch back to English");
@@ -296,7 +381,7 @@ for (const [device, opts] of [["desktop", { viewport: { width: 1280, height: 900
     if (cur !== lang) {
       const scope = device === "phone" ? '[role="dialog"]' : "aside";
       if (device === "phone") await p.click('button[aria-label="Open menu"], button[aria-label="فتح القائمة"]');
-      await p.click(`${scope} >> text=${lang === "ar" ? "العربية" : "English"}`);
+      await Promise.all([p.waitForNavigation({ waitUntil: "load" }), p.click(`${scope} >> text=${lang === "ar" ? "العربية" : "English"}`)]);
       await p.waitForFunction((l) => document.documentElement.lang === l, lang, { timeout: 15000 }).catch(() => {});
     }
     if ((await p.locator("html").getAttribute("lang")) !== lang) fail(w, "could not switch language");

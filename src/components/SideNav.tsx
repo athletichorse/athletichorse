@@ -12,7 +12,7 @@ type Props = {
   labels: { admin: string; openMenu: string; closeMenu: string; switchLang: string; logout: string; soon: string };
   company: string;
   user: { name: string; role: string };
-  switchLocale: () => Promise<void>;
+  otherLocale: "ar" | "en";
   logout: () => Promise<void>;
 };
 
@@ -42,6 +42,16 @@ function Links({ items, onNavigate, soon }: { items: NavItem[]; onNavigate?: () 
   );
 }
 
+/** Plain link (full page load) so switching language works even on an outdated tab. */
+function LangLink({ to, label }: { to: "ar" | "en"; label: string }) {
+  const path = usePathname();
+  return (
+    <a href={`/lang?to=${to}&next=${encodeURIComponent(path || "/")}`} className="flex flex-1 items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100">
+      <Icon name="globe" className="h-4 w-4" /> {label}
+    </a>
+  );
+}
+
 function Panel({ p, onNavigate }: { p: Props; onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
@@ -66,11 +76,7 @@ function Panel({ p, onNavigate }: { p: Props; onNavigate?: () => void }) {
           <div className="truncate text-xs text-gray-500">{p.user.role}</div>
         </div>
         <div className="flex gap-1">
-          <form action={p.switchLocale} className="flex-1">
-            <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100">
-              <Icon name="globe" className="h-4 w-4" /> {p.labels.switchLang}
-            </button>
-          </form>
+          <LangLink to={p.otherLocale} label={p.labels.switchLang} />
           <form action={p.logout} className="flex-1">
             <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100">
               <Icon name="logout" className="h-4 w-4" /> {p.labels.logout}

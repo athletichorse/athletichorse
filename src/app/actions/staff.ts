@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertPermission, usernameToEmail } from "@/lib/auth";
 import { db } from "@/lib/supabase/admin";
+import { audit } from "@/lib/audit";
 import { isRole } from "@/lib/permissions";
 import { normalizeSaudiMobile } from "@/lib/saudi";
 
@@ -63,6 +64,7 @@ export async function createStaffAction(form: FormData) {
   if (pin) await db().rpc("set_staff_pin", { p_user: data.user.id, p_pin: pin });
   const locErr = await saveLocations(data.user.id, form);
   if (locErr) return back(locErr);
+  await audit(actor.id, "staff.create", "profile", data.user.id, { username, role: c.role });
   revalidatePath("/staff");
   back();
 }
@@ -97,6 +99,7 @@ export async function updateStaffAction(form: FormData) {
     const locErr = await saveLocations(id, form);
     if (locErr) return back(locErr);
   }
+  await audit(actor.id, "staff.update", "profile", id, { role: c.role, active, password_changed: Boolean(password), pin_changed: Boolean(pin) });
   // Inactive staff are refused on their next request by requireStaff() (profile.active = false).
   revalidatePath("/staff");
   back();
