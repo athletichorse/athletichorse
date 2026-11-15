@@ -23,5 +23,7 @@ SUPABASE_SERVICE_ROLE_KEY=<service> SETUP_SECRET=e2e-setup-secret-123 npm run bu
 # 4. run it (XLSX optional: also tests the Excel upload)
 BASE=http://localhost:3105 OUT=/tmp/shots XLSX=/path/products.xlsx npm run e2e
 ```
+`npm run e2e:offline -- <sku>` (after the crawl, same servers) tests the offline till: turn on offline, cut the internet, reload, scan, pay → temporary number and receipt, shift close blocked, internet back → sent automatically and linked to the real invoice.
+
 It prints ✓/✗ per check, saves a screenshot of every page × device × language in `OUT`,
 and exits non-zero on any problem.

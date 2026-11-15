@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "e2e:supabase": "node scripts/e2e/fake-supabase.mjs",
-    "e2e": "node scripts/e2e/crawl.mjs"
+    "e2e": "node scripts/e2e/crawl.mjs",
+    "e2e:offline": "node scripts/e2e/offline.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

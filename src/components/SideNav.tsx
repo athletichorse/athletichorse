@@ -42,6 +42,11 @@ function Links({ items, onNavigate, soon }: { items: NavItem[]; onNavigate?: () 
   );
 }
 
+/** Logging out: forget the Cashier page saved for offline use on this device. */
+function forgetSavedPages() {
+  try { void caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith("pages-")).map((k) => caches.delete(k)))); } catch { /* no Cache API */ }
+}
+
 /** Plain link (full page load) so switching language works even on an outdated tab. */
 function LangLink({ to, label }: { to: "ar" | "en"; label: string }) {
   const path = usePathname();
@@ -77,7 +82,7 @@ function Panel({ p, onNavigate }: { p: Props; onNavigate?: () => void }) {
         </div>
         <div className="flex gap-1">
           <LangLink to={p.otherLocale} label={p.labels.switchLang} />
-          <form action={p.logout} className="flex-1">
+          <form action={p.logout} className="flex-1" onSubmit={forgetSavedPages}>
             <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100">
               <Icon name="logout" className="h-4 w-4" /> {p.labels.logout}
             </button>
