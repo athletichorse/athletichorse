@@ -44,8 +44,8 @@
 - ✅ Logo imported from athletic-horse.com (receipts, menu, login, app icon)
 
 ## Full settings & features list (second brief) — one PR each
-- 🟡 A. Settings & permissions: new keys (no-receipt returns, sell without customer, closed shifts, restock requests, all-locations stock, add items, sale prices, labels, website orders, salespeople, payroll), cashier settings (receipt footer, paper/print width, no selling below zero, attendance rules, overtime), manager PIN lock (5 wrong → 15 min), till staff see only Cashier + Stores, customer required unless allowed
-- ⬜ B. Products: wholesale price, reorder level, sale price for a period, types list, names/prices import with preview, barcode labels
+- ✅ A. Settings & permissions: new keys (no-receipt returns, sell without customer, closed shifts, restock requests, all-locations stock, add items, sale prices, labels, website orders, salespeople, payroll), cashier settings (receipt footer, paper/print width, no selling below zero, attendance rules, overtime), manager PIN lock (5 wrong → 15 min), till staff see only Cashier + Stores, customer required unless allowed
+- 🟡 B. Products: wholesale price, reorder level, sale price for a period (used by the cashier between its dates), names/prices file with old → new preview, barcode labels (Zebra 40×25, Xprinter 38×25, custom; standard/classic look)
 - ⬜ C. Stock: transfers sent → in transit → received, write-off reasons, count sheet, restock requests, shortages report
 - ⬜ D. Cashier: expenses, end of day, merge/edit quotations, return slips at Collect, customer receipt link, credit limit & statements, receipt discount, camera scan
 - ⬜ E. Reports & dashboard
