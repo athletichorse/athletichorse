@@ -14,7 +14,7 @@ export function LabelPrinter({ t, locale, initial }: { t: Dict; locale: Locale; 
   const [term, setTerm] = useState("");
   const [hits, setHits] = useState<VariantHit[] | null>(null);
   const [preset, setPreset] = useState<LabelPreset>("zebra");
-  const [s, setS] = useState<LabelSettings>({ w: 40, h: 25, margin: 1, scale: 100, style: "standard", showName: true, showPrice: true });
+  const [s, setS] = useState<LabelSettings>({ w: 40, h: 25, margin: 1, scale: 100, style: "standard", showName: true, showPrice: true, showLogo: true });
   const ref = useRef<HTMLInputElement>(null);
 
   const doc = useMemo(() => labelsDocument(rows.filter((r) => r.sku), s, L.title), [rows, s, L.title]);
@@ -90,6 +90,7 @@ export function LabelPrinter({ t, locale, initial }: { t: Dict; locale: Locale; 
           <select className="input" value={s.style} onChange={(e) => setS((x) => ({ ...x, style: e.target.value as LabelSettings["style"] }))}>
             <option value="standard">{L.styleNew}</option><option value="classic">{L.styleOld}</option>
           </select></div>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={s.showLogo} onChange={(e) => setS((x) => ({ ...x, showLogo: e.target.checked }))} className="h-4 w-4 accent-[var(--brand)]" /> {L.showLogo}</label>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={s.showName} onChange={(e) => setS((x) => ({ ...x, showName: e.target.checked }))} className="h-4 w-4 accent-[var(--brand)]" /> {L.showName}</label>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={s.showPrice} onChange={(e) => setS((x) => ({ ...x, showPrice: e.target.checked }))} className="h-4 w-4 accent-[var(--brand)]" /> {L.showPrice}</label>
         <button className="btn-primary w-full" disabled={!doc.count} onClick={print}>{L.print} ({doc.count} {L.total})</button>
