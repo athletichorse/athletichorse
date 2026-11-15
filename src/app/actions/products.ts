@@ -1,8 +1,9 @@
 "use server";
 
+import { saleWindow, type PriceRow } from "@/lib/product-prices";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { assertPermission } from "@/lib/auth";
+import { assertPermission, requireStaff } from "@/lib/auth";
 import { db } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
 import { formatDecimal, toHalalas } from "@/lib/money";
@@ -69,6 +70,25 @@ export async function saveProductAction(form: FormData) {
       return back("money");
     }
     const row: Record<string, unknown> = { sku, active: form.get(`active:${v.id}`) === "on" };
+    // extras: wholesale price, reorder level, sale price for a period (redirects stay outside try/catch)
+    let wholesale: string | null = null, salePrice: string | null = null;
+    try {
+      wholesale = money(form.get(`wholesale:${v.id}`));
+      salePrice = money(form.get(`sale:${v.id}`));
+    } catch {
+      return back("money");
+    }
+    if (form.has(`wholesale:${v.id}`)) row.wholesale_price = wholesale;
+    if (form.has(`reorder:${v.id}`)) {
+      const r = String(form.get(`reorder:${v.id}`) ?? "").trim();
+      if (r && !/^\d{1,9}(\.\d{1,3})?$/.test(r)) return back("money");
+      row.reorder_level = r || null;
+    }
+    if (staff.perms.has("products.sale_prices") && form.has(`sale:${v.id}`)) {
+      const sp = saleWindow(salePrice, String(form.get(`sale_from:${v.id}`) ?? ""), String(form.get(`sale_to:${v.id}`) ?? ""));
+      if (!sp) return back("sale");
+      Object.assign(row, sp);
+    }
     if (canCost && form.has(`cost:${v.id}`)) row.cost = cost;
     if (v.shopify_variant_id === null && price !== null) row.price = price;
     const { error: e } = await db().from("product_variants").update(row).eq("id", v.id);
@@ -91,7 +111,8 @@ export async function saveProductAction(form: FormData) {
 }
 
 export async function createProductAction(form: FormData) {
-  const staff = await assertPermission("products.edit");
+  const staff = await requireStaff();
+  if (!staff.perms.has("products.add") && !staff.perms.has("products.edit")) redirect("/forbidden");
   const back = (err: string) => redirect(`/products/new?err=${encodeURIComponent(err)}`);
   const p = readProduct(form);
   if (!p.name_en && !p.name_ar) return back("name");
@@ -158,4 +179,54 @@ export async function syncNowAction() {
   });
   revalidatePath("/products");
   redirect("/products");
+}
+
+// ---------------------------------------------------------------- names & prices file
+export type PricePreview = {
+  sku: string; found: boolean; onWebsite: boolean; name: string;
+  changes: { field: "name_en" | "name_ar" | "price" | "wholesale" | "cost"; old: string; new: string }[];
+};
+
+/** Old → new for every row of a names & prices file (nothing is saved). */
+export async function previewPricesAction(rows: PriceRow[]): Promise<{ ok: true; items: PricePreview[] } | { ok: false; error: string }> {
+  const s = await requireStaff();
+  if (!s.perms.has("products.edit")) return { ok: false, error: "forbidden" };
+  const list = (Array.isArray(rows) ? rows : []).slice(0, 20_000);
+  const canCost = s.perms.has("products.view_cost");
+  const found = new Map<string, Record<string, unknown>>();
+  for (let i = 0; i < list.length; i += 500) {
+    const skus = list.slice(i, i + 500).map((r) => String(r.sku));
+    const { data } = await db().from("variant_prices").select("sku, name_en, name_ar, price, wholesale_price, cost, on_website").in("sku", skus);
+    for (const d of data ?? []) found.set(String(d.sku), d);
+  }
+  const str = (v: unknown) => (v === null || v === undefined ? "" : String(v));
+  const money2 = (v: unknown) => { try { return v === null || v === undefined || v === "" ? "" : formatDecimal(toHalalas(String(v))); } catch { return str(v); } };
+  const items: PricePreview[] = list.map((r) => {
+    const d = found.get(String(r.sku));
+    if (!d) return { sku: r.sku, found: false, onWebsite: false, name: "", changes: [] };
+    const web = Boolean(d.on_website);
+    const changes: PricePreview["changes"] = [];
+    if (r.name_en && !web && r.name_en !== str(d.name_en)) changes.push({ field: "name_en", old: str(d.name_en), new: r.name_en });
+    if (r.name_ar && r.name_ar !== str(d.name_ar)) changes.push({ field: "name_ar", old: str(d.name_ar), new: r.name_ar });
+    if (r.price && !web && r.price !== money2(d.price)) changes.push({ field: "price", old: money2(d.price), new: r.price });
+    if (r.wholesale && r.wholesale !== money2(d.wholesale_price)) changes.push({ field: "wholesale", old: money2(d.wholesale_price), new: r.wholesale });
+    if (canCost && r.cost && r.cost !== money2(d.cost)) changes.push({ field: "cost", old: money2(d.cost), new: r.cost });
+    return { sku: r.sku, found: true, onWebsite: web, name: str(d.name_ar) || str(d.name_en), changes };
+  });
+  return { ok: true, items };
+}
+
+/** Saves a names & prices file (only changed fields; website prices are kept). */
+export async function applyPricesAction(rows: PriceRow[]): Promise<{ ok: true; updated: number; notFound: number; websiteKept: number } | { ok: false; error: string }> {
+  const s = await requireStaff();
+  if (!s.perms.has("products.edit")) return { ok: false, error: "forbidden" };
+  const list = (Array.isArray(rows) ? rows : []).slice(0, 20_000);
+  let updated = 0, notFound = 0, websiteKept = 0;
+  for (let i = 0; i < list.length; i += 500) {
+    const { data, error } = await db().rpc("update_names_prices", { p_rows: list.slice(i, i + 500), p_user: s.id, p_can_cost: s.perms.has("products.view_cost") });
+    if (error) return { ok: false, error: error.message };
+    updated += Number(data?.updated ?? 0); notFound += Number(data?.not_found ?? 0); websiteKept += Number(data?.website_price_kept ?? 0);
+  }
+  revalidatePath("/products");
+  return { ok: true, updated, notFound, websiteKept };
 }

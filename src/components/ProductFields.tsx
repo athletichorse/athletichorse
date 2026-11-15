@@ -60,6 +60,7 @@ export function productError(t: Dict, err?: string) {
   if (!err) return null;
   if (err === "sku") return t.products.badSku;
   if (err === "money") return t.products.badMoney;
+  if (err === "sale") return t.products.badSale;
   if (err === "duplicate") return t.products.duplicateCode;
   return err;
 }

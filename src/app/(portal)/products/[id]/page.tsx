@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ProductFields, productError, type Group } from "@/components/ProductFields";
 import { saveProductAction } from "@/app/actions/products";
 
-type Variant = { id: string; sku: string | null; option1: string | null; option2: string | null; option3: string | null; price: string; compare_at_price: string | null; cost: string | null; active: boolean; shopify_variant_id: number | null; shopify_sku: string | null; image_url: string | null };
+type Variant = { wholesale_price: string | null; reorder_level: string | null; sale_price: string | null; sale_from: string | null; sale_to: string | null; id: string; sku: string | null; option1: string | null; option2: string | null; option3: string | null; price: string; compare_at_price: string | null; cost: string | null; active: boolean; shopify_variant_id: number | null; shopify_sku: string | null; image_url: string | null };
 
 export default async function ProductPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ err?: string; ok?: string }> }) {
   const me = await requirePermission("products.view");
@@ -19,10 +19,11 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const canEdit = me.perms.has("products.edit");
   const seeCost = me.perms.has("products.view_cost");
+  const canSale = me.perms.has("products.sale_prices");
 
   const [{ data: p }, { data: vData }, { data: images }, { data: groups }, { data: storeUrl }] = await Promise.all([
     db().from("products").select("*").eq("id", id).maybeSingle(),
-    db().from("product_variants").select("id, sku, option1, option2, option3, price, compare_at_price, cost, active, shopify_variant_id, shopify_sku, image_url").eq("product_id", id).order("position"),
+    db().from("product_variants").select("id, sku, option1, option2, option3, price, compare_at_price, cost, active, shopify_variant_id, shopify_sku, image_url, wholesale_price, reorder_level, sale_price, sale_from, sale_to").eq("product_id", id).order("position"),
     db().from("product_images").select("url, alt").eq("product_id", id).order("position"),
     db().from("product_groups").select("id, parent_id, name_en, name_ar").eq("active", true).order("name_en"),
     db().from("settings").select("value").eq("key", "shopify_store_url").maybeSingle(),
@@ -41,6 +42,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
     <>
       <PageHeader title={locale === "ar" && p.name_ar ? p.name_ar : p.name_en} subtitle={fromWebsite ? t.products.nameFromWebsite : undefined} t={t} filename="product">
         <Link href="/products" className="btn-ghost no-print">← {t.products.title}</Link>
+        {me.perms.has("products.labels") && <Link href={`/products/labels?product=${p.id}`} className="btn-ghost no-print">{t.products.labels.open}</Link>}
         {webUrl && <a href={webUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost no-print">{t.products.viewOnWebsite} ↗</a>}
       </PageHeader>
       {err && <p className="alert-err">{err}</p>}
@@ -91,6 +93,29 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
                       </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <section className="card overflow-hidden p-0">
+            <h2 className="card-title px-5 pt-5">{t.products.extras.title}</h2>
+            <p className="hint px-5 -mt-2 mb-3">{t.products.extras.hint}</p>
+            <div className="overflow-x-auto">
+              <table className="table">
+                <thead>
+                  <tr><th>{t.products.options}</th><th>{t.products.extras.wholesale}</th><th>{t.products.extras.reorder}</th><th>{t.products.extras.salePrice}</th><th>{t.products.extras.from}</th><th>{t.products.extras.to}</th></tr>
+                </thead>
+                <tbody>
+                  {variants.map((v) => (
+                    <tr key={v.id}>
+                      <td className="cell-title font-medium whitespace-nowrap">{optionLabel(v)} <span className="text-xs text-gray-400" dir="ltr">{v.sku ?? ""}</span></td>
+                      <td data-label={t.products.extras.wholesale} className="min-w-[110px]"><input name={`wholesale:${v.id}`} defaultValue={v.wholesale_price ?? ""} className="input" dir="ltr" inputMode="decimal" /></td>
+                      <td data-label={t.products.extras.reorder} className="min-w-[90px]"><input name={`reorder:${v.id}`} defaultValue={v.reorder_level ?? ""} className="input" dir="ltr" inputMode="decimal" /></td>
+                      <td data-label={t.products.extras.salePrice} className="min-w-[110px]"><input name={`sale:${v.id}`} defaultValue={v.sale_price ?? ""} disabled={!canSale} className="input" dir="ltr" inputMode="decimal" /></td>
+                      <td data-label={t.products.extras.from} className="min-w-[150px]"><input type="date" name={`sale_from:${v.id}`} defaultValue={v.sale_from?.slice(0, 10) ?? ""} disabled={!canSale} className="input" dir="ltr" /></td>
+                      <td data-label={t.products.extras.to} className="min-w-[150px]"><input type="date" name={`sale_to:${v.id}`} defaultValue={v.sale_to?.slice(0, 10) ?? ""} disabled={!canSale} className="input" dir="ltr" /></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

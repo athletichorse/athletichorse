@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { requirePermission } from "@/lib/auth";
+import { requireStaff } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { PageHeader } from "@/components/PageHeader";
@@ -7,7 +8,8 @@ import { ProductFields, productError, type Group } from "@/components/ProductFie
 import { createProductAction } from "@/app/actions/products";
 
 export default async function NewProductPage({ searchParams }: { searchParams: Promise<{ err?: string }> }) {
-  const me = await requirePermission("products.edit");
+  const me = await requireStaff();
+  if (!me.perms.has("products.edit") && !me.perms.has("products.add")) redirect("/forbidden");
   const { t, locale } = await getDict();
   const sp = await searchParams;
   const { data: groups } = await db().from("product_groups").select("id, parent_id, name_en, name_ar").eq("active", true).order("name_en");
