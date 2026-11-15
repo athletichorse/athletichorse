@@ -15,7 +15,7 @@ export default async function PortalLayout({ children }: { children: React.React
   const { data: c } = await db().from("company").select("legal_name_ar, legal_name_en").eq("id", 1).maybeSingle();
   const raw = (locale === "ar" ? c?.legal_name_ar : c?.legal_name_en) || c?.legal_name_en || "";
   const company = !raw || raw.startsWith("[") ? (locale === "ar" ? BRAND.ar : BRAND.en) : raw;
-  const { main, admin } = buildNav(t, staff.perms);
+  const { main, admin } = buildNav(t, staff.perms, staff.role);
   return (
     <div className="min-h-screen">
       <ReloadOnStaleVersion />
