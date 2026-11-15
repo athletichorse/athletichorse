@@ -10,7 +10,7 @@ export function LoginForm({ t }: { t: Dict }) {
     <form action={action} className="space-y-3">
       <div>
         <label className="label" htmlFor="username">{t.login.username}</label>
-        <input className="input" id="username" name="username" autoComplete="username" required dir="ltr" />
+        <input className="input" id="username" name="username" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} required dir="ltr" />
       </div>
       <div>
         <label className="label" htmlFor="password">{t.login.password}</label>

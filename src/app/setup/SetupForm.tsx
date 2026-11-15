@@ -11,7 +11,7 @@ export function SetupForm({ t, branches }: { t: Dict; branches: { id: string; na
   return (
     <form action={action} className="space-y-3">
       <div><label className="label">{t.setup.secret}</label><input className="input" name="secret" type="password" required dir="ltr" /></div>
-      <div><label className="label">{t.login.username}</label><input className="input" name="username" required dir="ltr" pattern="[a-z0-9._\-]{3,32}" /></div>
+      <div><label className="label">{t.login.username}</label><input className="input" name="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} required dir="ltr" /></div>
       <div><label className="label">{t.setup.fullName}</label><input className="input" name="full_name" required /></div>
       <div><label className="label">{t.login.password}</label><input className="input" name="password" type="password" minLength={10} required dir="ltr" /></div>
       <div><label className="label">{t.setup.pin}</label><input className="input" name="pin" inputMode="numeric" pattern="\d{4,8}" required dir="ltr" /></div>

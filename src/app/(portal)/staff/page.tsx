@@ -65,7 +65,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
           <form action={createStaffAction} className="card space-y-2">
             <h2 className="font-semibold">{t.staff.newStaff}</h2>
             <div className="grid grid-cols-2 gap-2">
-              <input name="username" placeholder={t.staff.username} className="input" required dir="ltr" />
+              <input name="username" placeholder={t.staff.username} className="input" autoCapitalize="none" autoCorrect="off" spellCheck={false} required dir="ltr" />
               <input name="full_name" placeholder={t.staff.fullName} className="input" required />
               {roleSelect()}
               {branchSelect()}
