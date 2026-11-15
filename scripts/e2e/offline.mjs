@@ -23,6 +23,7 @@ const ok = (cond, msg) => { results.push(`${cond ? '✓' : '✗'} ${msg}`); cons
     await p.getByRole('button', { name: 'Open shift' }).click();
     await p.waitForSelector('[data-testid=offline-bar]', { timeout: 20000 });
   }
+  await p.waitForSelector('[data-testid=offline-bar]', { timeout: 20000 }).catch(() => {});
   ok(await p.locator('[data-testid=offline-bar]').isVisible(), 'offline bar shows on the cashier for the owner');
 
   // turn on offline for this device → price list is downloaded

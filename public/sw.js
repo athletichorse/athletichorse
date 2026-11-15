@@ -2,13 +2,13 @@
  * Service worker for the staff portal.
  * Purpose: the Cashier page (/pos) opens even without internet, so the till can
  * keep selling (offline sales are queued by the page itself and sent later).
- *  - /_next/static and /icons: cache-first (file names change on every update).
+ *  - /_next/static, /icons and /brand (logo): cache-first (file names change on every update).
  *  - /pos page: network-first; the last good copy is kept for offline use.
  *  - other pages offline: the saved Cashier page, or a short "no internet" page.
  *  - opening /login (logged out) forgets the saved pages.
  * Nothing else is cached: data always comes from the server.
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const STATIC = `static-${VERSION}`;
 const PAGES = `pages-${VERSION}`;
 
@@ -57,7 +57,7 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
+  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/") || url.pathname.startsWith("/brand/")) {
     event.respondWith(cacheFirst(req));
     return;
   }

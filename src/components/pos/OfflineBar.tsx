@@ -6,7 +6,7 @@ import type { QueuedSale } from "@/lib/offline";
 import type { OfflineTill } from "./useOfflineTill";
 
 /** Status of the offline till on this device: connection, price list, sales waiting to be sent. */
-export function OfflineBar({ t, locale, off, canManage, err }: { t: Dict; locale: Locale; off: OfflineTill; canManage: boolean; err: (c: string) => string }) {
+export function OfflineBar({ t, locale, off, canManage, err, screens }: { t: Dict; locale: Locale; off: OfflineTill; canManage: boolean; err: (c: string) => string; screens: { key: "sell" | "desk" | "collect"; label: string }[] }) {
   const o = t.pos.offline;
   const refused = off.queue.filter((x) => x.error);
   const waiting = off.queue.length;
@@ -31,6 +31,16 @@ export function OfflineBar({ t, locale, off, canManage, err }: { t: Dict; locale
         <label className="flex items-start gap-2 text-sm">
           <input type="checkbox" className="mt-0.5" checked={off.enabled} onChange={(e) => off.setEnabled(e.target.checked)} />
           <span><span className="font-medium">{o.enable}</span><span className="hint block">{o.enableHint}</span></span>
+        </label>
+      )}
+
+      {canManage && screens.length > 1 && (
+        <label className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-medium">{o.deviceScreen}</span>
+          <select className="input w-auto" value={off.screen ?? ""} onChange={(e) => off.setScreen((e.target.value || null) as "sell" | "desk" | "collect" | null)}>
+            <option value="">{o.screenDefault}</option>
+            {screens.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+          </select>
         </label>
       )}
 
@@ -74,7 +84,7 @@ export function printTempReceipt(sale: QueuedSale, ctx: { t: Dict; locale: Local
 .c{text-align:center}table{width:100%;border-collapse:collapse}td{padding:2px 0;vertical-align:top}.n{text-align:end;white-space:nowrap;padding-inline-start:6px}
 .d{color:#555;font-size:11px}.t{border-top:1px dashed #000;margin-top:6px;padding-top:6px;font-weight:700;display:flex;justify-content:space-between}
 .note{border:1px solid #000;padding:4px;margin-top:8px;font-size:11px}</style></head><body>
-<h1>${esc(ctx.company)}</h1><div class="c">${esc(ctx.branch)}</div>
+<div class="c"><img src="${location.origin}/brand/logo.png" alt="" style="height:40px"></div><h1>${esc(ctx.company)}</h1><div class="c">${esc(ctx.branch)}</div>
 <div class="c" style="margin:6px 0;font-weight:700">${esc(o.tempReceipt)}</div>
 <div class="c" dir="ltr">${esc(sale.tempNo)}</div><div class="c">${esc(formatDateTime(new Date(sale.createdAt), ctx.locale))}</div>
 <table style="margin-top:6px">${rows}</table>

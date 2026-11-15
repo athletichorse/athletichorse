@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Dict, Locale } from "@/i18n";
 import { computeTotals, formatDecimal, formatSAR, rateToBp, toHalalas, toMilliQty } from "@/lib/money";
@@ -77,6 +77,13 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
   const [closeRes, setCloseRes] = useState<{ expected: string; difference: string } | null>(null);
   const cashId = useRef(uuid());
   const off = useOfflineTill({ locale, branchCode: p.locations.find((l) => l.id === s.locationId)?.code ?? "POS", shiftId: s.id });
+  // Open on the screen chosen for this device (once, when its setting has been read).
+  const screenApplied = useRef(false);
+  useEffect(() => {
+    if (!off.loaded || screenApplied.current) return;
+    screenApplied.current = true;
+    if (off.screen && p.tabs.includes(off.screen)) p.setTab(off.screen);
+  }, [off.loaded, off.screen, p]);
   /** A server call that fails because there is no connection shows a clear message instead of doing nothing. */
   const tryOnline = async (fn: () => Promise<void>) => { try { await fn(); } catch (e) { p.setMsg({ ok: false, text: looksOffline(e) ? t.pos.offline.needsOnline : String(e) }); } };
 
@@ -91,7 +98,8 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
         {p.can.shift && <button className="btn-ghost" onClick={() => setPanel(panel === "close" ? "" : "close")}>{t.pos.closeShift}</button>}
       </div>
 
-      <OfflineBar t={t} locale={locale} off={off} canManage={p.canManageOffline} err={err} />
+      <OfflineBar t={t} locale={locale} off={off} canManage={p.canManageOffline} err={err}
+        screens={p.tabs.filter((k) => k !== "returns").map((k) => ({ key: k as "sell" | "desk" | "collect", label: k === "sell" ? t.pos.sell : k === "desk" ? t.pos.desk : t.pos.collect }))} />
 
       {panel === "cash" && (
         <section className="card grid gap-3 sm:grid-cols-2">

@@ -32,7 +32,7 @@
 6. ✅ POS: shifts with cash count (expected vs counted), cash in/out, desk quotation → cashier, quick sale, customers by mobile, salesperson, split payments + change, discounts/price changes with manager PIN, returns with/without receipt, 80 mm receipt with ZATCA QR + Code 128; all amounts recomputed in SQL
    - ✅ Sales: invoices, returns, today's totals, receipt reprint
    - ✅ Website orders (Shopify) imported nightly + "Sync orders now"; new orders reduce Jeddah stock, cancellations put it back
-7. ✅ Offline PWA: installable app (manifest + icons, opens on the Cashier), service worker keeps the Cashier page available offline, price list saved on the device, offline sales queued with temporary numbers (`OFF-BR01-XXXX-0001`) and a printed temporary receipt, sent automatically (idempotent by `client_id`) and linked to the real tax invoice, per-device switch for managers, shift close waits for unsent sales
+7. ✅ Offline PWA: installable app (manifest + icons, opens on the Cashier), service worker keeps the Cashier page available offline, price list saved on the device, offline sales queued with temporary numbers (`OFF-BR01-XXXX-0001`) and a printed temporary receipt, sent automatically (idempotent by `client_id`) and linked to the real tax invoice, per-device switch for managers, each device chooses its screen (Sell / Quotation desk / Collect), shift close waits for unsent sales
 8. 🟡 Layout: menu in the agreed order ✅, print/export menu (80 mm, A4, Excel, PDF) on every page ✅; proper 80 mm/A4 print layouts come with receipts and reports
 9. ✅ Seed data: owner (via /setup), two branches, one warehouse, VAT 15%, payment methods
 
@@ -41,3 +41,4 @@
 - ✅ Owner "god's eye" overview of all branches and warehouses
 - ✅ Website stock source = Jeddah branch (setting, changeable)
 - ✅ Daily website sync rule
+- ✅ Logo imported from athletic-horse.com (receipts, menu, login, app icon)

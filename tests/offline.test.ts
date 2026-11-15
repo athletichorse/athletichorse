@@ -84,3 +84,17 @@ describe("offline queue", () => {
     expect(pendingForShift(st, "s2")).toHaveLength(0);
   });
 });
+
+describe("device screen", () => {
+  it("remembers which cashier screen this device opens on, and ignores junk", async () => {
+    const { getDeviceScreen, setDeviceScreen } = await import("@/lib/offline");
+    const st = memStore();
+    expect(getDeviceScreen(st)).toBeNull();
+    setDeviceScreen(st, "desk");
+    expect(getDeviceScreen(st)).toBe("desk");
+    st.set("pos-device-screen", "admin");
+    expect(getDeviceScreen(st)).toBeNull();
+    setDeviceScreen(st, null);
+    expect(st.data.has("pos-device-screen")).toBe(false);
+  });
+});

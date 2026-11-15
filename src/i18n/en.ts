@@ -340,6 +340,8 @@ const en: Dict = {
     },
     offline: {
       title: "Offline till",
+      deviceScreen: "Opens on this device",
+      screenDefault: "Default",
       enable: "Allow offline sales on this device",
       enableHint: "Turn on only for the shop's own tills. Sales made without internet are saved here and sent automatically when it is back.",
       online: "Online",

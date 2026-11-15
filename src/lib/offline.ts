@@ -52,6 +52,7 @@ const K = {
   catalog: "pos-catalog-v1",
   queue: "pos-offline-queue-v1",
   sent: "pos-offline-sent-v1",
+  screen: "pos-device-screen",
 };
 
 export function browserStore(): Store {
@@ -92,6 +93,15 @@ export function nextTempNo(st: Store, branchCode: string): string {
   st.set(K.seq, String(seq));
   return makeTempNo(branchCode, deviceId(st), seq);
 }
+
+// ------------------------------------------------------------ device screen
+/** Which Cashier screen this device opens on (and keeps offline): the cashier till or the desk. */
+export type DeviceScreen = "sell" | "desk" | "collect";
+export function getDeviceScreen(st: Store): DeviceScreen | null {
+  const v = st.get(K.screen);
+  return v === "sell" || v === "desk" || v === "collect" ? v : null;
+}
+export const setDeviceScreen = (st: Store, v: DeviceScreen | null) => (v ? st.set(K.screen, v) : st.remove(K.screen));
 
 // ------------------------------------------------------------ price list
 export const loadCatalog = (st: Store) => readJson<Catalog | null>(st, K.catalog, null);

@@ -5,7 +5,7 @@ import type { Locale } from "@/i18n";
 import type { VariantHit } from "@/app/actions/stock";
 import { postSaleAction, posCatalogAction } from "@/app/actions/pos";
 import {
-  browserStore, enqueue, flushQueue, isOfflineEnabled, loadCatalog, loadQueue, loadSent, nextTempNo, saveCatalog,
+  browserStore, enqueue, flushQueue, getDeviceScreen, isOfflineEnabled, setDeviceScreen, type DeviceScreen, loadCatalog, loadQueue, loadSent, nextTempNo, saveCatalog,
   searchCatalog, setOfflineEnabled, type QueuedSale, type SentSale,
 } from "@/lib/offline";
 
@@ -22,6 +22,8 @@ export function useOfflineTill(opts: { locale: Locale; branchCode: string; shift
   const [sent, setSent] = useState<SentSale[]>([]);
   const [catalogInfo, setCatalogInfo] = useState<{ savedAt: string; count: number } | null>(null);
   const [busy, setBusy] = useState<"" | "catalog" | "send">("");
+  const [screen, setScreenState] = useState<DeviceScreen | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const flushing = useRef(false);
 
   const reload = useCallback(() => {
@@ -31,6 +33,8 @@ export function useOfflineTill(opts: { locale: Locale; branchCode: string; shift
     setQueue(loadQueue(st));
     setSent(loadSent(st));
     setCatalogInfo(c ? { savedAt: c.savedAt, count: c.items.length } : null);
+    setScreenState(getDeviceScreen(st));
+    setLoaded(true);
   }, []);
 
   const refreshCatalog = useCallback(async () => {
@@ -82,7 +86,11 @@ export function useOfflineTill(opts: { locale: Locale; branchCode: string; shift
   }, [flush, refreshCatalog, reload, locale]);
 
   return {
-    enabled, online, queue, sent, catalogInfo, busy, flush, refreshCatalog,
+    enabled, online, queue, sent, catalogInfo, busy, flush, refreshCatalog, screen, loaded,
+    setScreen(v: DeviceScreen | null) {
+      setDeviceScreen(browserStore(), v);
+      reload();
+    },
     setEnabled(on: boolean) {
       setOfflineEnabled(browserStore(), on);
       reload();
