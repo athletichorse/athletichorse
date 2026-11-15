@@ -1,4 +1,4 @@
-import type { PermissionKey } from "@/lib/permissions";
+import { TILL_ROLES, type PermissionKey, type Role } from "@/lib/permissions";
 import type { Dict } from "@/i18n";
 import type { IconName } from "./icons";
 
@@ -26,13 +26,15 @@ const ADMIN: { key: keyof Dict["nav"]; href: string; icon: IconName; perm: Permi
   { key: "permissions", href: "/permissions", icon: "permissions", perm: "permissions.edit" },
 ];
 
-export function buildNav(t: Dict, perms: ReadonlySet<PermissionKey>) {
-  const main: NavItem[] = MAIN.filter((e) => e.perms === null || e.perms.some((p) => perms.has(p))).map((e) => ({
+export function buildNav(t: Dict, perms: ReadonlySet<PermissionKey>, role?: Role) {
+  const till = role !== undefined && TILL_ROLES.includes(role);
+  const main: NavItem[] = MAIN.filter((e) => (till ? e.key === "pos" || e.key === "stock" : true))
+    .filter((e) => e.perms === null || e.perms.some((p) => perms.has(p))).map((e) => ({
     label: t.menu[e.key],
     href: e.href,
     icon: e.icon,
     soon: e.soon,
   }));
-  const admin: NavItem[] = ADMIN.filter((e) => perms.has(e.perm)).map((e) => ({ label: t.nav[e.key], href: e.href, icon: e.icon }));
+  const admin: NavItem[] = ADMIN.filter((e) => !till && perms.has(e.perm)).map((e) => ({ label: t.nav[e.key], href: e.href, icon: e.icon }));
   return { main, admin };
 }

@@ -1,3 +1,4 @@
+import { readPosSettings } from "@/lib/pos-settings";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
@@ -19,7 +20,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const { data: inv } = await db().from("invoices").select("*").eq("id", id).maybeSingle();
   if (!inv || (!me.perms.has("sales.view_all_branches") && !canUseLocation(me, inv.location_id))) notFound();
-  const [{ data: lines }, { data: pays }, { data: company }, { data: loc }, { data: people }, { data: cust }, { data: orig }, { data: methods }] = await Promise.all([
+  const [{ data: lines }, { data: pays }, { data: company }, { data: loc }, { data: people }, { data: cust }, { data: orig }, { data: methods }, { data: posRows }] = await Promise.all([
     db().from("invoice_lines").select("*").eq("invoice_id", id).order("line_no"),
     db().from("invoice_payments").select("method, amount").eq("invoice_id", id).order("line_no"),
     db().from("company").select("*").eq("id", 1).maybeSingle(),
@@ -28,7 +29,9 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
     inv.customer_id ? db().from("customers").select("name, phone, customer_no, vat_number").eq("id", inv.customer_id).maybeSingle() : Promise.resolve({ data: null }),
     inv.original_invoice_id ? db().from("invoices").select("number").eq("id", inv.original_invoice_id).maybeSingle() : Promise.resolve({ data: null }),
     db().from("payment_methods").select("code, name_en, name_ar"),
+    db().from("settings").select("key, value").in("key", ["receipt_footer_ar", "receipt_footer_en", "receipt_width_mm"]),
   ]);
+  const ps = readPosSettings(posRows);
   const qrSvg = await QRCode.toString(inv.qr, { type: "svg", errorCorrectionLevel: "M", margin: 0, width: 150 });
   const barcode = code128Svg(inv.number, 42, 1.4);
   const who = (pid: string | null) => people?.find((x) => x.id === pid)?.full_name ?? "—";
@@ -45,7 +48,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
         </PageHeader>
       </div>
       {sp.print && <AutoPrint mode="receipt80" />}
-      <article className="receipt mx-auto max-w-[80mm] bg-white p-3 text-[12px] leading-snug text-black" dir="rtl">
+      <article className="receipt mx-auto bg-white p-3 text-[12px] leading-snug text-black" dir="rtl" style={{ maxWidth: `${ps.receipt_width_mm}mm` }}>
         <header className="text-center">
           {company?.logo_url && /^https:\/\//.test(company.logo_url) && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -96,7 +99,12 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
           <div className="w-full overflow-hidden" dangerouslySetInnerHTML={{ __html: barcode }} />
           <div dir="ltr" className="font-mono">{inv.number}</div>
           <div className="text-center">شكرًا لتسوقكم معنا · Thank you</div>
-          {!isCN && <div className="text-center text-[10px]">الاسترجاع خلال 3 أيام مع هذا الإيصال · Returns within 3 days with this receipt</div>}
+          {!isCN && (ps.receipt_footer_ar || ps.receipt_footer_en) && (
+            <div className="text-center text-[10px] whitespace-pre-line">
+              {ps.receipt_footer_ar && <div>{ps.receipt_footer_ar}</div>}
+              {ps.receipt_footer_en && <div dir="ltr">{ps.receipt_footer_en}</div>}
+            </div>
+          )}
         </div>
       </article>
     </>

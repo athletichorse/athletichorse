@@ -34,6 +34,8 @@ export type QueuedSale = {
   payload: {
     salespersonId?: string;
     customerId?: string;
+    customerPhone?: string;
+    customerName?: string;
     lines: { variantId: string; qty: string; unitPrice: string; discount: string }[];
     payments: { method: string; amount: string }[];
     cashTendered?: string;

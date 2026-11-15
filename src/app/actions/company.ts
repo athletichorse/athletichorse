@@ -6,6 +6,7 @@ import { assertPermission } from "@/lib/auth";
 import { db } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
 import { isValidCrNumber, isValidVatNumber, toLatinDigits } from "@/lib/saudi";
+import { POS_SETTING_KEYS, parsePosSettingsForm } from "@/lib/pos-settings";
 
 const back = (err?: string) => redirect(err ? `/company?err=${encodeURIComponent(err)}` : "/company?ok=1");
 
@@ -19,6 +20,8 @@ export async function saveCompanyAction(form: FormData) {
   if (!/^\d{1,2}(\.\d{1,2})?$/.test(rate)) return back("rate");
   const logo = String(form.get("logo_url") ?? "").trim();
   if (logo && !/^https:\/\//.test(logo)) return back("logo");
+  const pos = parsePosSettingsForm((k) => (form.get(k) === null ? null : String(form.get(k))));
+  if (!pos.ok) return back(`pos:${pos.field}`);
 
   const { error } = await db().from("company").upsert({
     id: 1,
@@ -43,7 +46,9 @@ export async function saveCompanyAction(form: FormData) {
   } else {
     await db().from("settings").delete().eq("key", "website_stock_location");
   }
-  await audit(staff.id, "company.update", "company", "1", { vat_number: vat || null, website_stock_location: web || null });
+  const { error: e4 } = await db().from("settings").upsert(POS_SETTING_KEYS.map((k) => ({ key: k, value: pos.values[k] })));
+  if (e4) return back(e4.message);
+  await audit(staff.id, "company.update", "company", "1", { vat_number: vat || null, website_stock_location: web || null, cashier: pos.values });
   revalidatePath("/company");
   back();
 }

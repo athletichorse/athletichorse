@@ -38,7 +38,11 @@ const fmt = (v: unknown) => {
   }
 };
 const has = (s: Staff, ...k: Parameters<Staff["perms"]["has"]>[0][]) => k.some((x) => s.perms.has(x));
-const sqlError = (m: string) => m.replace(/^.*?ERROR:\s*/, "");
+/** SQL errors that carry a code ("not_enough_stock: 2 available") come back as just the code. */
+const sqlError = (m: string) => {
+  const msg = m.replace(/^.*?ERROR:\s*/, "");
+  return /^not_enough_stock\b/.test(msg) ? "not_enough_stock" : msg;
+};
 
 async function posLocationOk(s: Staff, locationId: string) {
   if (!isId(locationId) || !canUseLocation(s, locationId)) return false;
@@ -199,6 +203,8 @@ export type SaleInput = {
   clientId: string; locationId: string; shiftId: string; salespersonId?: string; customerId?: string; quotationId?: string;
   lines: CartLine[]; payments: { method: string; amount: string; reference?: string }[]; cashTendered?: string;
   offlineTempNo?: string; issuedAt?: string; approverUsername?: string; approverPin?: string;
+  /** A new customer typed at the till (e.g. offline): found or created by mobile when the sale is saved. */
+  customerPhone?: string; customerName?: string;
 };
 
 export async function postSaleAction(input: SaleInput): Promise<PosResult<{ invoiceId: string; number: string; change: string; duplicate: boolean }>> {
@@ -208,6 +214,21 @@ export async function postSaleAction(input: SaleInput): Promise<PosResult<{ invo
   // A retried request must return the first result, even if prices changed meanwhile.
   const { data: done } = await db().from("invoices").select("id, number, change_given").eq("client_id", input.clientId).maybeSingle();
   if (done) return { ok: true, invoiceId: done.id, number: done.number, change: fmt(done.change_given), duplicate: true };
+
+  // Customer: required on every receipt unless this person may skip it.
+  let customerId = isId(input.customerId) ? input.customerId : null;
+  if (!customerId && input.customerPhone) {
+    const phone = normalizeSaudiMobile(String(input.customerPhone));
+    const name = String(input.customerName ?? "").trim().slice(0, 200);
+    if (!phone) return { ok: false, error: "bad_phone" };
+    const { data: found } = await db().from("customers").select("id").eq("phone", phone).maybeSingle();
+    if (found) customerId = found.id;
+    else if (name) {
+      const { data: made } = await db().from("customers").insert({ phone, name, created_by: s.id }).select("id, customer_no").single();
+      if (made) { customerId = made.id; await audit(s.id, "customer.create", "customer", made.id, { customer_no: made.customer_no, from: input.offlineTempNo ? "pos-offline" : "pos" }); }
+    }
+  }
+  if (!customerId && !has(s, "pos.skip_customer") && !input.offlineTempNo) return { ok: false, error: "customer_required" };
 
   let lines: PricedLine[];
   let approvedBy: string | null = null;
@@ -229,7 +250,7 @@ export async function postSaleAction(input: SaleInput): Promise<PosResult<{ invo
     p: {
       client_id: input.clientId, location_id: input.locationId, shift_id: input.shiftId, cashier_id: s.id,
       salesperson_id: isId(input.salespersonId) ? input.salespersonId : s.id,
-      customer_id: isId(input.customerId) ? input.customerId : null,
+      customer_id: customerId,
       quotation_id: isId(input.quotationId) ? input.quotationId : null,
       lines, payments, cash_tendered: tendered,
       issued_at: input.issuedAt && !Number.isNaN(Date.parse(input.issuedAt)) ? new Date(input.issuedAt).toISOString() : null,
@@ -273,6 +294,7 @@ export async function postReturnAction(input: ReturnInput): Promise<PosResult<{ 
   if (!isId(input.clientId) || !isId(input.shiftId) || !(await posLocationOk(s, input.locationId))) return { ok: false, error: "location_not_allowed" };
   const { data: done } = await db().from("invoices").select("id, number, gross_total").eq("client_id", input.clientId).maybeSingle();
   if (done) return { ok: true, invoiceId: done.id, number: done.number, total: fmt(done.gross_total) };
+  if (!isId(input.originalInvoiceId) && !has(s, "pos.return_no_receipt")) return { ok: false, error: "no_receipt_forbidden" };
   const a = await checkApproval(s, "approval.return", input.approverUsername, input.approverPin);
   if (!a.ok) return { ok: false, error: a.error };
 

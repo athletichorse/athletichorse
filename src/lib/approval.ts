@@ -3,7 +3,7 @@ import { db } from "./supabase/admin";
 import { isRole, needsApproval, resolvePermissions, type APPROVAL_RULE_KEYS, type Staff } from "./permissions-server";
 
 type Rule = (typeof APPROVAL_RULE_KEYS)[number];
-export type ApprovalResult = { ok: true; approverId: string | null } | { ok: false; error: "approval_required" | "approval_invalid" };
+export type ApprovalResult = { ok: true; approverId: string | null } | { ok: false; error: "approval_required" | "approval_invalid" | "approval_locked" };
 
 /**
  * Manager approval (username + PIN). When `rule` applies to this person, the given
@@ -16,7 +16,11 @@ export async function checkApproval(staff: Staff, rule: Rule, approverUsername?:
   const pin = String(approverPin ?? "").trim();
   if (!u || !pin) return { ok: false, error: "approval_required" };
   const { data: id } = await db().rpc("verify_staff_pin", { p_username: u, p_pin: pin });
-  if (!id || id === staff.id) return { ok: false, error: "approval_invalid" };
+  if (!id) {
+    const { data: locked } = await db().rpc("staff_pin_locked", { p_username: u });
+    return { ok: false, error: locked ? "approval_locked" : "approval_invalid" };
+  }
+  if (id === staff.id) return { ok: false, error: "approval_invalid" };
   const { data: p } = await db().from("profiles").select("role, active").eq("id", id).maybeSingle();
   if (!p?.active || !isRole(p.role)) return { ok: false, error: "approval_invalid" };
   const [{ data: rp }, { data: up }] = await Promise.all([

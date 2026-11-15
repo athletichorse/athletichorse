@@ -3,6 +3,7 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { PageHeader } from "@/components/PageHeader";
 import { saveCompanyAction } from "@/app/actions/company";
+import { POS_SETTING_KEYS, readPosSettings } from "@/lib/pos-settings";
 
 export default async function CompanyPage({ searchParams }: { searchParams: Promise<{ err?: string; ok?: string }> }) {
   await requirePermission("settings.edit");
@@ -10,11 +11,20 @@ export default async function CompanyPage({ searchParams }: { searchParams: Prom
   const sp = await searchParams;
   const [{ data: c }, { data: settings }, { data: locs }] = await Promise.all([
     db().from("company").select("*").eq("id", 1).maybeSingle(),
-    db().from("settings").select("key, value").in("key", ["vat_rate", "website_stock_location"]),
+    db().from("settings").select("key, value").in("key", ["vat_rate", "website_stock_location", ...POS_SETTING_KEYS]),
     db().from("locations").select("id, name_ar, name_en, kind").eq("active", true).order("kind").order("code"),
   ]);
   const get = (k: string) => settings?.find((x) => x.key === k)?.value;
-  const err = sp.err === "vat" ? t.company.badVat : sp.err === "cr" ? t.company.badCr : sp.err;
+  const ps = readPosSettings(settings);
+  const posLabels = t.company.pos as Record<string, string>;
+  const err = sp.err === "vat" ? t.company.badVat : sp.err === "cr" ? t.company.badCr
+    : sp.err?.startsWith("pos:") ? `${t.company.pos.bad}: ${posLabels[sp.err.slice(4)] ?? sp.err.slice(4)}` : sp.err;
+  const num = (name: keyof typeof ps & string, step = "1") => (
+    <div>
+      <label className="label" htmlFor={name}>{posLabels[name]}</label>
+      <input id={name} name={name} type="number" step={step} defaultValue={String(ps[name])} className="input" dir="ltr" />
+    </div>
+  );
 
   const field = ({ name, label, ltr, value, hint }: { name: string; label: string; ltr?: boolean; value?: string | null; hint?: string }) => (
     <div>
@@ -61,6 +71,34 @@ export default async function CompanyPage({ searchParams }: { searchParams: Prom
               ))}
             </select>
             <p className="hint">{t.company.websiteStockHint}</p>
+          </div>
+        </section>
+
+        <section className="card" id="cashier">
+          <h2 className="card-title">{t.company.pos.title}</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <label className="label" htmlFor="receipt_footer_en">{t.company.pos.receipt_footer_en}</label>
+              <textarea id="receipt_footer_en" name="receipt_footer_en" defaultValue={ps.receipt_footer_en} rows={2} className="input" dir="ltr" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="label" htmlFor="receipt_footer_ar">{t.company.pos.receipt_footer_ar}</label>
+              <textarea id="receipt_footer_ar" name="receipt_footer_ar" defaultValue={ps.receipt_footer_ar} rows={2} className="input" dir="rtl" />
+            </div>
+            {num("receipt_paper_mm")}
+            {num("receipt_width_mm")}
+            <label className="flex items-start gap-2 text-sm md:col-span-2">
+              <input type="checkbox" name="block_negative_stock" defaultChecked={ps.block_negative_stock} className="mt-0.5 h-4 w-4 accent-[var(--brand)]" />
+              <span><span className="font-medium">{t.company.pos.block_negative_stock}</span><span className="hint block">{t.company.pos.blockHint}</span></span>
+            </label>
+          </div>
+          <h3 className="mt-6 mb-3 text-sm font-semibold text-gray-700">{t.company.pos.attendance}</h3>
+          <div className="grid gap-4 md:grid-cols-3">
+            {num("late_allowed")}
+            {num("late_day_value", "0.05")}
+            {num("absence_days", "0.5")}
+            {num("unexcused_absence_days", "0.5")}
+            {num("overtime_rate", "0.05")}
           </div>
         </section>
 

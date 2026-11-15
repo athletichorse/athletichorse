@@ -23,7 +23,7 @@ type Props = {
   shift: { id: string; locationId: string; openedAt: string; openingCash: string } | null;
   methods: Method[]; people: { id: string; name: string }[]; vatRate: string;
   quotes: { no: number; total: string; at: string }[];
-  can: { shift: boolean; sell: boolean; desk: boolean; collect: boolean; ret: boolean; discount: boolean; priceChange: boolean; cashOut: boolean; addCustomer: boolean };
+  can: { shift: boolean; sell: boolean; desk: boolean; collect: boolean; ret: boolean; retNoReceipt: boolean; skipCustomer: boolean; discount: boolean; priceChange: boolean; cashOut: boolean; addCustomer: boolean };
   approval: { discount: boolean; ret: boolean; cashOut: boolean };
 };
 
@@ -243,15 +243,20 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
   }
   function reset() { setLines([]); setCustomer(null); setPhone(""); setCustName(""); setPayments([]); setCashGiven(""); setMgr({ u: "", p: "" }); setQuoteId(null); setQuoteNo(""); clientId.current = uuid(); }
 
+  /** Every receipt needs the customer unless this person may skip it: a picked customer, or a mobile + name typed here. */
+  const typedCustomer = !customer && phone.trim() && custName.trim() ? { customerPhone: phone.trim(), customerName: custName.trim() } : {};
+  const customerMissing = mode !== "desk" && !p.can.skipCustomer && !customer && !("customerPhone" in typedCustomer);
+
   /** No connection: keep the sale on this device with a temporary number; it is sent automatically later. */
   function saveOffline(cart: { variantId: string; qty: string; unitPrice: string; discount: string }[]) {
     const o = t.pos.offline;
     if (!p.off.enabled || mode !== "sell") return p.setMsg({ ok: false, text: p.off.enabled ? o.needsOnline : o.notEnabled });
     if (changed && p.approval.discount) return p.setMsg({ ok: false, text: o.noApprovalOffline });
     if (pays.some((x) => p.methods.find((m) => m.code === x.method)?.kind === "on_account")) return p.setMsg({ ok: false, text: o.noAccountOffline });
+    if (customerMissing) return p.setMsg({ ok: false, text: err("customer_required") });
     const sale = p.off.save({
       clientId: clientId.current, createdAt: new Date().toISOString(), locationId: s.locationId, shiftId: s.id, total: formatDecimal(totalH),
-      payload: { salespersonId: salesperson, customerId: customer?.id, lines: cart, payments: pays, cashTendered: cashGiven || undefined },
+      payload: { salespersonId: salesperson, customerId: customer?.id, ...typedCustomer, lines: cart, payments: pays, cashTendered: cashGiven || undefined },
       lines: lines.map((l) => ({ name: l.options ? `${l.name} - ${l.options}` : l.name, qty: l.qty, price: l.price, discount: l.discount })),
     });
     const branch = p.locations.find((l) => l.id === s.locationId)?.name ?? "";
@@ -264,6 +269,7 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
     setBusy(true);
     p.setMsg(null);
     const cart = lines.map((l) => ({ variantId: l.variantId, qty: l.qty, unitPrice: l.price, discount: l.discount }));
+    if (customerMissing) { setBusy(false); return p.setMsg({ ok: false, text: err("customer_required") }); }
     if (mode === "sell" && p.off.enabled && !navigator.onLine) { setBusy(false); return saveOffline(cart); }
     try { await submitOnline(cart); } catch (e) {
       if (looksOffline(e)) saveOffline(cart); else p.setMsg({ ok: false, text: String(e) });
@@ -278,7 +284,7 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
       return;
     }
     const r = await postSaleAction({
-      clientId: clientId.current, locationId: s.locationId, shiftId: s.id, salespersonId: salesperson, customerId: customer?.id,
+      clientId: clientId.current, locationId: s.locationId, shiftId: s.id, salespersonId: salesperson, customerId: customer?.id, ...typedCustomer,
       quotationId: quoteId ?? undefined, lines: cart, payments: pays, cashTendered: cashGiven || undefined, approverUsername: mgr.u, approverPin: mgr.p,
     });
     setBusy(false);
@@ -364,7 +370,7 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
                   if (r.customer) setCustomer(r.customer); else setCustNotFound(true);
                 }}>{t.pos.findCustomer}</button>
               </div>
-              {custNotFound && p.can.addCustomer && (
+              {(custNotFound || (!p.can.skipCustomer && phone.trim() !== "")) && p.can.addCustomer && (
                 <div className="flex gap-2">
                   <input className="input" placeholder={t.pos.customerName} value={custName} onChange={(e) => setCustName(e.target.value)} />
                   <button className="btn-ghost" onClick={async () => {
@@ -373,7 +379,7 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
                   }}>{t.pos.addCustomer}</button>
                 </div>
               )}
-              <p className="hint">{t.pos.walkIn}</p>
+              <p className="hint">{p.can.skipCustomer || mode === "desk" ? t.pos.walkIn : t.pos.errors.customer_required}</p>
             </>
           )}
           <label className="label pt-2">{t.pos.salesperson}</label>
@@ -439,7 +445,7 @@ function ReturnView(p: Props & { setMsg: (m: { ok: boolean; text: string; href?:
 
   return (
     <section className="card space-y-4">
-      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={noReceipt} onChange={(e) => { setNoReceipt(e.target.checked); setInv(null); }} className="h-4 w-4 accent-[var(--brand)]" /> {t.pos.noReceipt}</label>
+      {p.can.retNoReceipt && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={noReceipt} onChange={(e) => { setNoReceipt(e.target.checked); setInv(null); }} className="h-4 w-4 accent-[var(--brand)]" /> {t.pos.noReceipt}</label>}
       {!noReceipt ? (
         <>
           <div className="flex gap-2">

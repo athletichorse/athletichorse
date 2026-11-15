@@ -32,9 +32,13 @@ export const PERMISSION_KEYS = [
   "pos.price_change",
   "pos.cash_out",
   "pos.reprint",
+  "pos.return_no_receipt", // returns without a receipt
+  "pos.skip_customer", // sell without the customer's mobile + name
+  "pos.past_shifts", // closed shifts and their reports
   // Sales / المبيعات
   "sales.view",
   "sales.view_all_branches",
+  "sales.website_orders",
   // Stock / المخازن
   "stock.view",
   "stock.transfer",
@@ -42,16 +46,24 @@ export const PERMISSION_KEYS = [
   "stock.write_off",
   "stock.count",
   "stock.log",
+  "stock.requests", // restock requests → transfers
+  "stock.all_locations", // see every location's stock (off: own branch)
   // Products / المنتجات
   "products.view",
   "products.edit",
   "products.view_cost",
+  "products.add", // new items with colours and sizes
+  "products.sale_prices", // sale price for a period
+  "products.labels", // print barcode stickers
   // Customers / العملاء
   "customers.view",
   "customers.edit",
   // Staff / الموظفين
   "staff.view",
   "staff.edit",
+  "staff.salespeople", // salespeople and daily attendance
+  "staff.payroll",
+  "staff.payroll_edit", // change, approve and reopen salaries
   // Admin
   "permissions.edit",
   "locations.edit",
@@ -97,20 +109,23 @@ export const PERMISSION_GROUPS: Record<string, readonly PermissionKey[]> = {
 
 const ALL = PERMISSION_KEYS;
 const APPROVAL_ALL = [...APPROVAL_RULE_KEYS];
-const cashierBase: PermissionKey[] = ["pos.collect", "pos.quick_sale", "pos.shift", "pos.return", "pos.reprint", "customers.view", "customers.edit", "products.view"];
-const deskBase: PermissionKey[] = ["pos.desk", "customers.view", "customers.edit", "products.view"];
+const cashierBase: PermissionKey[] = ["pos.collect", "pos.quick_sale", "pos.shift", "pos.return", "pos.return_no_receipt", "pos.reprint", "customers.view", "customers.edit", "products.view", "stock.view", "stock.requests"];
+const deskBase: PermissionKey[] = ["pos.desk", "customers.view", "customers.edit", "products.view", "stock.view", "stock.requests"];
+
+/** Till staff only see الكاشير and المخازن in the menu. */
+export const TILL_ROLES: readonly Role[] = ["cashier", "pos", "cashier_pos"];
 
 export const ROLE_DEFAULTS: Record<Role, readonly PermissionKey[]> = {
   owner: ALL,
   manager: ALL.filter(
-    (k) => k !== "permissions.edit" && k !== "settings.edit" && !(APPROVAL_ALL as string[]).includes(k),
+    (k) => k !== "permissions.edit" && k !== "settings.edit" && k !== "staff.payroll_edit" && !(APPROVAL_ALL as string[]).includes(k),
   ),
-  accountant: ["sales.view", "sales.view_all_branches", "reports.view", "products.view", "products.view_cost", "customers.view", "stock.view", "stock.log", "audit.view"],
-  warehouse: ["stock.view", "stock.transfer", "stock.receive", "stock.count", "stock.log", "stock.write_off", "products.view", "approval.stock_receive", "approval.write_off"],
+  accountant: ["sales.view", "sales.view_all_branches", "sales.website_orders", "reports.view", "products.view", "products.view_cost", "customers.view", "stock.view", "stock.log", "stock.all_locations", "audit.view", "staff.payroll", "staff.payroll_edit", "pos.past_shifts"],
+  warehouse: ["stock.view", "stock.transfer", "stock.receive", "stock.count", "stock.log", "stock.write_off", "stock.requests", "stock.all_locations", "products.view", "products.labels", "approval.stock_receive", "approval.write_off"],
   cashier: [...cashierBase, "sales.view", ...APPROVAL_ALL],
   pos: [...deskBase, ...APPROVAL_ALL],
   cashier_pos: [...new Set<PermissionKey>([...cashierBase, ...deskBase, "sales.view", ...APPROVAL_ALL])],
-  marketing: ["customers.view", "products.view", "sales.view", "reports.view"],
+  marketing: ["customers.view", "products.view", "sales.view", "sales.website_orders", "reports.view"],
 };
 
 export type Override = { permission: string; allowed: boolean };

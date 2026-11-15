@@ -71,8 +71,9 @@ export async function finishShopifySync(runId: string): Promise<SyncResult> {
 }
 
 /**
- * Website orders → portal (daily and "Sync orders now"). Fetches orders updated since the
- * last successful run (minus a day of overlap; every order is an upsert, so overlap is harmless).
+ * Website orders → portal (daily and "Sync orders now"). Every run is a FULL check of all
+ * orders the app may read, so older orders appear as soon as Shopify allows them and nothing
+ * missed is left behind. Every order is an upsert, so re-reading is harmless.
  */
 export async function runOrdersSync(trigger: "manual" | "daily", userId: string | null): Promise<SyncResult> {
   const cfg = ordersConfig();
@@ -80,13 +81,10 @@ export async function runOrdersSync(trigger: "manual" | "daily", userId: string 
   const { data: running } = await db().from("sync_runs").select("id").eq("source", "shopify_orders").eq("status", "running")
     .gte("started_at", new Date(Date.now() - 10 * 60_000).toISOString()).limit(1);
   if (running?.length) return { ok: false, error: "A sync is already running" };
-  const { data: last } = await db().from("sync_runs").select("started_at").eq("source", "shopify_orders").eq("status", "ok")
-    .order("started_at", { ascending: false }).limit(1).maybeSingle();
   const { data: run, error: e0 } = await db().from("sync_runs").insert({ source: "shopify_orders", trigger, started_by: userId }).select("id").single();
   if (e0 || !run) return { ok: false, error: e0?.message ?? "Could not start sync" };
   try {
-    const since = last ? new Date(new Date(last.started_at).getTime() - 24 * 3600_000).toISOString() : null;
-    const orders = (await fetchOrders(cfg, since)).map(mapOrder);
+    const orders = (await fetchOrders(cfg, null)).map(mapOrder);
     const counts = { orders_new: 0, orders_updated: 0, customers_new: 0, stock_moves: 0, fetched: orders.length };
     for (const part of chunk(orders, 50)) {
       const { data, error } = await db().rpc("sync_shopify_orders", { p_orders: part });
