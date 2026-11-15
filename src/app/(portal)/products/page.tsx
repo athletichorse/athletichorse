@@ -8,6 +8,10 @@ import { formatSAR, toHalalas } from "@/lib/money";
 import { thumb } from "@/lib/images";
 import { PageHeader } from "@/components/PageHeader";
 import { syncNowAction } from "@/app/actions/products";
+import { AutoRefresh } from "@/components/AutoRefresh";
+import { PendingButton } from "@/components/PendingButton";
+
+export const maxDuration = 300;
 
 const PER_PAGE = 50;
 type SP = { q?: string; f?: string; page?: string; err?: string; synced?: string };
@@ -65,7 +69,6 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         {canEdit && <Link href="/products/new" className="btn-primary no-print">{t.products.newProduct}</Link>}
       </PageHeader>
       {sp.err && <p className="alert-err">{sp.err}</p>}
-      {sp.synced && <p className="alert-ok">{t.products.syncDone}</p>}
 
       <div className="card no-print mb-6 flex flex-wrap items-center gap-4">
         <div className="min-w-0 flex-1">
@@ -90,9 +93,10 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         </div>
         {canEdit && (
           <form action={syncNowAction}>
-            <button className="btn-ghost">{t.products.syncNow}</button>
+            <PendingButton className="btn-ghost" label={t.products.syncNow} pendingLabel={t.products.syncRunning} disabled={lastRun?.status === "running"} />
           </form>
         )}
+        <AutoRefresh active={lastRun?.status === "running"} />
       </div>
 
       {missingTotal > 0 && (

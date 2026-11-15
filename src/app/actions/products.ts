@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { assertPermission } from "@/lib/auth";
 import { db } from "@/lib/supabase/admin";
 import { formatDecimal, toHalalas } from "@/lib/money";
-import { runShopifySync } from "@/lib/shopify-sync";
+import { after } from "next/server";
+import { finishShopifySync, startShopifySync } from "@/lib/shopify-sync";
 
 const CODE = /^[A-Za-z0-9._/-]{1,40}$/;
 const UNITS = ["piece", "pair", "set", "box", "kg", "m"] as const;
@@ -142,9 +143,15 @@ export async function saveGroupAction(form: FormData) {
   redirect("/products/groups?ok=1");
 }
 
+/** Starts the website sync and returns at once; the page shows "Running…" and refreshes itself. */
 export async function syncNowAction() {
   const staff = await assertPermission("products.edit");
-  const r = await runShopifySync("manual", staff.id);
+  const r = await startShopifySync("manual", staff.id);
+  if (!r.ok || !r.runId) redirect(`/products?err=${encodeURIComponent(r.error ?? "sync")}`);
+  const runId = r.runId;
+  after(async () => {
+    await finishShopifySync(runId);
+  });
   revalidatePath("/products");
-  redirect(r.ok ? "/products?synced=1" : `/products?err=${encodeURIComponent(r.error ?? "sync")}`);
+  redirect("/products");
 }

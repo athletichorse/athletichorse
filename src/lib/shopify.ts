@@ -89,12 +89,25 @@ export async function fetchAllProducts(storeUrl: string, fetchImpl: typeof fetch
   const base = normalizeStoreUrl(storeUrl);
   const all: ShopifyProduct[] = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
-    const res = await fetchImpl(`${base}/products.json?limit=${PAGE_SIZE}&page=${page}`, {
-      headers: { accept: "application/json", "user-agent": "staff-portal-sync/1.0" },
-      cache: "no-store",
-    });
-    if (!res.ok) throw new Error(`Website returned ${res.status} on page ${page}`);
-    const body = (await res.json()) as { products?: ShopifyProduct[] };
+    const url = `${base}/products.json?limit=${PAGE_SIZE}&page=${page}`;
+    let body: { products?: ShopifyProduct[] } | null = null;
+    let lastError = "";
+    for (let attempt = 1; attempt <= 3 && !body; attempt++) {
+      try {
+        const res = await fetchImpl(url, {
+          headers: { accept: "application/json", "user-agent": "Mozilla/5.0 (compatible; StaffPortalSync/1.0)" },
+          cache: "no-store",
+          signal: AbortSignal.timeout(30_000),
+        });
+        if (res.ok) body = (await res.json()) as { products?: ShopifyProduct[] };
+        else lastError = `Website returned ${res.status} on page ${page}`;
+        if (res.status >= 400 && res.status < 500 && res.status !== 429) break; // won't fix itself
+      } catch (err) {
+        lastError = `Could not reach the website (page ${page}): ${err instanceof Error ? err.message : String(err)}`;
+      }
+      if (!body && attempt < 3) await new Promise((r) => setTimeout(r, 1000 * attempt));
+    }
+    if (!body) throw new Error(lastError || `Website page ${page} failed`);
     const items = body.products ?? [];
     all.push(...items.map(slimProduct));
     if (items.length < PAGE_SIZE) return all;
