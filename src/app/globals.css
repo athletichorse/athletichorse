@@ -69,3 +69,6 @@ body {
   html[data-print="receipt80"] aside, html[data-print="receipt80"] header.no-print { display: none !important; }
   html[data-print="receipt80"] .lg\:ps-64 { padding: 0 !important; }
 }
+
+/* ---------- Loading bar ---------- */
+@keyframes loadbar { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
