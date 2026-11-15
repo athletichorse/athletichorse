@@ -2,6 +2,7 @@
 
 import { assertPermission } from "@/lib/auth";
 import { db } from "@/lib/supabase/admin";
+import { audit } from "@/lib/audit";
 import { BRAND, convertPrice, isCode, scrubBrand, type ImportRow, type Rate } from "@/lib/product-import";
 
 export type ChunkResult = { ok: true; counts: Record<string, number> } | { ok: false; error: string };
@@ -47,5 +48,6 @@ export async function importProductsChunk(rows: ImportRow[], rate: Rate): Promis
 
   const { data, error } = await db().rpc("import_products", { p_rows: clean, p_vendor: BRAND.en });
   if (error) return { ok: false, error: error.message };
+  await audit(staff.id, "products.import_file", "products", null, { rows: clean.length, ...(data as Record<string, number>) });
   return { ok: true, counts: data as Record<string, number> };
 }

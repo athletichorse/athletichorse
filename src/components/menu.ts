@@ -10,14 +10,14 @@ type Entry = { key: keyof Dict["menu"]; href: string; icon: IconName; perms: Per
 const MAIN: Entry[] = [
   { key: "home", href: "/", icon: "home", perms: null },
   { key: "pos", href: "/pos", icon: "pos", perms: ["pos.collect", "pos.desk", "pos.quick_sale"], soon: true },
-  { key: "stock", href: "/stock", icon: "stock", perms: ["stock.view"], soon: true },
+  { key: "stock", href: "/stock", icon: "stock", perms: ["stock.view"] },
   { key: "sales", href: "/sales", icon: "sales", perms: ["sales.view"], soon: true },
   { key: "products", href: "/products", icon: "products", perms: ["products.view"] },
-  { key: "customers", href: "/customers", icon: "customers", perms: ["customers.view"], soon: true },
+  { key: "customers", href: "/customers", icon: "customers", perms: ["customers.view"] },
   { key: "staff", href: "/staff", icon: "staff", perms: ["staff.view"] },
-  { key: "stockLog", href: "/stock-log", icon: "stockLog", perms: ["stock.log"], soon: true },
+  { key: "stockLog", href: "/stock-log", icon: "stockLog", perms: ["stock.log"] },
   { key: "upload", href: "/upload", icon: "upload", perms: ["upload.import"] },
-  { key: "audit", href: "/audit", icon: "audit", perms: ["audit.view"], soon: true },
+  { key: "audit", href: "/audit", icon: "audit", perms: ["audit.view"] },
 ];
 
 const ADMIN: { key: keyof Dict["nav"]; href: string; icon: IconName; perm: PermissionKey }[] = [
