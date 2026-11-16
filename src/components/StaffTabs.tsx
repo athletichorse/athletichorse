@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { TabNav } from "./TabNav";
 import type { Dict } from "@/i18n";
 import type { PermissionKey } from "@/lib/permissions";
 
@@ -14,11 +14,7 @@ export function StaffTabs({ t, perms, active }: { t: Dict; perms: ReadonlySet<Pe
     ["advances", "/staff/advances", T.advances, "staff.payroll"],
   ] as const).filter(([, , , p]) => perms.has(p));
   return (
-    <nav className="no-print mb-4 flex gap-1 overflow-x-auto border-b border-[var(--line)]">
-      {tabs.map(([k, href, label]) => (
-        <Link key={k} href={href} className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium whitespace-nowrap ${active === k ? "border-[var(--brand)] text-[var(--brand)]" : "border-transparent text-gray-600 hover:text-gray-900"}`}>{label}</Link>
-      ))}
-    </nav>
+    <TabNav tabs={tabs.map(([k, h, l]) => [k, h, l] as const)} active={active} />
   );
 }
 

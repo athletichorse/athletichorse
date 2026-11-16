@@ -188,7 +188,7 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
         </p>
       )}
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex flex-wrap gap-2 pb-1">
         {p.tabs.map((k) => (
           <button key={k} onClick={() => { p.setTab(k); p.setMsg(null); }} className={`rounded-full px-4 py-1.5 text-sm font-medium whitespace-nowrap ${p.tab === k ? "bg-[var(--brand)] text-white" : "border border-[var(--line)] bg-white text-gray-700"}`}>
             {k === "sell" ? t.pos.sell : k === "desk" ? t.pos.desk : k === "collect" ? t.pos.collect : t.pos.returns}
