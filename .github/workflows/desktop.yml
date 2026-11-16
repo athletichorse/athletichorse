@@ -1,0 +1,31 @@
+name: Windows app
+
+# Builds the Windows installer (Store Portal Setup .exe). Run it from the Actions tab
+# ("Run workflow"), or it runs when the desktop app changes. Download it from the run's artifacts.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["desktop/**", ".github/workflows/desktop.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: store-portal-windows
+          path: desktop/dist/*.exe
+          if-no-files-found: error

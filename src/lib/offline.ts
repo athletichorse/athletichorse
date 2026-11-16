@@ -39,6 +39,7 @@ export type QueuedSale = {
     lines: { variantId: string; qty: string; unitPrice: string; discount: string }[];
     payments: { method: string; amount: string }[];
     cashTendered?: string;
+    quoteTempNo?: string; // collected from a desk slip made offline
   };
   lines: { name: string; qty: string; price: string; discount: string }[]; // for the temporary receipt
   error?: string;      // last refusal from the server (not a network error)
@@ -172,3 +173,90 @@ export async function flushQueue(
 export const looksOffline = (e: unknown) =>
   (typeof navigator !== "undefined" && navigator.onLine === false) ||
   /fetch|network|load failed|connection/i.test(String((e as Error)?.message ?? e));
+
+// ------------------------------------------------------------ connection
+/**
+ * Real connection check (navigator.onLine only knows about the cable/Wi-Fi): the page pings
+ * /api/ping every few seconds. Two failed pings in a row = offline; one good ping = online.
+ */
+export type ConnState = { online: boolean; fails: number; since: number };
+export const PING_EVERY_MS = 5_000;
+export const FAILS_TO_OFFLINE = 2;
+export function nextConn(s: ConnState, pingOk: boolean, now: number): ConnState {
+  if (pingOk) return s.online ? { ...s, fails: 0 } : { online: true, fails: 0, since: now };
+  const fails = s.fails + 1;
+  return s.online && fails >= FAILS_TO_OFFLINE ? { online: false, fails, since: now } : { ...s, fails };
+}
+
+// ------------------------------------------------------------ customers copy
+/** i = id, no = customer no., n = name, p = +9665… mobile, d = usual discount % */
+export type CustomerItem = { i: string; no: number; n: string; p: string; d: number };
+const KC = "pos-customers-v1";
+export const loadCustomers = (st: Store) => readJson<{ savedAt: string; items: CustomerItem[] } | null>(st, KC, null);
+export const saveCustomers = (st: Store, items: CustomerItem[], savedAt = new Date().toISOString()) => st.set(KC, JSON.stringify({ savedAt, items }));
+
+/** Same rules as the online search: mobile, then customer no., then name contains. */
+export function searchCustomersLocal(items: CustomerItem[], term: string, normalizePhone: (s: string) => string | null): CustomerItem[] {
+  const t = term.trim();
+  if (!t) return [];
+  const phone = normalizePhone(t);
+  if (phone) return items.filter((c) => c.p === phone).slice(0, 1);
+  if (/^\d{1,9}$/.test(t)) { const hit = items.filter((c) => c.no === Number(t)); if (hit.length) return hit.slice(0, 1); }
+  const q = t.toLowerCase();
+  return items.filter((c) => c.n.toLowerCase().includes(q)).slice(0, 10);
+}
+
+// ------------------------------------------------------------ other offline work (drawer entries, desk quotations)
+export type QueuedOp =
+  | { kind: "drawer"; clientId: string; shiftId: string; createdAt: string; label: string; payload: { kind: "cash_out" | "cash_in" | "expense" | "customer_payment"; amount: string; reason: string; expenseTypeId?: string; customerId?: string; method?: string }; error?: string }
+  | { kind: "quote"; clientId: string; shiftId: string; createdAt: string; label: string; tempNo: string; payload: { locationId: string; salespersonId?: string; customerId?: string; lines: { variantId: string; qty: string; unitPrice: string; discount: string }[] }; error?: string };
+const KO = "pos-offline-ops-v1";
+export const loadOps = (st: Store) => readJson<QueuedOp[]>(st, KO, []);
+const saveOps = (st: Store, q: QueuedOp[]) => (q.length ? st.set(KO, JSON.stringify(q)) : st.remove(KO));
+export function enqueueOp(st: Store, op: QueuedOp) {
+  const q = loadOps(st);
+  if (!q.some((x) => x.clientId === op.clientId)) saveOps(st, [...q, op]);
+}
+/** Same behaviour as flushQueue: in order, stop when still offline, keep refusals with their error. */
+export async function flushOps(st: Store, send: (op: QueuedOp) => Promise<SendResult | { ok: true }>, only: (op: QueuedOp) => boolean = () => true) {
+  let sent = 0, refused = 0, offline = false;
+  for (const op of loadOps(st).filter(only)) {
+    let r: SendResult | { ok: true };
+    try { r = await send(op); } catch { r = { ok: false, error: "network", network: true }; }
+    if (!r.ok && r.network) { offline = true; break; }
+    const q = loadOps(st);
+    if (r.ok) { saveOps(st, q.filter((x) => x.clientId !== op.clientId)); sent++; }
+    else { saveOps(st, q.map((x) => (x.clientId === op.clientId ? { ...x, error: r.error } : x))); refused++; }
+  }
+  return { sent, refused, offline, waiting: loadOps(st).length };
+}
+
+/** Temporary quotation number: OFF-<branch>-<device>-Q0001 (own counter). */
+export function nextQuoteTempNo(st: Store, branchCode: string): string {
+  const seq = Number(st.get("pos-offline-qseq") || "0") + 1;
+  st.set("pos-offline-qseq", String(seq));
+  return `OFF-${branchCode}-${deviceId(st)}-Q${String(seq).padStart(4, "0")}`;
+}
+
+// ------------------------------------------------------------ quotation QR (desk slip → cashier, works offline)
+/**
+ * The desk slip's QR holds the quotation itself, so the cashier can scan it even with no
+ * connection between the two devices: AHQ1|<number>|<variant>,<qty>,<price>,<discount>;…
+ */
+export type QrLine = { variantId: string; qty: string; unitPrice: string; discount: string };
+export function encodeQuoteQr(no: string, lines: QrLine[]): string {
+  return `AHQ1|${no}|${lines.map((l) => [l.variantId, l.qty, l.unitPrice, l.discount || "0"].join(",")).join(";")}`;
+}
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const NUM_RE = /^\d{1,9}(\.\d{1,3})?$/;
+export function decodeQuoteQr(text: string): { no: string; lines: QrLine[] } | null {
+  const m = /^AHQ1\|([A-Za-z0-9-]{1,40})\|(.+)$/.exec(text.trim());
+  if (!m) return null;
+  const lines: QrLine[] = [];
+  for (const part of m[2].split(";")) {
+    const [variantId, qty, unitPrice, discount] = part.split(",");
+    if (!UUID_RE.test(variantId ?? "") || ![qty, unitPrice, discount].every((x) => NUM_RE.test(x ?? "")) || Number(qty) <= 0) return null;
+    lines.push({ variantId, qty, unitPrice, discount });
+  }
+  return lines.length ? { no: m[1], lines } : null;
+}

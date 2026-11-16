@@ -401,6 +401,8 @@ const en: Dict = {
   },
   pos: {
     extra: {
+      slipIsQuote: "This slip is a saved quotation — collect it in Collect:",
+      slipLoaded: "Desk slip loaded:",
       drawer: "Drawer",
       expense: "Expense",
       expenseType: "Expense type",
@@ -558,6 +560,13 @@ const en: Dict = {
       noAccountOffline: "\"On account\" can't be used offline.",
       closeBlocked: "Some offline sales from this shift haven't been sent yet. Connect to the internet and wait until they are sent, then close the shift.",
       notEnabled: "No internet. Offline sales are not turned on for this device.",
+      offlineFor: "No connection for",
+      seconds: "s — working offline",
+      savedOfflineDrawer: "Saved on this device — it is sent when the connection is back.",
+      quoteSavedOffline: "Quotation saved on this device — temporary no.",
+      quoteSlip: "Quotation (offline)",
+      quoteSlipNote: "Show this slip at the cashier. The cashier scans the QR code.",
+      otherWaiting: "Drawer entries / quotations waiting",
     },
   },
   reports: {
