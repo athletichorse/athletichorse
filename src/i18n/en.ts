@@ -799,6 +799,7 @@ const en: Dict = {
       last: "Last",
       ok: "OK",
       failed: "Failed",
+      working: "Working… (can take a minute)",
       done: "Done",
       switchOff: "Turn the switch on and save first.",
       webhooksLocal: "Open the live site to connect instant updates.",

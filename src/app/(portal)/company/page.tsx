@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { saveCompanyAction } from "@/app/actions/company";
 import { saveWebsiteAction, websiteNowAction } from "@/app/actions/website";
 import { ordersConfig } from "@/lib/shopify-orders";
+import { PendingButton } from "@/components/PendingButton";
 import { POS_SETTING_KEYS, readPosSettings } from "@/lib/pos-settings";
 
 const WEB_KEYS = ["shopify_push_prices", "shopify_push_stock", "web_orders_to_quotes", "shopify_location_id", "shopify_push_last_prices", "shopify_push_last_stock", "shopify_push_last_webhooks", "shopify_push_last_import"];
@@ -124,6 +125,9 @@ export default async function CompanyPage({ searchParams }: { searchParams: Prom
       <section className="card mt-6" id="website">
         <h2 className="card-title">{w.title}</h2>
         <p className="hint mb-4">{connected ? w.intro : w.notConnected}</p>
+        {/* results show here too: the page opens scrolled to this section */}
+        {sp.done && <p className="alert-ok mb-4">{w.done}{sp.n ? ` (${sp.n})` : ""}</p>}
+        {err && (sp.err === "switch_off" || sp.err === "webhooks_local" || sp.err === "location" || !["vat", "cr", "rate", "logo"].includes(sp.err ?? "") && !sp.err?.startsWith("pos:")) && <p className="alert-err mb-4">{w.failed}: {err}</p>}
         <form action={saveWebsiteAction} className="space-y-4">
           {(["push_prices", "push_stock", "orders_to_quotes"] as const).map((k) => {
             const key = k === "orders_to_quotes" ? "web_orders_to_quotes" : `shopify_${k}`;
@@ -146,7 +150,7 @@ export default async function CompanyPage({ searchParams }: { searchParams: Prom
             {([["import", w.importStock, "import"], ["prices", w.sendPrices, "prices"], ["stock", w.sendStock, "stock"], ["quotes", w.makeQuotes, null], ["webhooks", w.webhooks, "webhooks"]] as const).map(([what, label, lastKey]) => (
               <form key={what} action={websiteNowAction}>
                 <input type="hidden" name="what" value={what} />
-                <button className="btn-ghost">{label}</button>
+                <PendingButton className="btn-ghost" label={label} pendingLabel={w.working} disabled={false} />
                 {what === "webhooks" && <p className="hint">{w.webhooksHint}</p>}
                 {what === "import" && <p className="hint">{w.importStockHint}</p>}
                 {lastKey && last(lastKey)}

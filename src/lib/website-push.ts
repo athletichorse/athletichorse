@@ -69,7 +69,7 @@ export async function pushStock(variantIds: string[] | null): Promise<{ ok: bool
     const location = await shopifyLocation(cfg, sw.location);
     const errors: string[] = [];
     let sent = 0;
-    for (const part of chunk(list, 100)) {
+    for (const part of chunk(list, 50)) {
       const r = await adminGraphql<{ nodes: ({ id: string; inventoryItem: { id: string } } | null)[] }>(cfg, INVENTORY_ITEMS_QUERY, { ids: part.map((x) => gid("ProductVariant", x.shopify_variant_id)) });
       const item = new Map(r.nodes.filter(Boolean).map((n) => [n!.id, n!.inventoryItem.id]));
       const stock = part.flatMap((x) => { const id = item.get(gid("ProductVariant", x.shopify_variant_id)); return id ? [{ inventoryItemId: id, qty: Number(x.qty) }] : []; });
@@ -165,8 +165,8 @@ export async function pushStockForInvoice(invoiceId: string, locationId: string)
   await pushStockIfWebsite([locationId], [...new Set((data ?? []).map((l) => l.variant_id).filter(Boolean) as string[])]);
 }
 
-const LEVELS_QUERY = `query L($after: String) { productVariants(first: 100, after: $after) { pageInfo { hasNextPage endCursor }
-  nodes { legacyResourceId inventoryItem { tracked inventoryLevels(first: 10) { nodes { location { id } quantities(names: ["available"]) { quantity } } } } } } }`;
+const LEVELS_QUERY = `query L($after: String) { productVariants(first: 50, after: $after) { pageInfo { hasNextPage endCursor }
+  nodes { legacyResourceId inventoryItem { tracked inventoryLevels(first: 3) { nodes { location { id } quantities(names: ["available"]) { quantity } } } } } } }`;
 
 /**
  * One time: the website's current "available" quantities (at its stock location) become the

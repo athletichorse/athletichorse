@@ -16,7 +16,20 @@ export async function adminToken(cfg: OrdersConfig, fetchImpl: typeof fetch = fe
   return token;
 }
 
-export async function adminGraphql<T>(cfg: OrdersConfig, query: string, variables: Record<string, unknown>, fetchImpl: typeof fetch = fetch): Promise<T> {
+/** Shopify limits how much can be asked per second: on "Throttled", wait and try again. */
+export async function adminGraphql<T>(cfg: OrdersConfig, query: string, variables: Record<string, unknown>, fetchImpl: typeof fetch = fetch, wait: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms))): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await adminGraphqlOnce<T>(cfg, query, variables, fetchImpl);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (attempt >= 8 || !/throttled|\(429\)/i.test(msg)) throw e;
+      await wait(Math.min(10_000, 1_500 * attempt));
+    }
+  }
+}
+
+async function adminGraphqlOnce<T>(cfg: OrdersConfig, query: string, variables: Record<string, unknown>, fetchImpl: typeof fetch): Promise<T> {
   const token = await adminToken(cfg, fetchImpl);
   const res = await fetchImpl(`https://${cfg.store}/admin/api/${API_VERSION}/graphql.json`, {
     method: "POST",
