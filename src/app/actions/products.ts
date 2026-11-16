@@ -185,7 +185,7 @@ export async function syncNowAction() {
     await finishShopifySync(runId);
   });
   revalidatePath("/products");
-  redirect("/products");
+  redirect("/products?synced=1");
 }
 
 // ---------------------------------------------------------------- names & prices file

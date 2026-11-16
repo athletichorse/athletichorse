@@ -75,7 +75,7 @@ async function layoutProblems(page) {
     const out = [];
     const vw = document.documentElement.clientWidth;
     const name = (el) => (el.getAttribute("aria-label") || el.innerText || el.getAttribute("placeholder") || el.getAttribute("name") || el.tagName).trim().replace(/\s+/g, " ").slice(0, 40);
-    const visible = (el) => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== "hidden" && s.display !== "none" && !el.closest("[hidden],[aria-hidden=true],.print-only,dialog:not([open])"); };
+    const visible = (el) => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== "hidden" && s.display !== "none" && !el.closest("[hidden],[aria-hidden=true],.print-only,dialog:not([open])") && !(el.closest("details:not([open])") && !el.closest("summary")); };
     const inScroller = (el) => { for (let p = el.parentElement; p; p = p.parentElement) { const s = getComputedStyle(p); if (/(auto|scroll)/.test(s.overflowX) && p.scrollWidth > p.clientWidth + 1) return true; } return false; };
     const inClosedMenu = (el) => { const r = el.getBoundingClientRect(); return r.right <= 0 || r.left >= vw; };
     if (document.documentElement.scrollWidth > vw + 1) out.push(`page is wider than the screen (${document.documentElement.scrollWidth}px > ${vw}px)`);
@@ -184,14 +184,20 @@ for (const view of VIEWS) {
         if (!(await btn.count()) || (await btn.isDisabled())) continue;
         const label = (await btn.innerText()).trim().slice(0, 40);
         if (SKIP_CLICK.test(label)) continue;
+        // search/filter forms (GET) just show the page again with the filter
+        if (((await f.getAttribute("method")) ?? "").toLowerCase() === "get") continue;
         where = `${view.name} ${path} form "${label}"`;
         const before = page.url();
+        const textBefore = await page.locator("main").innerText().catch(() => "");
         await btn.click({ timeout: 5000 }).catch(() => {});
+        // slow actions (website, sync) can take a while: wait for an answer, up to 45 s
+        await page.waitForFunction((u) => location.href !== u || document.querySelector(".alert-ok, .alert-err"), before, { timeout: 45000 }).catch(() => {});
         await page.waitForLoadState("networkidle").catch(() => {});
-        await page.waitForTimeout(400);
+        await page.waitForTimeout(800);
         const m = await messageVisible(page);
         if (m.any && !m.seen) fail(where, `the message ("${m.text}") is not visible on screen after sending`);
-        if (!m.any && page.url() === before) {
+        const changed = (await page.locator("main").innerText().catch(() => "")) !== textBefore;
+        if (!m.any && page.url() === before && !changed) {
           // nothing visible happened: a browser check (required field) is fine, otherwise the person gets no answer
           const invalid = await f.evaluate((el) => !el.checkValidity()).catch(() => false);
           if (!invalid) fail(where, "no message and nothing changed after sending");
