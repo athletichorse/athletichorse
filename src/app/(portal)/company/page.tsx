@@ -7,7 +7,7 @@ import { saveWebsiteAction, websiteNowAction } from "@/app/actions/website";
 import { ordersConfig } from "@/lib/shopify-orders";
 import { POS_SETTING_KEYS, readPosSettings } from "@/lib/pos-settings";
 
-const WEB_KEYS = ["shopify_push_prices", "shopify_push_stock", "web_orders_to_quotes", "shopify_location_id", "shopify_push_last_prices", "shopify_push_last_stock", "shopify_push_last_webhooks"];
+const WEB_KEYS = ["shopify_push_prices", "shopify_push_stock", "web_orders_to_quotes", "shopify_location_id", "shopify_push_last_prices", "shopify_push_last_stock", "shopify_push_last_webhooks", "shopify_push_last_import"];
 
 export default async function CompanyPage({ searchParams }: { searchParams: Promise<{ err?: string; ok?: string; done?: string; n?: string }> }) {
   await requirePermission("settings.edit");
@@ -143,11 +143,12 @@ export default async function CompanyPage({ searchParams }: { searchParams: Prom
         </form>
         {connected && (
           <div className="mt-6 grid gap-4 border-t pt-4 md:grid-cols-2">
-            {([["prices", w.sendPrices, "prices"], ["stock", w.sendStock, "stock"], ["quotes", w.makeQuotes, null], ["webhooks", w.webhooks, "webhooks"]] as const).map(([what, label, lastKey]) => (
+            {([["import", w.importStock, "import"], ["prices", w.sendPrices, "prices"], ["stock", w.sendStock, "stock"], ["quotes", w.makeQuotes, null], ["webhooks", w.webhooks, "webhooks"]] as const).map(([what, label, lastKey]) => (
               <form key={what} action={websiteNowAction}>
                 <input type="hidden" name="what" value={what} />
                 <button className="btn-ghost">{label}</button>
                 {what === "webhooks" && <p className="hint">{w.webhooksHint}</p>}
+                {what === "import" && <p className="hint">{w.importStockHint}</p>}
                 {lastKey && last(lastKey)}
               </form>
             ))}
