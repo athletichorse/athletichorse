@@ -37,3 +37,24 @@ describe("portal → website", () => {
     expect(a).not.toBe(quoteClientIdForOrder(124, md5));
   });
 });
+
+describe("Shopify busy (Throttled)", () => {
+  it("waits and tries again, then gives up after a few tries", async () => {
+    const { adminGraphql } = await import("@/lib/shopify-admin");
+    const cfg = { store: "t1.myshopify.com", clientId: "id", clientSecret: "s" };
+    let calls = 0;
+    const ok = async (url: string | URL | Request) => {
+      if (String(url).includes("oauth")) return new Response(JSON.stringify({ access_token: "tok" }));
+      calls++;
+      return new Response(JSON.stringify(calls < 3 ? { errors: [{ message: "Throttled" }] } : { data: { x: 1 } }));
+    };
+    const waits: number[] = [];
+    expect(await adminGraphql(cfg, "q", {}, ok as typeof fetch, async (ms) => void waits.push(ms))).toEqual({ x: 1 });
+    expect(waits).toHaveLength(2);
+    const cfg2 = { ...cfg, store: "t2.myshopify.com" };
+    const never = async (url: string | URL | Request) => String(url).includes("oauth") ? new Response(JSON.stringify({ access_token: "tok" })) : new Response(JSON.stringify({ errors: [{ message: "Throttled" }] }));
+    await expect(adminGraphql(cfg2, "q", {}, never as typeof fetch, async () => {})).rejects.toThrow(/Throttled/);
+    const bad = async (url: string | URL | Request) => String(url).includes("oauth") ? new Response(JSON.stringify({ access_token: "tok" })) : new Response(JSON.stringify({ errors: [{ message: "Field x missing" }] }));
+    await expect(adminGraphql({ ...cfg, store: "t3.myshopify.com" }, "q", {}, bad as typeof fetch, async () => { throw new Error("should not wait"); })).rejects.toThrow(/Field x/);
+  });
+});
