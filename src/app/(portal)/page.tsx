@@ -1,6 +1,7 @@
 import { requireStaff } from "@/lib/auth";
 import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
+import { riyadhDate } from "@/lib/time";
 import { Overview, type OverviewLoc } from "@/components/Overview";
 
 export default async function Home() {
@@ -16,6 +17,31 @@ export default async function Home() {
     db().from("product_list").select("missing_sku").eq("active", true).gt("missing_sku", 0),
     db().from("sync_runs").select("started_at, status, error").eq("source", "shopify").order("started_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
+  // today's pulse: till sales, items below zero, stock per location, latest syncs/uploads
+  const visible = seeAll ? (locData ?? []).map((l) => l.id) : s.locations === "all" ? (locData ?? []).map((l) => l.id) : s.locations;
+  const dayStart = new Date(`${riyadhDate(new Date())}T00:00:00+03:00`).toISOString();
+  const [{ data: todayInv }, { count: belowZero }, { data: runs }, { data: uploads }] = await Promise.all([
+    db().from("invoices").select("kind, gross_total, location_id").gte("issued_at", dayStart).in("location_id", visible.length ? visible : ["00000000-0000-0000-0000-000000000000"]),
+    db().from("stock_levels").select("variant_id", { count: "exact", head: true }).lt("qty", 0),
+    db().from("sync_runs").select("source, status, started_at").order("started_at", { ascending: false }).limit(4),
+    db().from("audit_log").select("action, at").in("action", ["products.prices_import", "products.import_file"]).order("at", { ascending: false }).limit(3),
+  ]);
+  const stockByLoc: Record<string, number> = {};
+  for (let from = 0; from < 200_000; from += 1000) {
+    const { data } = await db().from("stock_levels").select("location_id, qty").gt("qty", 0).range(from, from + 999);
+    for (const r of data ?? []) stockByLoc[r.location_id] = (stockByLoc[r.location_id] ?? 0) + Number(r.qty);
+    if (!data || data.length < 1000) break;
+  }
+  const pulse = {
+    todaySales: Math.round((todayInv ?? []).reduce((a, i) => a + (i.kind === "credit_note" ? -1 : 1) * Number(i.gross_total), 0) * 100) / 100,
+    todayInvoices: (todayInv ?? []).filter((i) => i.kind === "invoice").length,
+    belowZero: belowZero ?? 0,
+    stockByLoc,
+    latest: [
+      ...(runs ?? []).map((r) => ({ label: r.source === "shopify_orders" ? t.home.syncOrders : t.home.syncProducts, at: r.started_at, ok: r.status !== "error" })),
+      ...(uploads ?? []).map((u) => ({ label: u.action === "products.prices_import" ? t.home.priceFile : t.home.excelUpload, at: u.at, ok: true })),
+    ].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 6),
+  };
   const catalog = {
     products: products.count ?? 0,
     website: website.count ?? 0,
@@ -32,6 +58,7 @@ export default async function Home() {
       staff={staffData ?? []}
       webLocId={typeof webSetting?.value === "string" ? webSetting.value : null}
       catalog={catalog}
+      pulse={pulse}
     />
   );
 }
