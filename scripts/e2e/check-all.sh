@@ -5,6 +5,7 @@
 # SETUP_SECRET, CRON_SECRET (dummy local values).
 # Usage: bash scripts/e2e/check-all.sh [fresh-db-name]
 set -euo pipefail
+export PGOPTIONS="-c client_min_messages=warning"
 cd "$(dirname "$0")/../.."
 OUT=${OUT:-/tmp/e2e-shots}; BASE=${BASE:-http://localhost:3105}; DB=${1:-portal_check}
 step() { echo; echo "=== $1"; }
@@ -31,10 +32,10 @@ sleep 6
 
 # browser checks: run them all, then report (one failing does not hide the others)
 FAILED=""
-run() { local name=$1; shift; step "$name"; if ! "$@" > "$OUT-$name.log" 2>&1; then FAILED="$FAILED|$name"; fi; grep -E "✗|problems|passed" "$OUT-$name.log" | tail -40; }
+run() { local name=$1; shift; step "$name"; if ! "$@" > "$OUT-$name.log" 2>&1; then FAILED="$FAILED|$name"; fi; grep -E "✗|problems|passed" "$OUT-$name.log" | tail -40 || true; }
 mkdir -p "$OUT"
 run crawl env BASE=$BASE OUT=$OUT node scripts/e2e/crawl.mjs
-run offline env BASE=$BASE node scripts/e2e/offline.mjs
+run offline env BASE=$BASE node scripts/e2e/offline.mjs 100025
 run offline2 env BASE=$BASE CUSTOMER="Test Customer" node scripts/e2e/offline2.mjs
 run audit env BASE=$BASE OUT=$OUT node scripts/e2e/audit.mjs
 echo
