@@ -16,7 +16,7 @@ export function LoginForm({ t }: { t: Dict }) {
         <label className="label" htmlFor="password">{t.login.password}</label>
         <input className="input" id="password" name="password" type="password" autoComplete="current-password" required dir="ltr" />
       </div>
-      {state?.error && <p className="alert-err">{t.login.invalid}</p>}
+      {state?.error && <p className="alert-err">{state.error === "hours" ? t.login.hours : state.error === "device" ? t.login.device : t.login.invalid}</p>}
       <button className="btn-primary w-full" disabled={pending}>{t.login.submit}</button>
     </form>
   );

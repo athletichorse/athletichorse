@@ -4,11 +4,12 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { formatDateTime } from "@/lib/time";
 import { PageHeader } from "@/components/PageHeader";
+import { AuditTabs } from "@/components/AuditTabs";
 
 type Row = { id: number; at: string; user_id: string | null; action: string; entity: string; entity_id: string | null; details: Record<string, unknown> };
 
 export default async function AuditPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
-  await requirePermission("audit.view");
+  const me = await requirePermission("audit.view");
   const { t, locale } = await getDict();
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page) || 1);
@@ -22,6 +23,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader title={t.audit.title} subtitle={t.audit.subtitle} t={t} filename="audit" />
+      <AuditTabs t={t} active="log" canEdit={me.perms.has("permissions.edit")} />
       <div className="card overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="table" data-export>

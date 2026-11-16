@@ -3,6 +3,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { db } from "./supabase/admin";
 import { authClient } from "./supabase/server";
+import { deviceKey, userAgent } from "./device";
 import { isRole, resolvePermissions, type PermissionKey, type Role } from "./permissions";
 import type { Locale } from "@/i18n";
 
@@ -20,6 +21,8 @@ export type Staff = {
   locations: "all" | string[];
   locale: Locale;
   perms: Set<PermissionKey>;
+  /** Outside working hours or on a device that isn't approved (never the owner). */
+  blocked: "hours" | "device" | null;
 };
 
 /** Current staff member, or null. Cached per request. */
@@ -48,7 +51,15 @@ export const getStaff = cache(async (): Promise<Staff | null> => {
     ? ("all" as const)
     : [...new Set([p.branch_id, ...(sl ?? []).map((r) => r.location_id)].filter((x): x is string => Boolean(x)))];
 
+  // الرقابة: working hours + approved devices (a database without 0014 simply skips this)
+  let blocked: Staff["blocked"] = null;
+  if (p.role !== "owner") {
+    const { data: verdict, error } = await db().rpc("check_access", { p_profile: uid, p_device_key: await deviceKey(), p_user_agent: await userAgent() });
+    if (!error && (verdict === "hours" || verdict === "device")) blocked = verdict;
+  }
+
   return {
+    blocked,
     id: p.id,
     username: p.username,
     fullName: p.full_name,
@@ -64,6 +75,7 @@ export const getStaff = cache(async (): Promise<Staff | null> => {
 export async function requireStaff(): Promise<Staff> {
   const s = await getStaff();
   if (!s) redirect("/login");
+  if (s.blocked) redirect(`/blocked?r=${s.blocked}`);
   return s;
 }
 
