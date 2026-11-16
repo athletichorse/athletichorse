@@ -18,7 +18,7 @@ const ok = (cond, msg) => { results.push(`${cond ? '✓' : '✗'} ${msg}`); cons
   await p.fill('input[name=username]', 'owner');
   await p.fill('input[name=password]', 'owner-password-123');
   await Promise.all([p.waitForURL(BASE + '/', { waitUntil: 'commit' }), p.locator('form button').last().click()]);
-  await p.goto(BASE + '/pos');
+  await p.goto(BASE + '/lang?to=en&next=/pos'); // the tests read English labels
   if (await p.getByRole('button', { name: 'Open shift' }).count()) {
     await p.getByRole('button', { name: 'Open shift' }).click();
     await p.waitForSelector('[data-testid=offline-bar]', { timeout: 20000 });
@@ -90,5 +90,7 @@ const ok = (cond, msg) => { results.push(`${cond ? '✓' : '✗'} ${msg}`); cons
   console.log('TEMP=' + temp + ' INV=' + link);
   ok(errs.length === 0, `no page errors ${errs.slice(0, 3).join(' | ')}`);
   await b.close();
-  console.log(`\n${results.filter((r) => r.startsWith('✗')).length} problems`);
-})();
+  const bad = results.filter((r) => r.startsWith('✗')).length;
+  console.log(`\n${bad} problems`);
+  process.exit(bad ? 1 : 0);
+})().catch((e) => { console.log('✗ crashed: ' + e.message.split('\n')[0]); process.exit(1); });

@@ -14,7 +14,7 @@ const errs = []; p.on('pageerror', (e) => errs.push(e.message));
 await p.goto(BASE + '/login');
 await p.fill('input[name=username]', 'owner'); await p.fill('input[name=password]', 'owner-password-123');
 await Promise.all([p.waitForURL(BASE + '/', { waitUntil: 'commit' }), p.locator('form button').last().click()]);
-await p.goto(BASE + '/pos');
+await p.goto(BASE + '/lang?to=en&next=/pos'); // the tests read English labels
 if (await p.getByRole('button', { name: 'Open shift' }).count()) await p.getByRole('button', { name: 'Open shift' }).click();
 await p.waitForSelector('[data-testid=offline-bar]', { timeout: 20000 });
 const box = p.locator('[data-testid=offline-bar] input[type=checkbox]').first();

@@ -29,7 +29,14 @@ npm run -s build >/dev/null
 (SHOPIFY_STORE=audit-test.myshopify.com SHOPIFY_CLIENT_ID=dummy SHOPIFY_CLIENT_SECRET=dummy nohup npx next start -p 3105 > "$OUT-next.log" 2>&1 &)
 sleep 6
 
-step "click-through of all flows (crawl)";   BASE=$BASE OUT=$OUT node scripts/e2e/crawl.mjs | grep -vE "^\s+✓" | tail -15
-step "offline till";                        BASE=$BASE node scripts/e2e/offline.mjs | tail -3
-step "offline everywhere";                  BASE=$BASE CUSTOMER="Test Customer" node scripts/e2e/offline2.mjs | tail -3
-step "full UI audit (every page, button, form, phone + desktop, en + ar)"; BASE=$BASE OUT=$OUT node scripts/e2e/audit.mjs | tail -40
+# browser checks: run them all, then report (one failing does not hide the others)
+FAILED=""
+run() { local name=$1; shift; step "$name"; if ! "$@" > "$OUT-$name.log" 2>&1; then FAILED="$FAILED|$name"; fi; grep -E "✗|problems|passed" "$OUT-$name.log" | tail -40; }
+mkdir -p "$OUT"
+run crawl env BASE=$BASE OUT=$OUT node scripts/e2e/crawl.mjs
+run offline env BASE=$BASE node scripts/e2e/offline.mjs
+run offline2 env BASE=$BASE CUSTOMER="Test Customer" node scripts/e2e/offline2.mjs
+run audit env BASE=$BASE OUT=$OUT node scripts/e2e/audit.mjs
+echo
+if [ -n "$FAILED" ]; then echo "NOT READY — failed: ${FAILED#|}"; exit 1; fi
+echo "ALL CHECKS PASSED"
