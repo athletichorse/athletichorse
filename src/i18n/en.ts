@@ -210,6 +210,7 @@ const en: Dict = {
     groups: "Groups",
     newGroup: "New group",
     parentGroup: "Inside group (leave empty for a main group)",
+    syncStarted: "Sync started — this page updates by itself when it finishes.",
     syncNow: "Sync with website now",
     lastSync: "Last website sync",
     never: "Never",

@@ -3,6 +3,7 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { BRAND } from "@/lib/product-import";
 import { SideNav } from "@/components/SideNav";
+import { ShowMessage } from "@/components/ShowMessage";
 import { buildNav } from "@/components/menu";
 import { logoutAction } from "@/app/actions/auth";
 import { ReloadOnStaleVersion } from "@/components/ReloadOnStaleVersion";
@@ -40,6 +41,7 @@ export default async function PortalLayout({ children }: { children: React.React
             </div>
           </header>
           {children}
+          <ShowMessage />
         </main>
       </div>
     </div>

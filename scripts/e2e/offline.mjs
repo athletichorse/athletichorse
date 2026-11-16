@@ -18,7 +18,7 @@ const ok = (cond, msg) => { results.push(`${cond ? '✓' : '✗'} ${msg}`); cons
   await p.fill('input[name=username]', 'owner');
   await p.fill('input[name=password]', 'owner-password-123');
   await Promise.all([p.waitForURL(BASE + '/', { waitUntil: 'commit' }), p.locator('form button').last().click()]);
-  await p.goto(BASE + '/pos');
+  await p.goto(BASE + '/lang?to=en&next=/pos'); // the tests read English labels
   if (await p.getByRole('button', { name: 'Open shift' }).count()) {
     await p.getByRole('button', { name: 'Open shift' }).click();
     await p.waitForSelector('[data-testid=offline-bar]', { timeout: 20000 });
@@ -54,6 +54,8 @@ const ok = (cond, msg) => { results.push(`${cond ? '✓' : '✗'} ${msg}`); cons
   await p.waitForTimeout(300);
   const qty = await p.locator('table input').first().inputValue().catch(() => '');
   ok(qty === '2', `offline scan from the device price list (qty ${qty})`);
+  const unit = await p.locator('table input').nth(1).inputValue().catch(() => '0');
+  const total = (Number(unit) * 2).toFixed(2);
 
   const [popup] = await Promise.all([
     ctx.waitForEvent('page', { timeout: 10000 }).catch(() => null),
@@ -66,7 +68,7 @@ const ok = (cond, msg) => { results.push(`${cond ? '✓' : '✗'} ${msg}`); cons
   if (popup) {
     await popup.waitForLoadState().catch(() => {});
     const rt = await popup.locator('body').innerText().catch(() => '');
-    ok(rt.includes('Temporary receipt') && rt.includes(temp) && rt.includes('14.00'), 'temporary receipt opens for printing (number, total 14.00, note)');
+    ok(rt.includes('Temporary receipt') && rt.includes(temp) && rt.includes(total), `temporary receipt opens for printing (number, total ${total}, note)`);
     await popup.close();
   } else ok(false, 'temporary receipt window opened');
   ok(/Waiting to send: 1/.test(await p.locator('[data-testid=offline-bar]').innerText()), 'queue shows 1 sale waiting');
@@ -90,5 +92,7 @@ const ok = (cond, msg) => { results.push(`${cond ? '✓' : '✗'} ${msg}`); cons
   console.log('TEMP=' + temp + ' INV=' + link);
   ok(errs.length === 0, `no page errors ${errs.slice(0, 3).join(' | ')}`);
   await b.close();
-  console.log(`\n${results.filter((r) => r.startsWith('✗')).length} problems`);
-})();
+  const bad = results.filter((r) => r.startsWith('✗')).length;
+  console.log(`\n${bad} problems`);
+  process.exit(bad ? 1 : 0);
+})().catch((e) => { console.log('✗ crashed: ' + e.message.split('\n')[0]); process.exit(1); });

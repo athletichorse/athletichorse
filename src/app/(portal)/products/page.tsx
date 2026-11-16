@@ -75,6 +75,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         {(canEdit || me.perms.has("products.add")) && <Link href="/products/new" className="btn-primary no-print">{t.products.newProduct}</Link>}
       </PageHeader>
       {sp.err && <p className="alert-err">{sp.err}</p>}
+      {sp.synced && <p className="alert-ok">{t.products.syncStarted}</p>}
 
       <div className="card no-print mb-6 flex flex-wrap items-center gap-4">
         <div className="min-w-0 flex-1">
