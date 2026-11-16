@@ -26,7 +26,7 @@
 4. ✅ Products: SKU (= barcode), extra codes, name ar/en, group + sub-group, unit, cost, VAT-incl price, active, service, variants (colour/size/weight)
    - ✅ **Website (athletic-horse.com, Shopify) import: names, prices, variants, options, images, synced daily at 3:00 Riyadh + "Sync now"**
    - ✅ **Upload file (رفع ملف)**: Excel product import with currency conversion, merges with website items, re-import never duplicates
-   - ⬜ Push stock to the website from the Jeddah branch (needs a Shopify Admin API token; comes with step 5)
+   - ✅ Push stock to the website from the Jeddah branch (switch in Company → Website; turn on after the Jeddah count)
 5. ✅ Stock: `stock_levels` + append-only `stock_movements` + `stock_docs`; changes only in `post_stock_doc()` (one transaction, idempotent by `client_id`); receipts, transfers, write-offs, counts; manager username+PIN approval; Stores + Stock log screens
    - ✅ Customers (serial customer no., Saudi mobile required, unique) · ✅ Audit log (append-only)
 6. ✅ POS: shifts with cash count (expected vs counted), cash in/out, desk quotation → cashier, quick sale, customers by mobile, salesperson, split payments + change, discounts/price changes with manager PIN, returns with/without receipt, 80 mm receipt with ZATCA QR + Code 128; all amounts recomputed in SQL
@@ -51,5 +51,5 @@
 - ✅ E. Reports & dashboard: all reports on one page (by day, branch, payment method, salesperson, customer; best/least sellers; every item; website sales; one item's history), dashboard (today's till sales, invoices today, items below zero, stock per location, latest syncs/uploads)
 - ✅ F. Salespeople, attendance, payroll, commission on the 15th: pay settings (salary, hours, commission 6/1000 or %, own or all sales, regularity bonus, food allowance), attendance sheet, advances paid off monthly, bonuses/deductions, payroll month sheet (calculate → approve → pay from drawer or bank, reopen), commission sheet, slips
 - ✅ G. Security (الرقابة): working hours per group or person (Riyadh time, overnight windows), device lock with owner approval, activity log; owner never locked out
-- ⬜ H. Website two-way: prices, orders → quotations, stock from Jeddah, webhooks
+- ✅ H. Website two-way: prices, orders → quotations, stock from Jeddah, webhooks (all switches off until turned on)
 - ⬜ I. Offline everywhere: auto switch, customers/returns/stores/products offline, Windows app, local hub

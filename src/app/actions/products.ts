@@ -9,6 +9,7 @@ import { audit } from "@/lib/audit";
 import { formatDecimal, toHalalas } from "@/lib/money";
 import { after } from "next/server";
 import { finishShopifySync, startShopifySync } from "@/lib/shopify-sync";
+import { pushPrices, webSwitches } from "@/lib/website-push";
 
 const CODE = /^[A-Za-z0-9._/-]{1,40}$/;
 const UNITS = ["piece", "pair", "set", "box", "kg", "m"] as const;
@@ -59,13 +60,15 @@ export async function saveProductAction(form: FormData) {
   if (error) return back(error.message);
 
   const { data: variants } = await db().from("product_variants").select("id, shopify_variant_id").eq("product_id", id);
+  const sw = fromWebsite ? await webSwitches() : null;
+  const webPrices = !!sw?.push_prices;
   for (const v of variants ?? []) {
     const sku = String(form.get(`sku:${v.id}`) ?? "").trim() || null;
     if (sku && !CODE.test(sku)) return back("sku");
     let cost: string | null, price: string | null;
     try {
       cost = money(form.get(`cost:${v.id}`));
-      price = v.shopify_variant_id === null ? money(form.get(`price:${v.id}`)) : null;
+      price = v.shopify_variant_id === null || webPrices ? money(form.get(`price:${v.id}`)) : null;
     } catch {
       return back("money");
     }
@@ -90,7 +93,7 @@ export async function saveProductAction(form: FormData) {
       Object.assign(row, sp);
     }
     if (canCost && form.has(`cost:${v.id}`)) row.cost = cost;
-    if (v.shopify_variant_id === null && price !== null) row.price = price;
+    if ((v.shopify_variant_id === null || webPrices) && price !== null) row.price = price;
     const { error: e } = await db().from("product_variants").update(row).eq("id", v.id);
     if (e) return back(friendly(e.message));
 
@@ -106,6 +109,10 @@ export async function saveProductAction(form: FormData) {
     }
   }
   await audit(staff.id, "product.update", "product", id, { variants: (variants ?? []).length });
+  if (webPrices) {
+    const vids = (variants ?? []).map((v) => v.id);
+    after(() => pushPrices(vids));
+  }
   revalidatePath("/products");
   back();
 }
@@ -226,6 +233,18 @@ export async function applyPricesAction(rows: PriceRow[]): Promise<{ ok: true; u
     const { data, error } = await db().rpc("update_names_prices", { p_rows: list.slice(i, i + 500), p_user: s.id, p_can_cost: s.perms.has("products.view_cost") });
     if (error) return { ok: false, error: error.message };
     updated += Number(data?.updated ?? 0); notFound += Number(data?.not_found ?? 0); websiteKept += Number(data?.website_price_kept ?? 0);
+  }
+  // portal prices go to the website: website items take the file's price too
+  if ((await webSwitches()).push_prices) {
+    const changed: string[] = [];
+    for (let i = 0; i < list.length; i += 500) {
+      const { data, error } = await db().rpc("update_web_prices", { p_rows: list.slice(i, i + 500), p_user: s.id });
+      if (error) return { ok: false, error: error.message };
+      changed.push(...((data ?? []) as string[]));
+    }
+    websiteKept = Math.max(0, websiteKept - changed.length);
+    updated += changed.length;
+    if (changed.length) after(() => pushPrices(changed));
   }
   revalidatePath("/products");
   return { ok: true, updated, notFound, websiteKept };

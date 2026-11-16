@@ -28,6 +28,9 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
     db().from("product_groups").select("id, parent_id, name_en, name_ar").eq("active", true).order("name_en"),
     db().from("settings").select("value").eq("key", "shopify_store_url").maybeSingle(),
   ]);
+  const { data: pushSw } = await db().from("settings").select("value").eq("key", "shopify_push_prices").maybeSingle();
+  // while portal prices go to the website, website items' prices are edited here
+  const webPricesHere = pushSw?.value === true || pushSw?.value === "true";
   if (!p) notFound();
   const variants = (vData ?? []) as Variant[];
   const ids = variants.map((v) => v.id);
@@ -80,7 +83,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
                           <input name={`codes:${v.id}`} defaultValue={vc} placeholder={t.products.codesHint} className="input font-mono" dir="ltr" autoCapitalize="none" />
                         </td>
                         <td data-label={t.products.price} className="min-w-[120px]">
-                          {v.shopify_variant_id === null ? (
+                          {v.shopify_variant_id === null || webPricesHere ? (
                             <input name={`price:${v.id}`} defaultValue={v.price} className="input" dir="ltr" inputMode="decimal" />
                           ) : (
                             <span className="whitespace-nowrap">{v.price}{v.compare_at_price && <s className="ms-2 text-xs text-gray-400">{v.compare_at_price}</s>}</span>

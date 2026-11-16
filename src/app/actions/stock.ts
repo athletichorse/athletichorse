@@ -6,6 +6,8 @@ import { db } from "@/lib/supabase/admin";
 import { checkApproval } from "@/lib/approval";
 import { audit } from "@/lib/audit";
 import type { PermissionKey } from "@/lib/permissions";
+import { after } from "next/server";
+import { pushStockIfWebsite } from "@/lib/website-push";
 
 export type StockKind = "receipt" | "transfer" | "write_off" | "count" | "adjust";
 export type StockDocInput = {
@@ -66,6 +68,10 @@ export async function postStockDocAction(input: StockDocInput): Promise<StockDoc
   });
   if (error) return { ok: false, error: /reason_required|bad_target/.test(error.message) ? error.message.match(/reason_required|bad_target/)![0] : error.message };
   if (!data?.duplicate) await audit(staff.id, `stock.${kind}`, "stock_doc", String(data.doc_id), { doc_no: data.doc_no, lines: clean.length, approved_by: approverId });
+  if (!data?.duplicate) {
+    const vids = clean.map((l) => l.variant_id);
+    after(() => pushStockIfWebsite([input.locationId, kind === "transfer" ? input.toLocationId : null], vids));
+  }
   revalidatePath("/stock");
   revalidatePath("/stock-log");
   return { ok: true, docNo: Number(data.doc_no), duplicate: Boolean(data.duplicate) };
@@ -122,6 +128,10 @@ export async function receiveTransferAction(docId: string, lines: { lineNo: numb
   if (clean.some((l) => !Number.isInteger(l.line_no) || !/^\d{1,9}(\.\d{1,3})?$/.test(l.received_qty))) return { ok: false, error: "bad_qty" };
   const { data, error } = await db().rpc("receive_transfer", { p_doc: docId, p_lines: clean, p_user: staff.id });
   if (error) return { ok: false, error: error.message };
+  if (!data?.duplicate) after(async () => {
+    const { data: ls } = await db().from("stock_doc_lines").select("variant_id").eq("doc_id", docId);
+    await pushStockIfWebsite([d.to_location_id], (ls ?? []).map((l) => l.variant_id));
+  });
   if (!data?.duplicate) await audit(staff.id, "stock.transfer_received", "stock_doc", docId, { doc_no: d.doc_no, shortage: data?.shortage, extra: data?.extra });
   revalidatePath("/stock");
   revalidatePath("/stock/docs");
