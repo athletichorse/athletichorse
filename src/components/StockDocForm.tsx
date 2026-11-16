@@ -4,17 +4,20 @@ import { useRef, useState } from "react";
 import type { Dict, Locale } from "@/i18n";
 import { postStockDocAction, searchVariantsAction, type StockKind, type VariantHit } from "@/app/actions/stock";
 
-type Line = { variantId: string; name: string; options: string; sku: string | null; qty: string };
+export type StockLine = { variantId: string; name: string; options: string; sku: string | null; qty: string; price?: string };
+type Line = StockLine;
 const newId = () => (crypto.randomUUID ? crypto.randomUUID() : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) => (Number(c) ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (Number(c) / 4)))).toString(16)));
 
-export function StockDocForm({ t, locale, kind, locations, destinations, defaultLocation, approval }: {
+export function StockDocForm({ t, locale, kind, locations, destinations, defaultLocation, approval, initialLines, requestId, defaultTo }: {
   t: Dict; locale: Locale; kind: StockKind;
   locations: { id: string; name: string }[]; destinations: { id: string; name: string }[];
   defaultLocation: string; approval: boolean;
+  initialLines?: StockLine[]; requestId?: string; defaultTo?: string;
 }) {
   const [loc, setLoc] = useState(defaultLocation);
-  const [to, setTo] = useState(destinations.find((d) => d.id !== defaultLocation)?.id ?? "");
-  const [lines, setLines] = useState<Line[]>([]);
+  const [to, setTo] = useState(defaultTo && defaultTo !== defaultLocation ? defaultTo : destinations.find((d) => d.id !== defaultLocation)?.id ?? "");
+  const [lines, setLines] = useState<Line[]>(initialLines ?? []);
+  const [reason, setReason] = useState("");
   const [term, setTerm] = useState("");
   const [hits, setHits] = useState<VariantHit[] | null>(null);
   const [note, setNote] = useState("");
@@ -30,7 +33,7 @@ export function StockDocForm({ t, locale, kind, locations, destinations, default
       const i = ls.findIndex((l) => l.variantId === h.variantId);
       if (i >= 0 && kind !== "count") return ls.map((l, j) => (j === i ? { ...l, qty: String(Number(l.qty || 0) + 1) } : l));
       if (i >= 0) return ls;
-      return [...ls, { variantId: h.variantId, name: h.name, options: h.options, sku: h.sku, qty: kind === "count" ? "" : "1" }];
+      return [...ls, { variantId: h.variantId, name: h.name, options: h.options, sku: h.sku, qty: kind === "count" ? "" : "1", price: h.price }];
     });
     setTerm("");
     setHits(null);
@@ -52,7 +55,7 @@ export function StockDocForm({ t, locale, kind, locations, destinations, default
     setBusy(true);
     setMsg(null);
     const r = await postStockDocAction({
-      clientId: clientId.current, kind, locationId: loc, toLocationId: kind === "transfer" ? to : null, note,
+      clientId: clientId.current, kind, locationId: loc, toLocationId: kind === "transfer" ? to : null, note, reason, requestId,
       lines: lines.map((l) => ({ variantId: l.variantId, qty: l.qty.trim() })), approverUsername: mgr.u, approverPin: mgr.p,
     });
     setBusy(false);
@@ -60,6 +63,7 @@ export function StockDocForm({ t, locale, kind, locations, destinations, default
       setMsg({ ok: true, text: (r.duplicate ? t.stock.duplicate : t.stock.posted) + r.docNo });
       setLines([]);
       setNote("");
+      setReason("");
       setMgr({ u: "", p: "" });
       clientId.current = newId();
     } else {
@@ -83,6 +87,15 @@ export function StockDocForm({ t, locale, kind, locations, destinations, default
             <label className="label">{t.stock.to}</label>
             <select className="input" value={to} onChange={(e) => setTo(e.target.value)}>
               {destinations.filter((d) => d.id !== loc).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+          </div>
+        )}
+        {kind === "write_off" && (
+          <div>
+            <label className="label">{t.stock.flow.reason}</label>
+            <select className="input" value={reason} onChange={(e) => setReason(e.target.value)} required>
+              <option value="">—</option>
+              {(Object.keys(t.stock.flow.reasons) as (keyof typeof t.stock.flow.reasons)[]).map((k) => <option key={k} value={k}>{t.stock.flow.reasons[k]}</option>)}
             </select>
           </div>
         )}
@@ -123,19 +136,22 @@ export function StockDocForm({ t, locale, kind, locations, destinations, default
         </div>
         {lines.length > 0 && (
           <table className="table mt-4">
-            <thead><tr><th>{t.stock.item}</th><th>SKU</th><th>{qtyLabel}</th><th></th></tr></thead>
+            <thead><tr><th>{t.stock.item}</th><th>SKU</th><th>{t.stock.flow.price}</th><th>{qtyLabel}</th><th>{t.stock.flow.value}</th><th></th></tr></thead>
             <tbody>
               {lines.map((l, i) => (
                 <tr key={l.variantId}>
                   <td className="cell-title">{l.name}{l.options && <div className="text-xs text-gray-500">{l.options}</div>}</td>
                   <td data-label="SKU" className="font-mono text-xs" dir="ltr">{l.sku ?? "—"}</td>
+                  <td data-label={t.stock.flow.price} dir="ltr">{l.price ?? "—"}</td>
                   <td data-label={qtyLabel}>
                     <input className="input w-28" dir="ltr" inputMode="decimal" value={l.qty} onChange={(e) => setLines((ls) => ls.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)))} />
                   </td>
+                  <td data-label={t.stock.flow.value} dir="ltr">{l.price && Number(l.qty) ? (Number(l.price) * Number(l.qty)).toFixed(2) : "—"}</td>
                   <td><button type="button" className="text-sm text-red-600 hover:underline" onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}>{t.stock.remove}</button></td>
                 </tr>
               ))}
             </tbody>
+            <tfoot><tr><td colSpan={3} className="font-semibold">{t.stock.flow.total}</td><td className="font-semibold" dir="ltr">{lines.reduce((a, l) => a + (Number(l.qty) || 0), 0)}</td><td className="font-semibold" dir="ltr">{lines.reduce((a, l) => a + (Number(l.price) || 0) * (Number(l.qty) || 0), 0).toFixed(2)}</td><td></td></tr></tfoot>
           </table>
         )}
       </section>
@@ -149,7 +165,7 @@ export function StockDocForm({ t, locale, kind, locations, destinations, default
       )}
 
       <div className="flex justify-end">
-        <button type="button" className="btn-primary" onClick={post} disabled={busy || !lines.length}>{busy ? t.stock.posting : t.stock.post}</button>
+        <button type="button" className="btn-primary" onClick={post} disabled={busy || !lines.length || (kind === "write_off" && !reason)}>{busy ? t.stock.posting : kind === "transfer" ? t.stock.flow.send : t.stock.post}</button>
       </div>
     </div>
   );

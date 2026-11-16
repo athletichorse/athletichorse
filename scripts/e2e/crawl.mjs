@@ -245,9 +245,10 @@ if (process.env.XLSX) {
 
 
 // ---------------------------------------------------------------- stock
-async function stockDoc(pg, kind, sku, qty, { to, mgr } = {}) {
+async function stockDoc(pg, kind, sku, qty, { to, mgr, reason } = {}) {
   await pg.goto(BASE + `/stock/new?kind=${kind}`, { waitUntil: "networkidle" });
   if (to) await pg.locator("select").nth(1).selectOption({ label: to });
+  if (kind === "write_off") await pg.locator("select").nth(1).selectOption(reason ?? "damaged");
   const box = pg.locator('input[placeholder*="SKU"]').first();
   await box.fill(sku);
   await box.press("Enter");
@@ -257,7 +258,7 @@ async function stockDoc(pg, kind, sku, qty, { to, mgr } = {}) {
     await pg.locator('input[autocapitalize="none"]').last().fill(mgr.u);
     await pg.locator('input[type="password"]').last().fill(mgr.p);
   }
-  await pg.click('button:text-is("Post")');
+  await pg.click(kind === "transfer" ? 'button:text-is("Send transfer")' : 'button:text-is("Post")');
   await pg.waitForSelector(".alert-ok, .alert-err", { timeout: 20000 });
   return (await pg.locator(".alert-ok, .alert-err").first().innerText()).trim();
 }
@@ -265,17 +266,25 @@ where = "stock";
 const m1 = await stockDoc(page, "receipt", "E2E-ROPE-1", 10);
 if (!/Posted/.test(m1)) fail("stock", `receipt: ${m1}`); else ok("stock receipt (scan by SKU) posts");
 const m2 = await stockDoc(page, "transfer", "E2E-ROPE-1", 4, { to: "Jeddah Branch" });
-if (!/Posted/.test(m2)) fail("stock", `transfer: ${m2}`); else ok("stock transfer to Jeddah posts");
+if (!/Posted/.test(m2)) fail("stock", `transfer: ${m2}`); else ok("stock transfer to Jeddah sent (in transit)");
+// Jeddah receives it: all 4 arrived
+const trNo = (m2.match(/#(\d+)/) ?? [])[1];
+await page.goto(BASE + "/stock/docs?status=in_transit", { waitUntil: "networkidle" });
+await page.locator(`a:has-text("#${trNo}")`).first().click();
+await page.waitForSelector("[data-testid=receive]", { timeout: 15000 });
+await page.click('button:text-is("Receive transfer")');
+await page.waitForFunction(() => document.body.innerText.includes("Received"), null, { timeout: 20000 });
+ok("transfer received at Jeddah");
 const m3 = await stockDoc(page, "write_off", "E2E-ROPE-1", 1);
 if (!/Posted/.test(m3)) fail("stock", `write-off: ${m3}`); else ok("write-off posts");
 const m4 = await stockDoc(page, "count", "E2E-ROPE-1", 7);
 if (!/Posted/.test(m4)) fail("stock", `count: ${m4}`); else ok("stock count posts");
 await page.goto(BASE + "/stock?q=e2e-rope", { waitUntil: "networkidle" });
-const stockTxt = await page.locator("table").innerText();
+const stockTxt = await page.locator("table").first().innerText();
 if (!/Riyadh Branch[\s\S]*7|7[\s\S]*Riyadh/.test(stockTxt) || !/Jeddah Branch/.test(stockTxt)) fail("stock", `levels look wrong: ${stockTxt.replace(/\s+/g, " ").slice(0, 200)}`);
 else ok("stock levels: Riyadh 7 after count, Jeddah holds the transfer");
 await page.goto(BASE + "/stock-log", { waitUntil: "networkidle" });
-const logTxt = await page.locator("table").innerText();
+const logTxt = await page.locator("table").first().innerText();
 for (const k of ["Receipt", "Transfer out", "Transfer in", "Write-off", "Count"]) if (!logTxt.includes(k)) fail("stock log", `missing ${k}`);
 ok("stock log lists every movement");
 
@@ -311,7 +320,7 @@ const cForm = page.locator("form").filter({ has: page.locator('button:text-is("A
 await cForm.locator('input[name="phone"]').fill("0551234567");
 await cForm.locator('input[name="name"]').fill("Test Customer");
 await Promise.all([page.waitForURL(/ok=1|err=/, { waitUntil: "commit" }), cForm.locator('button:text-is("Add")').click()]);
-if (!(await page.locator("table").innerText()).includes("+966551234567")) fail("customers", "new customer not listed");
+if (!(await page.locator("table").first().innerText()).includes("+966551234567")) fail("customers", "new customer not listed");
 else ok("add a customer (mobile normalised, customer # given)");
 await page.goto(BASE + "/customers");
 const cForm2 = page.locator("form").filter({ has: page.locator('button:text-is("Add")') }).first();
@@ -323,7 +332,7 @@ else ok("duplicate customer mobile is refused");
 // audit
 where = "audit";
 await page.goto(BASE + "/audit", { waitUntil: "networkidle" });
-const auditTxt = await page.locator("table").innerText();
+const auditTxt = await page.locator("table").first().innerText();
 for (const a of ["stock.receipt", "customer.create", "staff.create", "company.update"]) if (!auditTxt.includes(a)) fail("audit", `missing ${a}`);
 ok("audit log records stock, customers, staff and company changes");
 
@@ -416,9 +425,9 @@ if (!/Expected cash 160\.00/.test(closeTxt) || !/Difference 0\.00/.test(closeTxt
 
 // sales list
 await page.goto(BASE + "/sales", { waitUntil: "networkidle" });
-if (!(await page.locator("table").innerText()).includes(invoiceNo ?? "-")) fail("sales", "invoice not in the list"); else ok("Sales lists the invoice");
+if (!(await page.locator("table").first().innerText()).includes(invoiceNo ?? "-")) fail("sales", "invoice not in the list"); else ok("Sales lists the invoice");
 await page.goto(BASE + "/sales?tab=returns", { waitUntil: "networkidle" });
-if (!/BR01-CN-/.test(await page.locator("table").innerText())) fail("sales", "credit note not in Returns"); else ok("Sales → Returns lists the credit note");
+if (!/BR01-CN-/.test(await page.locator("table").first().innerText())) fail("sales", "credit note not in Returns"); else ok("Sales → Returns lists the credit note");
 
 // language switch + logout + login
 where = "language";
@@ -456,6 +465,7 @@ const nav = await cp.locator("aside nav").innerText();
 if (/Permissions|Company details/.test(nav)) fail("cashier", "cashier sees admin menu");
 else ok("cashier menu hides admin pages");
 await cp.goto(BASE + "/permissions");
+await cp.waitForURL(/\/forbidden/, { timeout: 15000 }).catch(() => {}); // the redirect arrives in the streamed page (loading screen first)
 if (!cp.url().includes("/forbidden")) fail("cashier", "cashier can open /permissions");
 else ok("cashier is blocked from admin pages");
 await cctx.close();

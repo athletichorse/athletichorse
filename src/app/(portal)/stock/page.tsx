@@ -4,6 +4,7 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { formatDateTime } from "@/lib/time";
 import { PageHeader } from "@/components/PageHeader";
+import { StockTabs, viewableLocations } from "@/components/StockTabs";
 
 const PER_PAGE = 50;
 type Row = { location_id: string; variant_id: string; qty: string; updated_at: string; product_id: string; name_en: string; name_ar: string; sku: string | null; option1: string | null; option2: string | null; option3: string | null };
@@ -13,8 +14,12 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
   const { t, locale } = await getDict();
   const sp = await searchParams;
   const { data: allLocs } = await db().from("locations").select("id, code, name_en, name_ar, kind").eq("active", true).order("code");
-  const mine = (allLocs ?? []).filter((l) => me.locations === "all" || me.locations.includes(l.id));
-  const loc = mine.find((l) => l.id === sp.loc) ? sp.loc! : me.locations === "all" ? "all" : mine[0]?.id ?? "none";
+  const own = (allLocs ?? []).filter((l) => me.locations === "all" || me.locations.includes(l.id));
+  const mine = viewableLocations(allLocs ?? [], me); // look at: own, or all with "stock of all branches"
+  const seeAll = me.locations === "all" || me.perms.has("stock.all_locations");
+  const loc = mine.find((l) => l.id === sp.loc) ? sp.loc! : seeAll ? "all" : mine[0]?.id ?? "none";
+  const { count: incoming } = await db().from("stock_docs").select("id", { count: "exact", head: true }).eq("status", "in_transit")
+    .in("to_location_id", own.map((l) => l.id).concat(["00000000-0000-0000-0000-000000000000"]));
   const page = Math.max(1, Number(sp.page) || 1);
   const q = (sp.q ?? "").trim().toLowerCase().slice(0, 60);
   const lname = (id: string) => {
@@ -24,7 +29,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
 
   let query = db().from("stock_list").select("location_id, variant_id, qty, updated_at, product_id, name_en, name_ar, sku, option1, option2, option3", { count: "exact" }).neq("qty", 0);
   if (loc === "all") {
-    if (me.locations !== "all") query = query.in("location_id", me.locations);
+    if (!seeAll) query = query.in("location_id", mine.map((l) => l.id));
   } else query = query.eq("location_id", loc);
   if (q) query = query.ilike("search", `%${q.replace(/[%_\\]/g, "")}%`);
   const { data, count } = await query.order("name_en").range((page - 1) * PER_PAGE, page * PER_PAGE - 1);
@@ -38,7 +43,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
     if (m.page && m.page > 1) u.set("page", String(m.page));
     return `/stock?${u}`;
   };
-  const docLoc = loc !== "all" ? loc : mine[0]?.id ?? "";
+  const docLoc = own.find((l) => l.id === loc)?.id ?? own[0]?.id ?? "";
   const actions = ([
     ["receipt", "stock.receive"],
     ["transfer", "stock.transfer"],
@@ -53,12 +58,16 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
     <>
       <PageHeader title={t.stock.title} subtitle={t.stock.subtitle} t={t} filename="stock">
         {actions.map(([k], i) => (
-          <Link key={k} href={`/stock/new?kind=${k}&loc=${docLoc}`} className={`${i === 0 ? "btn-primary" : "btn-ghost"} no-print`}>{t.stock[k]}</Link>
+          <Link key={k} href={k === "count" ? `/stock/count?loc=${docLoc}` : `/stock/new?kind=${k}&loc=${docLoc}`} className={`${i === 0 ? "btn-primary" : "btn-ghost"} no-print`}>{k === "count" ? t.stock.flow.countSheet : k === "transfer" ? t.stock.flow.send : t.stock[k]}</Link>
         ))}
       </PageHeader>
+      <StockTabs t={t} active="stock" canRequests={me.perms.has("stock.requests")} />
+      {(incoming ?? 0) > 0 && (
+        <Link href="/stock/docs?status=in_transit" className="alert-ok no-print block font-medium">🚚 {incoming} {t.stock.flow.incoming} →</Link>
+      )}
 
       <div className="no-print mb-3 flex gap-2 overflow-x-auto pb-1">
-        {me.locations === "all" && tab("all", t.stock.allLocations)}
+        {seeAll && tab("all", t.stock.allLocations)}
         {mine.map((l) => tab(l.id, locale === "ar" ? l.name_ar : l.name_en || l.name_ar))}
       </div>
       <form className="no-print mb-4" action="/stock">
