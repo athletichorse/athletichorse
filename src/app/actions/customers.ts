@@ -16,6 +16,8 @@ function read(form: FormData) {
     email: email || null,
     vat_number: vat || null,
     notes: String(form.get("notes") ?? "").trim().slice(0, 1000),
+    credit_limit: String(form.get("credit_limit") ?? "").trim(),
+    discount_pct: String(form.get("discount_pct") ?? "0").trim() || "0",
     vatOk: !vat || isValidVatNumber(vat),
     emailOk: !email || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email),
   };
@@ -32,7 +34,9 @@ export async function saveCustomerAction(form: FormData) {
   if (!c.phone) return back("phone");
   if (!c.vatOk) return back("vat");
   if (!c.emailOk) return back("email");
-  const row = { phone: c.phone, name: c.name, email: c.email, vat_number: c.vat_number, notes: c.notes };
+  if (c.credit_limit && !/^\d{1,9}(\.\d{1,2})?$/.test(c.credit_limit)) return back("credit_limit");
+  if (!/^\d{1,3}(\.\d{1,2})?$/.test(c.discount_pct) || Number(c.discount_pct) > 100) return back("discount_pct");
+  const row = { phone: c.phone, name: c.name, email: c.email, vat_number: c.vat_number, notes: c.notes, credit_limit: c.credit_limit || null, discount_pct: c.discount_pct };
   if (id) {
     const { error } = await db().from("customers").update({ ...row, active: form.get("active") === "on" }).eq("id", id);
     if (error) return back(friendly(error.message));

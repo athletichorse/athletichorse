@@ -195,6 +195,7 @@ const count = Number((syncTxt.match(/(\d[\d,]*) products/i)?.[1] || "0").replace
 if (count < 300) fail("products sync", `only ${count} products after sync`);
 else ok(`website sync imported ${count} products from athletic-horse.com`);
 await page.goto(BASE + "/");
+await page.waitForFunction(() => document.body.innerText.includes("Synced"), null, { timeout: 15000 }).catch(() => {}); // streamed after the loading screen
 if (!(await page.locator("body").innerText()).includes("Synced")) fail("home", "last sync status not shown on home");
 
 // product edit
@@ -359,7 +360,7 @@ const qtyVal = await page.locator("main table tbody tr input").first().inputValu
 if (qtyVal !== "2") fail("pos", `scanning twice should give qty 2, got ${qtyVal}`); else ok("scan adds items; scanning again increases the quantity");
 const totalTxt = await page.locator("main aside").innerText();
 if (!/70\.00/.test(totalTxt)) fail("pos", `total should be 70.00 (2 × 35): ${totalTxt.replace(/\s+/g, " ").slice(0, 160)}`); else ok("cart total 70.00 incl. VAT (net 60.87 + VAT 9.13)");
-await page.locator('input[placeholder*="Customer mobile"]').fill("0551234567");
+await page.locator('input[placeholder="Mobile, name or customer no."]').first().fill("0551234567");
 await page.click('button:text-is("Find")');
 await page.waitForSelector("text=+966551234567", { timeout: 10000 }).catch(() => fail("pos", "customer not found by mobile"));
 await page.locator('label:has-text("Cash given") + input').fill("100");
@@ -409,7 +410,7 @@ const rMsg = await page.locator(".alert-ok, .alert-err").first().innerText();
 if (!/credit note BR01-CN-\d{6}/.test(rMsg) || !/35\.00/.test(rMsg)) fail("pos", `return: ${rMsg}`); else ok("return with receipt → credit note, refund 35.00");
 
 // cash out, close shift
-await page.click('button:has-text("Cash out")');
+await page.click('button:text-is("Drawer")'); // drawer panel: Cash out is the first choice
 await page.locator('input[placeholder="Amount"]').fill("10");
 await page.locator('input[placeholder="Reason"]').fill("e2e");
 await page.click('section >> button:text-is("Save")');

@@ -8,18 +8,27 @@ import { formatDateTime } from "@/lib/time";
 import { looksOffline } from "@/lib/offline";
 import { useOfflineTill, type OfflineTill } from "./useOfflineTill";
 import { OfflineBar, printTempReceipt } from "./OfflineBar";
+import { CameraScan } from "./CameraScan";
 import { searchVariantsAction, type VariantHit } from "@/app/actions/stock";
 import {
-  cashMovementAction, closeShiftAction, findCustomerAction, findInvoiceForReturnAction, loadQuotationAction, openShiftAction,
-  postReturnAction, postSaleAction, quickAddCustomerAction, saveQuotationAction, type InvoiceForReturn, type PosCustomer,
+  cashMovementAction, closeShiftAction, findInvoiceForReturnAction, loadQuotationAction, openShiftAction,
+  postReturnAction, postSaleAction, quickAddCustomerAction, saveQuotationAction, searchCustomersAction, updateQuotationAction,
+  cancelQuotationAction, type DrawerKind, type InvoiceForReturn, type PosCustomer,
 } from "@/app/actions/pos";
 
-type Line = { variantId: string; name: string; options: string; sku: string | null; qty: string; price: string; listPrice: string; discount: string };
+type Line = { variantId: string; name: string; options: string; sku: string | null; qty: string; price: string; listPrice: string; discount: string; usual?: boolean };
+
+/** The customer's usual discount for one line, same rounding as the server (down to the halala). */
+function usualDiscount(price: string, qty: string, pct: number | undefined): string {
+  if (!pct) return "0";
+  try { return formatDecimal((toHalalas(price) * toMilliQty(qty || "0") * BigInt(Math.round(pct * 100))) / 10_000_000n); } catch { return "0"; }
+}
 type Method = { code: string; name: string; kind: string };
 type Props = {
   t: Dict; locale: Locale; me: { id: string; name: string };
   locations: { id: string; name: string; code: string }[];
   company: string; canManageOffline: boolean;
+  expenseTypes: { id: string; name: string }[];
   shift: { id: string; locationId: string; openedAt: string; openingCash: string } | null;
   methods: Method[]; people: { id: string; name: string }[]; vatRate: string;
   quotes: { no: number; total: string; at: string }[];
@@ -72,7 +81,10 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
   const [panel, setPanel] = useState<"" | "cash" | "close">("");
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
-  const [cashKind, setCashKind] = useState<"cash_out" | "cash_in">("cash_out");
+  const [cashKind, setCashKind] = useState<DrawerKind>("cash_out");
+  const [expenseType, setExpenseType] = useState("");
+  const [payCustomer, setPayCustomer] = useState<PosCustomer | null>(null);
+  const [payMethod, setPayMethod] = useState(p.methods.find((m) => m.kind === "cash")?.code ?? "cash");
   const [mgr, setMgr] = useState({ u: "", p: "" });
   const [closeRes, setCloseRes] = useState<{ expected: string; difference: string } | null>(null);
   const cashId = useRef(uuid());
@@ -94,7 +106,8 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
           <div className="font-semibold text-gray-900">{locName}</div>
           <div className="text-xs text-gray-500">{t.pos.shiftOpen} {formatDateTime(new Date(s.openedAt), locale)} · {p.me.name}</div>
         </div>
-        {p.can.cashOut && <button className="btn-ghost" onClick={() => setPanel(panel === "cash" ? "" : "cash")}>{t.pos.cashOut} / {t.pos.cashIn}</button>}
+        {(p.can.cashOut || p.can.collect || p.can.shift) && <button className="btn-ghost" onClick={() => setPanel(panel === "cash" ? "" : "cash")}>{t.pos.extra.drawer}</button>}
+        <a href={`/pos/shifts/${s.id}`} className="btn-ghost">{t.pos.extra.shiftReport}</a>
         {p.can.shift && <button className="btn-ghost" onClick={() => setPanel(panel === "close" ? "" : "close")}>{t.pos.closeShift}</button>}
       </div>
 
@@ -103,15 +116,32 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
 
       {panel === "cash" && (
         <section className="card grid gap-3 sm:grid-cols-2">
-          <select className="input" value={cashKind} onChange={(e) => setCashKind(e.target.value as "cash_out" | "cash_in")}>
-            <option value="cash_out">{t.pos.cashOut}</option><option value="cash_in">{t.pos.cashIn}</option>
+          <select className="input" value={cashKind} onChange={(e) => setCashKind(e.target.value as DrawerKind)}>
+            {p.can.cashOut && <option value="cash_out">{t.pos.cashOut}</option>}
+            {p.can.cashOut && <option value="cash_in">{t.pos.cashIn}</option>}
+            <option value="expense">{t.pos.extra.expense}</option>
+            <option value="customer_payment">{t.pos.extra.customerPayment}</option>
           </select>
           <input className="input" dir="ltr" inputMode="decimal" placeholder={t.pos.amount} value={amount} onChange={(e) => setAmount(e.target.value)} />
           <input className="input sm:col-span-2" placeholder={t.pos.reason} value={reason} onChange={(e) => setReason(e.target.value)} />
-          {cashKind === "cash_out" && p.approval.cashOut && <Approval t={t} mgr={mgr} setMgr={setMgr} />}
+          {cashKind === "expense" && (
+            <select className="input sm:col-span-2" value={expenseType} onChange={(e) => setExpenseType(e.target.value)}>
+              <option value="">{t.pos.extra.expenseType}</option>
+              {p.expenseTypes.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </select>
+          )}
+          {cashKind === "customer_payment" && (
+            <>
+              <div className="sm:col-span-2"><CustomerPicker t={t} value={payCustomer} onPick={setPayCustomer} err={err} setMsg={p.setMsg} /></div>
+              <select className="input sm:col-span-2" value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
+                {p.methods.filter((m) => m.kind !== "on_account").map((m) => <option key={m.code} value={m.code}>{m.name}</option>)}
+              </select>
+            </>
+          )}
+          {((cashKind === "cash_out" && p.approval.cashOut) || ((cashKind === "cash_in" || cashKind === "expense") && p.approval.discount)) && <Approval t={t} mgr={mgr} setMgr={setMgr} />}
           <button className="btn-primary sm:col-span-2" onClick={() => tryOnline(async () => {
-            const r = await cashMovementAction({ clientId: cashId.current, shiftId: s.id, kind: cashKind, amount, reason, approverUsername: mgr.u, approverPin: mgr.p });
-            if (r.ok) { cashId.current = uuid(); setAmount(""); setReason(""); setMgr({ u: "", p: "" }); setPanel(""); p.setMsg({ ok: true, text: t.saved }); }
+            const r = await cashMovementAction({ clientId: cashId.current, shiftId: s.id, kind: cashKind, amount, reason, expenseTypeId: expenseType, customerId: payCustomer?.id, method: payMethod, approverUsername: mgr.u, approverPin: mgr.p });
+            if (r.ok) { cashId.current = uuid(); setAmount(""); setReason(""); setExpenseType(""); setPayCustomer(null); setMgr({ u: "", p: "" }); setPanel(""); p.setMsg({ ok: true, text: t.saved }); }
             else p.setMsg({ ok: false, text: err(r.error) });
           })}>{t.save}</button>
         </section>
@@ -164,25 +194,64 @@ function Approval({ t, mgr, setMgr }: { t: Dict; mgr: { u: string; p: string }; 
   );
 }
 
+/** Customer by mobile, name or serial number; shows usual discount and balance. */
+function CustomerPicker({ t, value, onPick, err, setMsg, disabled }: { t: Dict; value: PosCustomer | null; onPick: (c: PosCustomer | null) => void; err: (c: string) => string; setMsg: (m: { ok: boolean; text: string } | null) => void; disabled?: boolean }) {
+  const [term, setTerm] = useState("");
+  const [hits, setHits] = useState<PosCustomer[] | null>(null);
+  const X = t.pos.extra;
+  if (value) {
+    return (
+      <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm" data-testid="customer">
+        <span><b>{value.name || "—"}</b> · <span dir="ltr">{value.phone}</span> · #{value.customerNo}
+          {!!value.discountPct && <span className="badge-blue ms-2">{X.usualDiscount} {value.discountPct}%</span>}
+          {value.balance !== undefined && Number(value.balance) !== 0 && <span className="badge-gray ms-2">{X.balance} {value.balance}</span>}
+          <span className="ms-2 text-xs text-gray-500">{X.creditLimit}: {value.creditLimit ?? X.noLimit}</span></span>
+        {!disabled && <button className="text-red-600" onClick={() => onPick(null)}>×</button>}
+      </div>
+    );
+  }
+  return (
+    <div className="relative">
+      <div className="flex gap-2">
+        <input className="input" placeholder={X.searchCustomer} value={term} onChange={(e) => setTerm(e.target.value)} disabled={disabled}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.currentTarget.nextSibling as HTMLButtonElement)?.click(); } }} />
+        <button type="button" className="btn-ghost" disabled={disabled} onClick={async () => {
+          const r = await searchCustomersAction(term);
+          if (!r.ok) return setMsg({ ok: false, text: err(r.error) });
+          if (r.customers.length === 1) { onPick(r.customers[0]); setTerm(""); setHits(null); } else setHits(r.customers);
+        }}>{t.pos.findCustomer}</button>
+      </div>
+      {hits && (
+        <div className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-[var(--line)] bg-white shadow-lg">
+          {hits.length === 0 && <div className="px-4 py-3 text-sm text-gray-500">{t.stock.notFound}</div>}
+          {hits.map((c) => <button key={c.id} type="button" onClick={() => { onPick(c); setTerm(""); setHits(null); }} className="block w-full px-4 py-2 text-start text-sm hover:bg-gray-50">{c.name} · <span dir="ltr">{c.phone}</span> · #{c.customerNo}</button>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ItemSearch({ t, locale, onPick, off }: { t: Dict; locale: Locale; onPick: (h: VariantHit) => void; off?: OfflineTill }) {
   const [term, setTerm] = useState("");
   const [hits, setHits] = useState<VariantHit[] | null>(null);
   const ref = useRef<HTMLInputElement>(null);
-  const pick = (h: VariantHit) => { onPick(h); setTerm(""); setHits(null); ref.current?.focus(); };
+  const pick = (h: VariantHit) => { onPick(h); setTerm(""); setHits(null); };
+  const run = async (q: string) => {
+    let r: VariantHit[];
+    if (off?.enabled && !navigator.onLine) r = off.searchLocal(q);
+    else {
+      try { r = await searchVariantsAction(q, locale); }
+      catch { r = off?.enabled ? off.searchLocal(q) : []; }
+    }
+    if (r.length === 1 || r[0]?.exact) pick(r[0]); else setHits(r);
+  };
   return (
     <div className="relative">
-      <input ref={ref} autoFocus className="input" placeholder={t.pos.scan} value={term} onChange={(e) => setTerm(e.target.value)}
-        onKeyDown={async (e) => {
-          if (e.key !== "Enter") return;
-          e.preventDefault();
-          let r: VariantHit[];
-          if (off?.enabled && !navigator.onLine) r = off.searchLocal(term);
-          else {
-            try { r = await searchVariantsAction(term, locale); }
-            catch { r = off?.enabled ? off.searchLocal(term) : []; }
-          }
-          if (r.length === 1 || r[0]?.exact) pick(r[0]); else setHits(r);
-        }} />
+      <div className="flex gap-2">
+        <input ref={ref} autoFocus className="input" placeholder={t.pos.scan} value={term} onChange={(e) => setTerm(e.target.value)}
+          onKeyDown={(e) => { if (e.key !== "Enter") return; e.preventDefault(); void run(term); }} />
+        <CameraScan label={t.pos.extra.camera} unsupported={t.pos.extra.cameraUnsupported} onCode={(c) => void run(c)} />
+      </div>
       {hits && (
         <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-[var(--line)] bg-white shadow-lg">
           {hits.length === 0 && <div className="px-4 py-3 text-sm text-gray-500">{t.stock.notFound}</div>}
@@ -206,12 +275,16 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
   const [phone, setPhone] = useState("");
   const [custName, setCustName] = useState("");
   const [custNotFound, setCustNotFound] = useState(false);
+  const [custHits, setCustHits] = useState<PosCustomer[] | null>(null);
   const [salesperson, setSalesperson] = useState(p.me.id);
   const [payments, setPayments] = useState<{ method: string; amount: string }[]>([]);
   const [cashGiven, setCashGiven] = useState("");
   const [mgr, setMgr] = useState({ u: "", p: "" });
   const [quoteNo, setQuoteNo] = useState("");
   const [quoteId, setQuoteId] = useState<string | null>(null);
+  const [quotes, setQuotes] = useState<{ id: string; no: number }[]>([]); // several quotations on one receipt
+  const [editId, setEditId] = useState<string | null>(null); // desk: editing an existing quotation
+  const [recDisc, setRecDisc] = useState("");
   const [busy, setBusy] = useState(false);
   const clientId = useRef(uuid());
   const locked = mode === "collect";
@@ -230,18 +303,48 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
   const paidH = payments.reduce((a, x) => a + (safeH(x.amount) ?? 0n), 0n);
   const cashPartH = payments.filter((x) => p.methods.find((m) => m.code === x.method)?.kind === "cash").reduce((a, x) => a + (safeH(x.amount) ?? 0n), 0n);
   const changeH = cashGiven ? (safeH(cashGiven) ?? 0n) - cashPartH : 0n;
-  const changed = lines.some((l) => (safeH(l.discount) ?? 0n) > 0n || l.price !== l.listPrice);
+  const changed = lines.some((l) => ((safeH(l.discount) ?? 0n) > 0n && !l.usual) || l.price !== l.listPrice);
   const pays = payments.length ? payments : [{ method: p.methods[0]?.code ?? "cash", amount: totals ? formatDecimal(totalH) : "" }];
 
+  const focusQty = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusQty.current) return;
+    const el = document.querySelector<HTMLInputElement>(`input[data-qty="${focusQty.current}"]`);
+    focusQty.current = null;
+    el?.focus(); el?.select();
+  }, [lines]);
+  const withUsual = (l: Line, c: PosCustomer | null): Line => (c?.discountPct && (l.usual || (safeH(l.discount) ?? 0n) === 0n) && l.price === l.listPrice
+    ? { ...l, discount: usualDiscount(l.price, l.qty, c.discountPct), usual: true } : l);
   function add(h: VariantHit) {
     setLines((ls) => {
       const i = ls.findIndex((l) => l.variantId === h.variantId);
-      if (i >= 0) return ls.map((l, j) => (j === i ? { ...l, qty: String(Number(l.qty) + 1) } : l));
-      return [...ls, { variantId: h.variantId, name: h.name, options: h.options, sku: h.sku, qty: "1", price: h.price, listPrice: h.price, discount: "0" }];
+      if (i >= 0) return ls.map((l, j) => (j === i ? withUsual({ ...l, qty: String(Number(l.qty) + 1) }, customer) : l));
+      return [...ls, withUsual({ variantId: h.variantId, name: h.name, options: h.options, sku: h.sku, qty: "1", price: h.price, listPrice: h.price, discount: "0" }, customer)];
     });
+    focusQty.current = h.variantId; // the quantity box gets the focus after picking an item
     setPayments([]);
   }
-  function reset() { setLines([]); setCustomer(null); setPhone(""); setCustName(""); setPayments([]); setCashGiven(""); setMgr({ u: "", p: "" }); setQuoteId(null); setQuoteNo(""); clientId.current = uuid(); }
+  function pickCustomer(c: PosCustomer | null) {
+    setCustomer(c);
+    if (!locked) setLines((ls) => ls.map((l) => (c ? withUsual(l, c) : l.usual ? { ...l, discount: "0", usual: false } : l)));
+    setPayments([]);
+  }
+  /** Receipt discount: spread over the lines by value; the last line takes the rounding remainder. */
+  function applyReceiptDiscount(amount: string) {
+    const d = safeH(amount);
+    if (d === null || d <= 0n || !totals) return;
+    const gross = lines.map((l) => (safeH(l.price) ?? 0n) * (safeQ(l.qty) ?? 0n) / 1000n);
+    const sum = gross.reduce((a, b) => a + b, 0n);
+    if (sum <= 0n || d > sum) return p.setMsg({ ok: false, text: err("bad_amount") });
+    let left = d;
+    setLines((ls) => ls.map((l, i) => {
+      const part = i === ls.length - 1 ? left : (d * gross[i]) / sum;
+      left -= part;
+      return { ...l, discount: formatDecimal(part), usual: false };
+    }));
+    setPayments([]);
+  }
+  function reset() { setLines([]); setCustomer(null); setPhone(""); setCustName(""); setPayments([]); setCashGiven(""); setMgr({ u: "", p: "" }); setQuoteId(null); setQuoteNo(""); setQuotes([]); setEditId(null); setRecDisc(""); clientId.current = uuid(); }
 
   /** Every receipt needs the customer unless this person may skip it: a picked customer, or a mobile + name typed here. */
   const typedCustomer = !customer && phone.trim() && custName.trim() ? { customerPhone: phone.trim(), customerName: custName.trim() } : {};
@@ -277,6 +380,12 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
   }
 
   async function submitOnline(cart: { variantId: string; qty: string; unitPrice: string; discount: string }[]) {
+    if (mode === "desk" && editId) {
+      const r = await updateQuotationAction({ quotationId: editId, customerId: customer?.id, salespersonId: salesperson, lines: cart, approverUsername: mgr.u, approverPin: mgr.p });
+      setBusy(false);
+      if (r.ok) { p.setMsg({ ok: true, text: `${t.pos.extra.quoteUpdated} ${r.quoteNo}` }); reset(); p.router.refresh(); } else p.setMsg({ ok: false, text: err(r.error) });
+      return;
+    }
     if (mode === "desk") {
       const r = await saveQuotationAction({ clientId: clientId.current, locationId: s.locationId, salespersonId: salesperson, customerId: customer?.id, lines: cart, approverUsername: mgr.u, approverPin: mgr.p });
       setBusy(false);
@@ -285,7 +394,7 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
     }
     const r = await postSaleAction({
       clientId: clientId.current, locationId: s.locationId, shiftId: s.id, salespersonId: salesperson, customerId: customer?.id, ...typedCustomer,
-      quotationId: quoteId ?? undefined, lines: cart, payments: pays, cashTendered: cashGiven || undefined, approverUsername: mgr.u, approverPin: mgr.p,
+      quotationId: quoteId ?? undefined, quotationIds: quotes.map((q) => q.id), lines: cart, payments: pays, cashTendered: cashGiven || undefined, approverUsername: mgr.u, approverPin: mgr.p,
     });
     setBusy(false);
     if (r.ok) {
@@ -298,20 +407,40 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
       <section className="card space-y-3">
-        {mode === "collect" ? (
+        {mode === "collect" || mode === "desk" ? (
           <div className="space-y-3">
+            {mode === "desk" && <ItemSearch t={t} locale={locale} onPick={add} off={p.off} />}
             <div className="flex gap-2">
-              <input className="input" dir="ltr" inputMode="numeric" placeholder={t.pos.quoteNo} value={quoteNo} onChange={(e) => setQuoteNo(e.target.value)} />
-              <button className="btn-ghost" onClick={async () => {
+              <input className="input" dir="ltr" inputMode="numeric" placeholder={mode === "desk" ? t.pos.extra.editQuote : t.pos.quoteNo} value={quoteNo} onChange={(e) => setQuoteNo(e.target.value)} />
+              <button className="btn-ghost whitespace-nowrap" onClick={async () => {
                 const r = await loadQuotationAction(Number(quoteNo), locale);
                 if (!r.ok) return p.setMsg({ ok: false, text: err(r.error) });
-                setQuoteId(r.quote.id);
-                setLines(r.quote.lines.map((l) => ({ ...l, price: l.unitPrice, listPrice: l.unitPrice })));
-                if (r.quote.salespersonId) setSalesperson(r.quote.salespersonId);
-                setPayments([]);
-              }}>{t.pos.loadQuote}</button>
+                const q = r.quote;
+                const mapped = q.lines.map((l) => ({ ...l, price: l.unitPrice, listPrice: l.unitPrice }));
+                if (mode === "desk") { setEditId(q.id); setLines(mapped); }
+                else {
+                  if (quotes.some((x) => x.id === q.id)) return;
+                  setQuotes((qs) => [...qs, { id: q.id, no: q.quoteNo }]);
+                  if (!quoteId) setQuoteId(q.id);
+                  setLines((ls) => [...ls, ...mapped]);
+                }
+                if (q.customer && !customer) setCustomer(q.customer);
+                if (q.salespersonId) setSalesperson(q.salespersonId);
+                setQuoteNo(""); setPayments([]);
+              }}>{mode === "desk" ? t.pos.extra.load : quotes.length ? t.pos.extra.addQuote : t.pos.loadQuote}</button>
             </div>
-            {!quoteId && (
+            {(quotes.length > 0 || editId) && (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                {quotes.length > 0 && <span className="text-gray-600">{t.pos.extra.quotesOnReceipt}:</span>}
+                {quotes.map((q) => <span key={q.id} className="badge-blue">#{q.no}</span>)}
+                {editId && <span className="badge-blue">{t.pos.extra.editQuote}</span>}
+                <button className="text-xs text-red-600 underline" onClick={async () => {
+                  for (const id of editId ? [editId] : quotes.map((q) => q.id)) await cancelQuotationAction(id);
+                  p.setMsg({ ok: true, text: t.pos.extra.quoteCancelled }); reset(); p.router.refresh();
+                }}>{t.pos.extra.cancelQuote}</button>
+              </div>
+            )}
+            {mode === "collect" && !quotes.length && (
               <div className="text-sm">
                 <div className="mb-1 font-medium text-gray-700">{t.pos.openQuotes}</div>
                 {p.quotes.length === 0 ? <p className="text-gray-500">{t.pos.noQuotes}</p> : (
@@ -321,8 +450,7 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
                 )}
               </div>
             )}
-          </div>
-        ) : (
+          </div>        ) : (
           <ItemSearch t={t} locale={locale} onPick={add} off={p.off} />
         )}
         {lines.length === 0 ? <p className="py-8 text-center text-sm text-gray-500">{t.pos.cartEmpty}</p> : (
@@ -334,9 +462,9 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
                 return (
                   <tr key={l.variantId}>
                     <td className="cell-title">{l.name}{(l.options || l.sku) && <div className="text-xs text-gray-500">{l.options} <span dir="ltr">{l.sku ?? ""}</span></div>}</td>
-                    <td data-label={t.pos.qty}><input className="input w-20" dir="ltr" inputMode="decimal" value={l.qty} disabled={locked} onChange={(e) => set({ qty: e.target.value })} /></td>
+                    <td data-label={t.pos.qty}><input data-qty={l.variantId} className="input w-20" dir="ltr" inputMode="decimal" value={l.qty} disabled={locked} onChange={(e) => set(l.usual ? { qty: e.target.value, discount: usualDiscount(l.price, e.target.value, customer?.discountPct) } : { qty: e.target.value })} /></td>
                     <td data-label={t.pos.price}><input className="input w-24" dir="ltr" inputMode="decimal" value={l.price} disabled={locked || !p.can.priceChange} onChange={(e) => set({ price: e.target.value })} /></td>
-                    {p.can.discount && <td data-label={t.pos.discount}><input className="input w-20" dir="ltr" inputMode="decimal" value={l.discount} disabled={locked} onChange={(e) => set({ discount: e.target.value })} /></td>}
+                    {p.can.discount && <td data-label={t.pos.discount}><input className="input w-20" dir="ltr" inputMode="decimal" value={l.discount} disabled={locked} onChange={(e) => set({ discount: e.target.value, usual: false })} /></td>}
                     <td>{!locked && <button className="text-sm text-red-600 hover:underline" onClick={() => { setLines((ls) => ls.filter((_, j) => j !== i)); setPayments([]); }}>{t.stock.remove}</button>}</td>
                   </tr>
                 );
@@ -351,31 +479,41 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
           <div className="flex justify-between"><span className="text-gray-500">{t.pos.net}</span><span dir="ltr">{totals ? formatSAR(totals.net, locale) : "—"}</span></div>
           <div className="flex justify-between"><span className="text-gray-500">{t.pos.vat} ({p.vatRate}%)</span><span dir="ltr">{totals ? formatSAR(totals.vat, locale) : "—"}</span></div>
           <div className="flex justify-between border-t border-[var(--line)] pt-2 text-lg font-semibold"><span>{t.pos.total}</span><span dir="ltr">{totals ? formatSAR(totalH, locale) : "—"}</span></div>
+          {p.can.discount && !locked && lines.length > 0 && (
+            <div className="flex gap-2 pt-2">
+              <input className="input" dir="ltr" inputMode="decimal" placeholder={t.pos.extra.receiptDiscount} value={recDisc} onChange={(e) => setRecDisc(e.target.value)} />
+              <button type="button" className="btn-ghost" onClick={() => applyReceiptDiscount(recDisc)}>{t.pos.extra.apply}</button>
+            </div>
+          )}
         </section>
 
         <section className="card space-y-2">
           <label className="label">{t.pos.customer}</label>
           {customer ? (
-            <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm">
-              <span><b>{customer.name || "—"}</b> · <span dir="ltr">{customer.phone}</span> · #{customer.customerNo}</span>
-              {!locked && <button className="text-red-600" onClick={() => setCustomer(null)}>×</button>}
-            </div>
+            <CustomerPicker t={t} value={customer} onPick={pickCustomer} err={err} setMsg={p.setMsg} disabled={locked} />
           ) : (
             <>
               <div className="flex gap-2">
-                <input className="input" dir="ltr" inputMode="tel" placeholder={t.pos.customerPhone} value={phone} onChange={(e) => { setPhone(e.target.value); setCustNotFound(false); }} />
+                <input className="input" placeholder={t.pos.extra.searchCustomer} value={phone} onChange={(e) => { setPhone(e.target.value); setCustNotFound(false); setCustHits(null); }} />
                 <button className="btn-ghost" onClick={async () => {
-                  const r = await findCustomerAction(phone);
+                  const r = await searchCustomersAction(phone);
                   if (!r.ok) return p.setMsg({ ok: false, text: err(r.error) });
-                  if (r.customer) setCustomer(r.customer); else setCustNotFound(true);
+                  if (r.customers.length === 1) pickCustomer(r.customers[0]);
+                  else if (r.customers.length > 1) setCustHits(r.customers);
+                  else setCustNotFound(true);
                 }}>{t.pos.findCustomer}</button>
               </div>
+              {custHits && (
+                <div className="max-h-48 overflow-y-auto rounded-lg border border-[var(--line)]">
+                  {custHits.map((c) => <button key={c.id} type="button" onClick={() => { pickCustomer(c); setCustHits(null); }} className="block w-full px-3 py-2 text-start text-sm hover:bg-gray-50">{c.name} · <span dir="ltr">{c.phone}</span> · #{c.customerNo}</button>)}
+                </div>
+              )}
               {(custNotFound || (!p.can.skipCustomer && phone.trim() !== "")) && p.can.addCustomer && (
                 <div className="flex gap-2">
                   <input className="input" placeholder={t.pos.customerName} value={custName} onChange={(e) => setCustName(e.target.value)} />
                   <button className="btn-ghost" onClick={async () => {
                     const r = await quickAddCustomerAction(phone, custName);
-                    if (r.ok) setCustomer(r.customer); else p.setMsg({ ok: false, text: err(r.error) });
+                    if (r.ok) pickCustomer(r.customer); else p.setMsg({ ok: false, text: err(r.error) });
                   }}>{t.pos.addCustomer}</button>
                 </div>
               )}
