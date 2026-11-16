@@ -164,3 +164,53 @@ export async function pushStockForInvoice(invoiceId: string, locationId: string)
   const { data } = await db().from("invoice_lines").select("variant_id").eq("invoice_id", invoiceId);
   await pushStockIfWebsite([locationId], [...new Set((data ?? []).map((l) => l.variant_id).filter(Boolean) as string[])]);
 }
+
+const LEVELS_QUERY = `query L($after: String) { productVariants(first: 100, after: $after) { pageInfo { hasNextPage endCursor }
+  nodes { legacyResourceId inventoryItem { tracked inventoryLevels(first: 10) { nodes { location { id } quantities(names: ["available"]) { quantity } } } } } } }`;
+
+/**
+ * One time: the website's current "available" quantities (at its stock location) become the
+ * counted stock of the portal's website stock location (Jeddah). Posted as a stock count, so
+ * every change is in the stock log.
+ */
+export async function importWebsiteStock(userId: string): Promise<{ ok: boolean; sent?: number; error?: string }> {
+  const cfg = ordersConfig();
+  if (!cfg) return { ok: false, error: "not_connected" };
+  const sw = await webSwitches();
+  const { data: locSetting } = await db().from("settings").select("value").eq("key", "website_stock_location").maybeSingle();
+  const loc = typeof locSetting?.value === "string" ? locSetting.value : null;
+  if (!loc) return { ok: false, error: "no website stock location" };
+  try {
+    const want = sw.location ? gid("Location", sw.location) : null;
+    const qty = new Map<string, number>();
+    let after: string | null = null;
+    for (let page = 0; page < 200; page++) {
+      type Page = { productVariants: { pageInfo: { hasNextPage: boolean; endCursor: string | null }; nodes: { legacyResourceId: string; inventoryItem: { tracked: boolean; inventoryLevels: { nodes: { location: { id: string }; quantities: { quantity: number }[] }[] } } }[] } };
+      const r: Page = await adminGraphql<Page>(cfg, LEVELS_QUERY, { after });
+      for (const n of r.productVariants.nodes) {
+        if (!n.inventoryItem.tracked) continue;
+        const levels = n.inventoryItem.inventoryLevels.nodes.filter((l) => !want || l.location.id === want);
+        qty.set(n.legacyResourceId, levels.reduce((a, l) => a + (l.quantities[0]?.quantity ?? 0), 0));
+      }
+      if (!r.productVariants.pageInfo.hasNextPage) break;
+      after = r.productVariants.pageInfo.endCursor;
+    }
+    const ids = [...qty.keys()];
+    const lines: { variant_id: string; qty: string }[] = [];
+    for (const part of chunk(ids, 500)) {
+      const { data } = await db().from("product_variants").select("id, shopify_variant_id").in("shopify_variant_id", part);
+      for (const v of data ?? []) lines.push({ variant_id: v.id, qty: String(Math.max(0, qty.get(String(v.shopify_variant_id)) ?? 0)) });
+    }
+    if (!lines.length) return { ok: false, error: "no website items found" };
+    const { error } = await db().rpc("post_stock_doc2", {
+      p: { client_id: crypto.randomUUID(), kind: "count", location_id: loc, to_location_id: null, lines, note: "Opening stock copied from the website", reason: null, user_id: userId, approved_by: null, request_id: null },
+    });
+    if (error) throw new Error(error.message);
+    await note("import", true, { sent: lines.length });
+    return { ok: true, sent: lines.length };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    await note("import", false, { error });
+    return { ok: false, error };
+  }
+}

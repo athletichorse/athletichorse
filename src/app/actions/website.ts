@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { assertPermission } from "@/lib/auth";
 import { db } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
-import { connectWebhooks, ordersToQuotations, pushPrices, pushStock, webSwitches } from "@/lib/website-push";
+import { connectWebhooks, importWebsiteStock, ordersToQuotations, pushPrices, pushStock, webSwitches } from "@/lib/website-push";
 
 const back = (q: string) => redirect(`/company?${q}#website`);
 
@@ -48,6 +48,7 @@ export async function websiteNowAction(form: FormData) {
   let r: { ok: boolean; error?: string; sent?: number; added?: number; made?: number };
   if (what === "prices") r = await pushPrices(null);
   else if (what === "stock") r = await pushStock(null);
+  else if (what === "import") { r = await importWebsiteStock(staff.id); revalidatePath("/stock"); }
   else if (what === "quotes") r = { ok: true, ...(await ordersToQuotations()) };
   else if (what === "webhooks") {
     const h = await headers();

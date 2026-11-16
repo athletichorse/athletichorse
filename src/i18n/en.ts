@@ -792,6 +792,8 @@ const en: Dict = {
       sendPrices: "Send all prices now",
       sendStock: "Send all stock now",
       makeQuotes: "Make quotations now",
+      importStock: "Copy website stock into the website stock location (one time)",
+      importStockHint: "The website's current quantities become that location's counted stock (logged as a stock count). Use once, before turning on \"Send website stock\".",
       webhooks: "Connect instant updates",
       webhooksHint: "Website orders and product changes reach the portal at once (the daily check stays).",
       last: "Last",
