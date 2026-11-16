@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
@@ -21,6 +22,7 @@ export default async function PosPage() {
     db().from("settings").select("value").eq("key", "vat_rate").maybeSingle(),
     db().from("company").select("legal_name_en, legal_name_ar").eq("id", 1).maybeSingle(),
   ]);
+  const { data: expenseTypes } = await db().from("expense_types").select("id, name_en, name_ar").eq("active", true).order("sort");
   const companyName = (locale === "ar" ? company?.legal_name_ar : company?.legal_name_en) || company?.legal_name_en || BRAND[locale];
   const name = (l: { name_en: string; name_ar: string }) => (locale === "ar" ? l.name_ar : l.name_en || l.name_ar);
   const myLocs = (locs ?? []).filter((l) => me.locations === "all" || me.locations.includes(l.id)).map((l) => ({ id: l.id, name: name(l), code: l.code }));
@@ -30,12 +32,16 @@ export default async function PosPage() {
   const p = (k: Parameters<typeof me.perms.has>[0]) => me.perms.has(k);
   return (
     <>
-      <PageHeader title={t.pos.title} t={t} filename="pos" />
+      <PageHeader title={t.pos.title} t={t} filename="pos">
+        {me.perms.has("pos.past_shifts") && <Link href="/pos/shifts" className="btn-ghost no-print">{t.pos.extra.pastShifts}</Link>}
+        {(me.perms.has("pos.past_shifts") || me.perms.has("pos.shift")) && <Link href="/pos/day" className="btn-ghost no-print">{t.pos.extra.endOfDay}</Link>}
+      </PageHeader>
       <PosApp
         t={t}
         locale={locale}
         me={{ id: me.id, name: me.fullName }}
         company={companyName}
+        expenseTypes={(expenseTypes ?? []).map((e) => ({ id: e.id, name: (locale === "ar" && e.name_ar) || e.name_en }))}
         canManageOffline={me.role === "owner" || p("approval.approve")}
         locations={myLocs}
         shift={shift ? { id: shift.id, locationId: shift.location_id, openedAt: shift.opened_at, openingCash: String(shift.opening_cash) } : null}

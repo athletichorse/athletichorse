@@ -41,7 +41,8 @@ const has = (s: Staff, ...k: Parameters<Staff["perms"]["has"]>[0][]) => k.some((
 /** SQL errors that carry a code ("not_enough_stock: 2 available") come back as just the code. */
 const sqlError = (m: string) => {
   const msg = m.replace(/^.*?ERROR:\s*/, "");
-  return /^not_enough_stock\b/.test(msg) ? "not_enough_stock" : msg;
+  const code = msg.match(/^(not_enough_stock|credit_limit|quote_not_found|expense_type_required|customer_required|bad_amount)\b/);
+  return code ? code[1] : msg;
 };
 
 async function posLocationOk(s: Staff, locationId: string) {
@@ -78,23 +79,36 @@ export async function closeShiftAction(input: { shiftId: string; counted: string
   return { ok: true, expected: fmt(data.expected), difference: fmt(data.difference) };
 }
 
-export async function cashMovementAction(input: { clientId: string; shiftId: string; kind: "cash_out" | "cash_in"; amount: string; reason: string; approverUsername?: string; approverPin?: string }): Promise<PosResult> {
+export type DrawerKind = "cash_out" | "cash_in" | "expense" | "customer_payment";
+/** Drawer movements: cash out/in, expenses (with a type) and payments received from customers. */
+export async function cashMovementAction(input: { clientId: string; shiftId: string; kind: DrawerKind; amount: string; reason: string; expenseTypeId?: string; customerId?: string; method?: string; approverUsername?: string; approverPin?: string }): Promise<PosResult> {
   const s = await requireStaff();
-  if (!has(s, "pos.cash_out")) return { ok: false, error: "forbidden" };
+  const kinds: DrawerKind[] = ["cash_out", "cash_in", "expense", "customer_payment"];
+  if (!kinds.includes(input.kind)) return { ok: false, error: "bad_request" };
+  const allowed = input.kind === "cash_out" || input.kind === "cash_in" ? has(s, "pos.cash_out") : has(s, "pos.collect", "pos.shift");
+  if (!allowed) return { ok: false, error: "forbidden" };
   const amount = money(input.amount);
-  if (!isId(input.clientId) || !isId(input.shiftId) || !amount || amount === "0.00" || !["cash_out", "cash_in"].includes(input.kind)) return { ok: false, error: "bad_amount" };
+  if (!isId(input.clientId) || !isId(input.shiftId) || !amount || amount === "0.00") return { ok: false, error: "bad_amount" };
+  if (input.kind === "expense" && !isId(input.expenseTypeId)) return { ok: false, error: "expense_type_required" };
+  if (input.kind === "customer_payment" && !isId(input.customerId)) return { ok: false, error: "customer_required" };
+  const { data: shift } = await db().from("pos_shifts").select("location_id, opened_by").eq("id", input.shiftId).maybeSingle();
+  if (!shift || !canUseLocation(s, shift.location_id)) return { ok: false, error: "location_not_allowed" };
+  // cash out → its own PIN rule; cash in and expenses follow the till PIN rule
+  const rule = input.kind === "cash_out" ? "approval.cash_out" : input.kind === "customer_payment" ? null : "approval.discount";
   let approver: string | null = null;
-  if (input.kind === "cash_out") {
-    const a = await checkApproval(s, "approval.cash_out", input.approverUsername, input.approverPin);
+  if (rule) {
+    const a = await checkApproval(s, rule, input.approverUsername, input.approverPin);
     if (!a.ok) return { ok: false, error: a.error };
     approver = a.approverId;
   }
-  const { data, error } = await db().rpc("post_cash_movement", {
-    p_client_id: input.clientId, p_shift: input.shiftId, p_kind: input.kind, p_amount: amount,
-    p_reason: String(input.reason ?? "").slice(0, 300), p_user: s.id, p_approved_by: approver,
+  const { data, error } = await db().rpc("post_cash_movement2", {
+    p: { client_id: input.clientId, shift_id: input.shiftId, kind: input.kind, amount, reason: String(input.reason ?? "").slice(0, 300), user_id: s.id,
+         approved_by: approver, expense_type_id: input.kind === "expense" ? input.expenseTypeId : null,
+         customer_id: input.kind === "customer_payment" ? input.customerId : null, method: input.kind === "customer_payment" ? String(input.method ?? "cash") : null },
   });
   if (error) return { ok: false, error: sqlError(error.message) };
-  if (!data.duplicate) await audit(s.id, `pos.${input.kind}`, "shift", input.shiftId, { amount, approved_by: approver });
+  if (!data.duplicate) await audit(s.id, `pos.${input.kind}`, "shift", input.shiftId, { amount, approved_by: approver, customer: input.customerId ?? null });
+  revalidatePath("/customers");
   return { ok: true };
 }
 
@@ -103,7 +117,13 @@ type CartLine = { variantId: string; qty: string; unitPrice?: string; discount?:
 type PricedLine = { variant_id: string; qty: string; unit_price: string; discount: string };
 
 /** Uses the database price unless the person may change prices; checks discounts. */
-async function priceLines(s: Staff, lines: CartLine[], approver: { u?: string; p?: string }): Promise<PosResult<{ lines: PricedLine[]; approvedBy: string | null }>> {
+async function priceLines(s: Staff, lines: CartLine[], approver: { u?: string; p?: string }, customerId?: string | null): Promise<PosResult<{ lines: PricedLine[]; approvedBy: string | null }>> {
+  // the customer's usual discount (%) is allowed without a PIN or the discount permission
+  let usualPct = 0;
+  if (customerId && isId(customerId)) {
+    const { data: c } = await db().from("customers").select("discount_pct").eq("id", customerId).maybeSingle();
+    usualPct = Number(c?.discount_pct ?? 0);
+  }
   if (!Array.isArray(lines) || !lines.length || lines.length > 300) return { ok: false, error: "no_lines" };
   if (!lines.every((l) => isId(l.variantId))) return { ok: false, error: "bad_request" };
   const ids = [...new Set(lines.map((l) => l.variantId))];
@@ -127,8 +147,12 @@ async function priceLines(s: Staff, lines: CartLine[], approver: { u?: string; p
     const disc = money(l.discount || "0");
     if (disc === null) return { ok: false, error: "bad_amount" };
     if (disc !== "0.00") {
-      if (!has(s, "pos.discount")) return { ok: false, error: "no_discount" };
-      needsDiscountApproval = true;
+      const usualMax = usualPct > 0 ? (toHalalas(unit) * toMilliQty(q) * BigInt(Math.round(usualPct * 100))) / 10_000_000n : 0n;
+      const priceKept = unit === formatDecimal(toHalalas(dbPrice));
+      if (!(priceKept && toHalalas(disc) <= usualMax)) {
+        if (!has(s, "pos.discount")) return { ok: false, error: "no_discount" };
+        needsDiscountApproval = true;
+      }
     }
     out.push({ variant_id: l.variantId, qty: q, unit_price: unit, discount: disc });
   }
@@ -146,7 +170,7 @@ export async function saveQuotationAction(input: { clientId: string; locationId:
   const s = await requireStaff();
   if (!has(s, "pos.desk")) return { ok: false, error: "forbidden" };
   if (!isId(input.clientId) || !(await posLocationOk(s, input.locationId))) return { ok: false, error: "location_not_allowed" };
-  const priced = await priceLines(s, input.lines, { u: input.approverUsername, p: input.approverPin });
+  const priced = await priceLines(s, input.lines, { u: input.approverUsername, p: input.approverPin }, input.customerId);
   if (!priced.ok) return priced;
   const { data, error } = await db().rpc("save_quotation", {
     p: {
@@ -171,21 +195,41 @@ export async function cancelQuotationAction(quotationId: string): Promise<PosRes
   return { ok: true };
 }
 
-export type QuoteForCashier = { id: string; quoteNo: number; total: string; customerId: string | null; salespersonId: string | null; lines: { variantId: string; name: string; options: string; sku: string | null; qty: string; unitPrice: string; discount: string }[] };
+/** Desk: change an open quotation (lines replaced and recomputed). */
+export async function updateQuotationAction(input: { quotationId: string; customerId?: string; salespersonId?: string; lines: CartLine[]; approverUsername?: string; approverPin?: string }): Promise<PosResult<{ quoteNo: number }>> {
+  const s = await requireStaff();
+  if (!has(s, "pos.desk")) return { ok: false, error: "forbidden" };
+  if (!isId(input.quotationId)) return { ok: false, error: "bad_request" };
+  const { data: q } = await db().from("quotations").select("location_id, status").eq("id", input.quotationId).maybeSingle();
+  if (!q || q.status !== "open" || !canUseLocation(s, q.location_id)) return { ok: false, error: "quote_not_found" };
+  const priced = await priceLines(s, input.lines, { u: input.approverUsername, p: input.approverPin }, input.customerId);
+  if (!priced.ok) return priced;
+  const { data, error } = await db().rpc("update_quotation", {
+    p: { quotation_id: input.quotationId, lines: priced.lines, customer_id: isId(input.customerId) ? input.customerId : null, salesperson_id: isId(input.salespersonId) ? input.salespersonId : null },
+  });
+  if (error) return { ok: false, error: sqlError(error.message) };
+  await audit(s.id, "pos.quotation_edit", "quotation", input.quotationId, { quote_no: data.quote_no, total: data.gross_total });
+  revalidatePath("/pos");
+  return { ok: true, quoteNo: Number(data.quote_no) };
+}
+
+export type QuoteForCashier = { id: string; quoteNo: number; total: string; customerId: string | null; customer: PosCustomer | null; salespersonId: string | null; lines: { variantId: string; name: string; options: string; sku: string | null; qty: string; unitPrice: string; discount: string }[] };
 
 export async function loadQuotationAction(quoteNo: number, locale: "ar" | "en"): Promise<PosResult<{ quote: QuoteForCashier }>> {
   const s = await requireStaff();
-  if (!has(s, "pos.collect")) return { ok: false, error: "forbidden" };
+  if (!has(s, "pos.collect", "pos.desk")) return { ok: false, error: "forbidden" };
   const { data: q } = await db().from("quotations").select("id, quote_no, gross_total, customer_id, salesperson_id, location_id, status").eq("quote_no", Number(quoteNo)).maybeSingle();
   if (!q || q.status !== "open" || !canUseLocation(s, q.location_id)) return { ok: false, error: "quote_not_found" };
   const { data: lines } = await db().from("quotation_lines").select("line_no, variant_id, qty, unit_price, discount").eq("quotation_id", q.id).order("line_no");
   const ids = (lines ?? []).map((l) => l.variant_id);
   const { data: names } = ids.length ? await db().from("variant_search").select("variant_id, name_en, name_ar, sku, option1, option2, option3").in("variant_id", ids) : { data: [] };
   const nm = new Map((names ?? []).map((n) => [n.variant_id, n]));
+  const { data: c } = q.customer_id ? await db().from("customer_list").select("id, customer_no, name, phone, discount_pct, balance, credit_limit").eq("id", q.customer_id).maybeSingle() : { data: null };
   return {
     ok: true,
     quote: {
-      id: q.id, quoteNo: q.quote_no, total: String(q.gross_total), customerId: q.customer_id, salespersonId: q.salesperson_id,
+      id: q.id, quoteNo: q.quote_no, total: String(q.gross_total), customerId: q.customer_id,
+      customer: c ? { id: c.id, customerNo: c.customer_no, name: c.name, phone: c.phone, discountPct: Number(c.discount_pct ?? 0), balance: fmt(c.balance), creditLimit: c.credit_limit === null ? null : fmt(c.credit_limit) } : null, salespersonId: q.salesperson_id,
       lines: (lines ?? []).map((l) => {
         const n = nm.get(l.variant_id);
         return {
@@ -203,6 +247,8 @@ export type SaleInput = {
   clientId: string; locationId: string; shiftId: string; salespersonId?: string; customerId?: string; quotationId?: string;
   lines: CartLine[]; payments: { method: string; amount: string; reference?: string }[]; cashTendered?: string;
   offlineTempNo?: string; issuedAt?: string; approverUsername?: string; approverPin?: string;
+  /** Several open quotations of one customer collected on this receipt. */
+  quotationIds?: string[];
   /** A new customer typed at the till (e.g. offline): found or created by mobile when the sale is saved. */
   customerPhone?: string; customerName?: string;
 };
@@ -232,13 +278,17 @@ export async function postSaleAction(input: SaleInput): Promise<PosResult<{ invo
 
   let lines: PricedLine[];
   let approvedBy: string | null = null;
-  if (isId(input.quotationId)) {
-    // Collecting a desk quotation: the quoted lines (already checked at the desk) are used, not the browser's.
-    const { data: ql } = await db().from("quotation_lines").select("variant_id, qty, unit_price, discount").eq("quotation_id", input.quotationId).order("line_no");
-    if (!ql?.length) return { ok: false, error: "quote_not_found" };
-    lines = ql.map((l) => ({ variant_id: l.variant_id, qty: String(l.qty), unit_price: String(l.unit_price), discount: String(l.discount) }));
+  const quoteIds = [...new Set([...(isId(input.quotationId) ? [input.quotationId] : []), ...(Array.isArray(input.quotationIds) ? input.quotationIds.filter(isId) : [])])].slice(0, 20);
+  if (quoteIds.length) {
+    // Collecting desk quotations: the quoted lines (already checked at the desk) are used, not the browser's.
+    lines = [];
+    for (const qid of quoteIds) {
+      const { data: ql } = await db().from("quotation_lines").select("variant_id, qty, unit_price, discount").eq("quotation_id", qid).order("line_no");
+      if (!ql?.length) return { ok: false, error: "quote_not_found" };
+      lines.push(...ql.map((l) => ({ variant_id: l.variant_id, qty: String(l.qty), unit_price: String(l.unit_price), discount: String(l.discount) })));
+    }
   } else {
-    const priced = await priceLines(s, input.lines, { u: input.approverUsername, p: input.approverPin });
+    const priced = await priceLines(s, input.lines, { u: input.approverUsername, p: input.approverPin }, input.customerId);
     if (!priced.ok) return priced;
     lines = priced.lines;
     approvedBy = priced.approvedBy;
@@ -246,12 +296,12 @@ export async function postSaleAction(input: SaleInput): Promise<PosResult<{ invo
   const payments = (Array.isArray(input.payments) ? input.payments : []).slice(0, 10).map((p) => ({ method: String(p.method), amount: money(p.amount), reference: String(p.reference ?? "").slice(0, 100) }));
   if (!payments.length || payments.some((p) => !p.amount || p.amount === "0.00")) return { ok: false, error: "bad_payment" };
   const tendered = input.cashTendered ? money(input.cashTendered) : null;
-  const { data, error } = await db().rpc("post_sale", {
+  const { data, error } = await db().rpc("post_sale_multi", {
     p: {
       client_id: input.clientId, location_id: input.locationId, shift_id: input.shiftId, cashier_id: s.id,
       salesperson_id: isId(input.salespersonId) ? input.salespersonId : s.id,
       customer_id: customerId,
-      quotation_id: isId(input.quotationId) ? input.quotationId : null,
+      quotation_id: quoteIds[0] ?? null, quotation_ids: quoteIds.length > 1 ? quoteIds : [],
       lines, payments, cash_tendered: tendered,
       issued_at: input.issuedAt && !Number.isNaN(Date.parse(input.issuedAt)) ? new Date(input.issuedAt).toISOString() : null,
       offline_temp_no: input.offlineTempNo ? String(input.offlineTempNo).slice(0, 40) : null,
@@ -336,7 +386,7 @@ export async function postReturnAction(input: ReturnInput): Promise<PosResult<{ 
 }
 
 // ---------------------------------------------------------------- customers at the till
-export type PosCustomer = { id: string; customerNo: number; name: string; phone: string };
+export type PosCustomer = { id: string; customerNo: number; name: string; phone: string; discountPct?: number; balance?: string; creditLimit?: string | null };
 
 export async function findCustomerAction(phoneOrNo: string): Promise<PosResult<{ customer: PosCustomer | null }>> {
   const s = await requireStaff();
@@ -397,4 +447,28 @@ export async function posCatalogAction(locale: "ar" | "en" = "en"): Promise<PosR
       x: Boolean(r.is_service),
     })),
   };
+}
+
+/** Customers by mobile, name or serial customer number (with usual discount, balance and credit limit). */
+export async function searchCustomersAction(term: string): Promise<PosResult<{ customers: PosCustomer[] }>> {
+  const s = await requireStaff();
+  if (!has(s, "customers.view", "pos.collect", "pos.desk", "pos.quick_sale")) return { ok: false, error: "forbidden" };
+  const t = String(term ?? "").trim().slice(0, 60);
+  if (!t) return { ok: true, customers: [] };
+  const cols = "id, customer_no, name, phone, discount_pct, balance, credit_limit";
+  const phone = normalizeSaudiMobile(t);
+  let rows: Record<string, unknown>[] = [];
+  if (phone) rows = (await db().from("customer_list").select(cols).eq("phone", phone).limit(1)).data ?? [];
+  else if (/^\d{1,9}$/.test(t)) rows = (await db().from("customer_list").select(cols).eq("customer_no", Number(t)).limit(1)).data ?? [];
+  if (!rows.length) rows = (await db().from("customer_list").select(cols).ilike("name", `%${t.replace(/[%_\\]/g, "")}%`).order("name").limit(10)).data ?? [];
+  return {
+    ok: true,
+    customers: rows.map((r) => ({ id: String(r.id), customerNo: Number(r.customer_no), name: String(r.name ?? ""), phone: String(r.phone), discountPct: Number(r.discount_pct ?? 0), balance: fmt(r.balance), creditLimit: r.credit_limit === null ? null : fmt(r.credit_limit) })),
+  };
+}
+
+export async function expenseTypesAction(locale: "ar" | "en"): Promise<{ id: string; name: string }[]> {
+  await requireStaff();
+  const { data } = await db().from("expense_types").select("id, name_en, name_ar").eq("active", true).order("sort");
+  return (data ?? []).map((e) => ({ id: e.id, name: (locale === "ar" && e.name_ar) || e.name_en }));
 }
