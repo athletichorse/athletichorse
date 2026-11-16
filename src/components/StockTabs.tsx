@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { TabNav } from "./TabNav";
 import type { Dict } from "@/i18n";
 
 /** Tabs across the Stores area. */
@@ -10,11 +10,7 @@ export function StockTabs({ t, active, canRequests }: { t: Dict; active: "stock"
     ["shortages", "/stock/shortages", t.stock.flow.tabs.shortages],
   ] as [string, string, string][];
   return (
-    <nav className="no-print mb-4 flex gap-1 overflow-x-auto border-b border-[var(--line)]">
-      {tabs.map(([k, href, label]) => (
-        <Link key={k} href={href} className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium whitespace-nowrap ${active === k ? "border-[var(--brand)] text-[var(--brand)]" : "border-transparent text-gray-600 hover:text-gray-900"}`}>{label}</Link>
-      ))}
-    </nav>
+    <TabNav tabs={tabs} active={active} />
   );
 }
 
