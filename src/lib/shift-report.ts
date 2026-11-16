@@ -12,12 +12,14 @@ export type DrawerReport = {
 export async function drawerReport(shiftIds: string[], typeName: (id: string | null) => string): Promise<DrawerReport> {
   const empty: DrawerReport = { opening: 0, sales: 0, returns: 0, invoices: 0, creditNotes: 0, byMethod: [], cashIn: 0, cashOut: 0, expenses: [], customerPayments: 0, expected: 0 };
   if (!shiftIds.length) return empty;
-  const [{ data: shifts }, { data: invs }, { data: moves }, { data: methods }] = await Promise.all([
+  const [{ data: shifts }, { data: invs }, { data: cash }, { data: entries }, { data: methods }] = await Promise.all([
     db().from("pos_shifts").select("id, opening_cash").in("id", shiftIds),
     db().from("invoices").select("id, kind, gross_total").in("shift_id", shiftIds),
-    db().from("cash_movements").select("kind, amount, expense_type_id, method").in("shift_id", shiftIds),
+    db().from("cash_movements").select("kind, amount").in("shift_id", shiftIds).in("kind", ["cash_in", "cash_out"]),
+    db().from("drawer_entries").select("kind, amount, expense_type_id, method").in("shift_id", shiftIds),
     db().from("payment_methods").select("code, kind"),
   ]);
+  const moves = [...(cash ?? []).map((m) => ({ ...m, expense_type_id: null as string | null, method: null as string | null })), ...(entries ?? [])];
   const ids = (invs ?? []).map((i) => i.id);
   const pays: { invoice_id: string; method: string; amount: string }[] = [];
   for (let i = 0; i < ids.length; i += 200) {
@@ -43,7 +45,7 @@ export async function drawerReport(shiftIds: string[], typeName: (id: string | n
   r.byMethod = [...bm.entries()].map(([method, v]) => ({ method, ...v }));
   const ex = new Map<string, number>();
   let cashPayments = 0;
-  for (const m of moves ?? []) {
+  for (const m of moves) {
     const amt = Number(m.amount);
     if (m.kind === "cash_in") r.cashIn += amt;
     else if (m.kind === "cash_out") r.cashOut += amt;

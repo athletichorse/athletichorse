@@ -195,6 +195,7 @@ const count = Number((syncTxt.match(/(\d[\d,]*) products/i)?.[1] || "0").replace
 if (count < 300) fail("products sync", `only ${count} products after sync`);
 else ok(`website sync imported ${count} products from athletic-horse.com`);
 await page.goto(BASE + "/");
+await page.waitForFunction(() => document.body.innerText.includes("Synced"), null, { timeout: 15000 }).catch(() => {}); // streamed after the loading screen
 if (!(await page.locator("body").innerText()).includes("Synced")) fail("home", "last sync status not shown on home");
 
 // product edit

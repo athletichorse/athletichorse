@@ -220,7 +220,7 @@ export async function loadQuotationAction(quoteNo: number, locale: "ar" | "en"):
   if (!has(s, "pos.collect", "pos.desk")) return { ok: false, error: "forbidden" };
   const { data: q } = await db().from("quotations").select("id, quote_no, gross_total, customer_id, salesperson_id, location_id, status").eq("quote_no", Number(quoteNo)).maybeSingle();
   if (!q || q.status !== "open" || !canUseLocation(s, q.location_id)) return { ok: false, error: "quote_not_found" };
-  const { data: lines } = await db().from("quotation_lines").select("line_no, variant_id, qty, unit_price, discount").eq("quotation_id", q.id).order("line_no");
+  const { data: lines } = await db().from("quotation_lines").select("line_no, variant_id, qty, unit_price, discount").eq("quotation_id", q.id).eq("active", true).order("line_no");
   const ids = (lines ?? []).map((l) => l.variant_id);
   const { data: names } = ids.length ? await db().from("variant_search").select("variant_id, name_en, name_ar, sku, option1, option2, option3").in("variant_id", ids) : { data: [] };
   const nm = new Map((names ?? []).map((n) => [n.variant_id, n]));
@@ -283,7 +283,7 @@ export async function postSaleAction(input: SaleInput): Promise<PosResult<{ invo
     // Collecting desk quotations: the quoted lines (already checked at the desk) are used, not the browser's.
     lines = [];
     for (const qid of quoteIds) {
-      const { data: ql } = await db().from("quotation_lines").select("variant_id, qty, unit_price, discount").eq("quotation_id", qid).order("line_no");
+      const { data: ql } = await db().from("quotation_lines").select("variant_id, qty, unit_price, discount").eq("quotation_id", qid).eq("active", true).order("line_no");
       if (!ql?.length) return { ok: false, error: "quote_not_found" };
       lines.push(...ql.map((l) => ({ variant_id: l.variant_id, qty: String(l.qty), unit_price: String(l.unit_price), discount: String(l.discount) })));
     }

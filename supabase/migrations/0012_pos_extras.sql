@@ -27,11 +27,27 @@ on conflict do nothing;
 alter table public.expense_types enable row level security;
 revoke all on public.expense_types from anon, authenticated;
 
-alter table public.cash_movements drop constraint if exists cash_movements_kind_check;
-alter table public.cash_movements add constraint cash_movements_kind_check check (kind in ('cash_out', 'cash_in', 'expense', 'customer_payment'));
-alter table public.cash_movements add column if not exists expense_type_id uuid references public.expense_types(id);
-alter table public.cash_movements add column if not exists customer_id uuid references public.customers(id);
-alter table public.cash_movements add column if not exists method text references public.payment_methods(code);
+-- Expenses and customer payments get their own table (cash in/out stay in cash_movements).
+create table if not exists public.drawer_entries (
+  id               uuid primary key default gen_random_uuid(),
+  client_id        uuid not null unique,
+  shift_id         uuid not null references public.pos_shifts(id),
+  kind             text not null check (kind in ('expense', 'customer_payment')),
+  amount           numeric(12,2) not null check (amount > 0),
+  reason           text not null default '',
+  expense_type_id  uuid references public.expense_types(id),
+  customer_id      uuid references public.customers(id),
+  method           text references public.payment_methods(code),
+  created_by       uuid not null references public.profiles(id),
+  approved_by      uuid references public.profiles(id),
+  created_at       timestamptz not null default now(),
+  check ((kind = 'expense') = (expense_type_id is not null)),
+  check ((kind = 'customer_payment') = (customer_id is not null))
+);
+create index if not exists drawer_entries_shift_idx on public.drawer_entries (shift_id);
+create index if not exists drawer_entries_customer_idx on public.drawer_entries (customer_id);
+alter table public.drawer_entries enable row level security;
+revoke all on public.drawer_entries from anon, authenticated;
 
 -- ---------------------------------------------------------------------
 -- Customers: credit limit, usual discount, balance
@@ -49,7 +65,7 @@ as $$
   select coalesce((select sum(case when i.kind = 'invoice' then p.amount else -p.amount end)
                      from invoice_payments p join invoices i on i.id = p.invoice_id join payment_methods m on m.code = p.method
                     where i.customer_id = p_customer and m.kind = 'on_account'), 0)
-       - coalesce((select sum(amount) from cash_movements where customer_id = p_customer and kind = 'customer_payment'), 0);
+       - coalesce((select sum(amount) from drawer_entries where customer_id = p_customer and kind = 'customer_payment'), 0);
 $$;
 
 create or replace view public.customer_list with (security_invoker = true) as
@@ -69,7 +85,7 @@ select i.customer_id, i.issued_at as at, i.kind as kind, i.number as ref, i.id a
  where m.kind = 'on_account' and i.customer_id is not null
 union all
 select c.customer_id, c.created_at, 'payment', coalesce(c.reason, ''), null, -c.amount
-  from public.cash_movements c where c.kind = 'customer_payment' and c.customer_id is not null;
+  from public.drawer_entries c where c.kind = 'customer_payment';
 revoke all on public.customer_statement from anon, authenticated;
 
 -- Payments: on account only within the credit limit (no limit set = not allowed).
@@ -123,9 +139,10 @@ as $$
        - coalesce((select sum(p.amount) from invoice_payments p join invoices i on i.id = p.invoice_id join payment_methods m on m.code = p.method
                     where i.shift_id = s.id and m.kind = 'cash' and i.kind = 'credit_note'), 0)
        + coalesce((select sum(amount) from cash_movements where shift_id = s.id and kind = 'cash_in'), 0)
-       + coalesce((select sum(c.amount) from cash_movements c left join payment_methods m on m.code = c.method
-                    where c.shift_id = s.id and c.kind = 'customer_payment' and coalesce(m.kind, 'cash') = 'cash'), 0)
-       - coalesce((select sum(amount) from cash_movements where shift_id = s.id and kind in ('cash_out', 'expense')), 0)
+       + coalesce((select sum(d.amount) from drawer_entries d left join payment_methods m on m.code = d.method
+                    where d.shift_id = s.id and d.kind = 'customer_payment' and coalesce(m.kind, 'cash') = 'cash'), 0)
+       - coalesce((select sum(amount) from cash_movements where shift_id = s.id and kind = 'cash_out'), 0)
+       - coalesce((select sum(amount) from drawer_entries where shift_id = s.id and kind = 'expense'), 0)
     from pos_shifts s where s.id = p_shift;
 $$;
 
@@ -140,16 +157,27 @@ declare v_id uuid; v_kind text := p->>'kind';
 begin
   select id into v_id from cash_movements where client_id = (p->>'client_id')::uuid;
   if found then return jsonb_build_object('id', v_id, 'duplicate', true); end if;
+  select id into v_id from drawer_entries where client_id = (p->>'client_id')::uuid;
+  if found then return jsonb_build_object('id', v_id, 'duplicate', true); end if;
   if not exists (select 1 from pos_shifts where id = (p->>'shift_id')::uuid and status = 'open') then raise exception 'The shift is not open'; end if;
   if v_kind not in ('cash_out', 'cash_in', 'expense', 'customer_payment') then raise exception 'bad_kind'; end if;
   if v_kind = 'expense' and nullif(p->>'expense_type_id', '') is null then raise exception 'expense_type_required'; end if;
   if v_kind = 'customer_payment' and nullif(p->>'customer_id', '') is null then raise exception 'customer_required'; end if;
   if (p->>'amount')::numeric <= 0 then raise exception 'bad_amount'; end if;
-  insert into cash_movements (client_id, shift_id, kind, amount, reason, created_by, approved_by, expense_type_id, customer_id, method)
-  values ((p->>'client_id')::uuid, (p->>'shift_id')::uuid, v_kind, (p->>'amount')::numeric(12,2), coalesce(p->>'reason', ''),
-          (p->>'user_id')::uuid, nullif(p->>'approved_by', '')::uuid, nullif(p->>'expense_type_id', '')::uuid,
-          nullif(p->>'customer_id', '')::uuid, case when v_kind = 'customer_payment' then coalesce(nullif(p->>'method', ''), 'cash') end)
-  returning id into v_id;
+  if v_kind in ('cash_out', 'cash_in') then
+    insert into cash_movements (client_id, shift_id, kind, amount, reason, created_by, approved_by)
+    values ((p->>'client_id')::uuid, (p->>'shift_id')::uuid, v_kind, (p->>'amount')::numeric(12,2), coalesce(p->>'reason', ''),
+            (p->>'user_id')::uuid, nullif(p->>'approved_by', '')::uuid)
+    returning id into v_id;
+  else
+    insert into drawer_entries (client_id, shift_id, kind, amount, reason, created_by, approved_by, expense_type_id, customer_id, method)
+    values ((p->>'client_id')::uuid, (p->>'shift_id')::uuid, v_kind, (p->>'amount')::numeric(12,2), coalesce(p->>'reason', ''),
+            (p->>'user_id')::uuid, nullif(p->>'approved_by', '')::uuid,
+            case when v_kind = 'expense' then nullif(p->>'expense_type_id', '')::uuid end,
+            case when v_kind = 'customer_payment' then nullif(p->>'customer_id', '')::uuid end,
+            case when v_kind = 'customer_payment' then coalesce(nullif(p->>'method', ''), 'cash') end)
+    returning id into v_id;
+  end if;
   return jsonb_build_object('id', v_id, 'duplicate', false);
 end;
 $$;
@@ -157,9 +185,8 @@ $$;
 -- ---------------------------------------------------------------------
 -- Customer's receipt link (no login): a long random token per invoice.
 -- ---------------------------------------------------------------------
+-- New invoices get a token; older ones simply have no link.
 alter table public.invoices add column if not exists public_token text;
-update public.invoices set public_token = translate(encode(extensions.gen_random_bytes(24), 'base64'), '+/=', '-_')
- where public_token is null;
 alter table public.invoices alter column public_token set default translate(encode(extensions.gen_random_bytes(24), 'base64'), '+/=', '-_');
 create unique index if not exists invoices_public_token_uq on public.invoices (public_token);
 
@@ -168,6 +195,8 @@ create unique index if not exists invoices_public_token_uq on public.invoices (p
 -- collect several open quotations of one customer on one receipt.
 -- ---------------------------------------------------------------------
 alter table public.quotations add column if not exists updated_at timestamptz;
+-- Editing keeps history: old lines are switched off (active = false), new lines added after them.
+alter table public.quotation_lines add column if not exists active boolean not null default true;
 
 create or replace function public.update_quotation(p jsonb)
 returns jsonb
@@ -182,7 +211,8 @@ begin
   if not found then raise exception 'quote_not_found'; end if;
   if jsonb_array_length(coalesce(p->'lines', '[]'::jsonb)) = 0 then raise exception 'A quotation needs at least one item'; end if;
   v_rate := (select (value #>> '{}')::numeric from settings where key = 'vat_rate');
-  delete from quotation_lines where quotation_id = v_id;
+  update quotation_lines set active = false where quotation_id = v_id and active;
+  n := coalesce((select max(line_no) from quotation_lines where quotation_id = v_id), 0);
   for l in select * from jsonb_array_elements(p->'lines') loop
     n := n + 1;
     select * into a from pos_line_amounts((l->>'unit_price')::numeric, (l->>'qty')::numeric, coalesce((l->>'discount')::numeric, 0), v_rate);
