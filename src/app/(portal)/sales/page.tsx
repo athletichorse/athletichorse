@@ -120,7 +120,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
         <div className="card p-4"><div className="text-sm text-gray-500">{t.sales.today} · {t.sales.invoices}</div><div className="text-2xl font-semibold">{sar(todaySales)}</div></div>
         <div className="card p-4"><div className="text-sm text-gray-500">{t.sales.today} · {t.sales.creditNotes}</div><div className="text-2xl font-semibold">{sar(todayReturns)}</div></div>
       </div>
-      <div className="no-print mb-4 flex gap-2 overflow-x-auto pb-1">
+      <div className="no-print mb-4 flex flex-wrap gap-2 pb-1">
         {tabLink("invoices", t.sales.invoices)}{tabLink("returns", t.sales.creditNotes)}{tabLink("website", t.sales.website)}
       </div>
       {body}

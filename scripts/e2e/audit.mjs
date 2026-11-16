@@ -79,6 +79,12 @@ async function layoutProblems(page) {
     const inScroller = (el) => { for (let p = el.parentElement; p; p = p.parentElement) { const s = getComputedStyle(p); if (/(auto|scroll)/.test(s.overflowX) && p.scrollWidth > p.clientWidth + 1) return true; } return false; };
     const inClosedMenu = (el) => { const r = el.getBoundingClientRect(); return r.right <= 0 || r.left >= vw; };
     if (document.documentElement.scrollWidth > vw + 1) out.push(`page is wider than the screen (${document.documentElement.scrollWidth}px > ${vw}px)`);
+    // a row of buttons/links that slides sideways hides some of them (tables may scroll, rows of choices may not)
+    for (const el of document.querySelectorAll("div, nav, ul")) {
+      if (!visible(el) || el.querySelector("table")) continue;
+      const st = getComputedStyle(el);
+      if (/(auto|scroll)/.test(st.overflowX) && el.scrollWidth > el.clientWidth + 2 && el.querySelector("a, button")) out.push(`row "${name(el).slice(0, 30)}" slides sideways — some choices are off screen`);
+    }
     const items = [...document.querySelectorAll("a[href], button, input:not([type=hidden]), select, textarea")].filter(visible);
     for (const el of items.slice(0, 400)) {
       const r = el.getBoundingClientRect();

@@ -4,7 +4,6 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { formatDateTime } from "@/lib/time";
 import { PageHeader } from "@/components/PageHeader";
-import { StockTabs } from "@/components/StockTabs";
 import { RequestForm } from "@/components/RequestForm";
 import { cancelRequestAction } from "@/app/actions/stock";
 
@@ -27,7 +26,6 @@ export default async function RequestsPage() {
       <PageHeader title={F.tabs.requests} t={t} filename="restock-requests">
         <Link href="/stock/requests/quick" className="btn-ghost no-print">{F.quick}</Link>
       </PageHeader>
-      <StockTabs t={t} active="requests" canRequests />
       <RequestForm t={t} locale={locale} mine={mine.map((l) => ({ id: l.id, name: name(l.id) }))} all={(locs ?? []).map((l) => ({ id: l.id, name: name(l.id) }))} />
       <div className="card mt-6 overflow-hidden p-0"><div className="overflow-x-auto">
         <table className="table" data-export>

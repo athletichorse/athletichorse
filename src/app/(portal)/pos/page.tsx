@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
@@ -33,8 +32,6 @@ export default async function PosPage() {
   return (
     <>
       <PageHeader title={t.pos.title} t={t} filename="pos">
-        {me.perms.has("pos.past_shifts") && <Link href="/pos/shifts" className="btn-ghost no-print">{t.pos.extra.pastShifts}</Link>}
-        {(me.perms.has("pos.past_shifts") || me.perms.has("pos.shift")) && <Link href="/pos/day" className="btn-ghost no-print">{t.pos.extra.endOfDay}</Link>}
       </PageHeader>
       <PosApp
         t={t}
