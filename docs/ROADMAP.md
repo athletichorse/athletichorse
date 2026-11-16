@@ -50,6 +50,6 @@
 - ✅ D. Cashier: expenses (types), customer payments, shift report + closed shifts + end of day, several quotations on one receipt, edit/cancel quotations, customer receipt link (no login), credit limit + usual discount + balance + statement, receipt discount, camera scan, quantity focused after picking, customer by mobile/name/number. Later: return slips settled as exchange at Collect
 - ✅ E. Reports & dashboard: all reports on one page (by day, branch, payment method, salesperson, customer; best/least sellers; every item; website sales; one item's history), dashboard (today's till sales, invoices today, items below zero, stock per location, latest syncs/uploads)
 - ✅ F. Salespeople, attendance, payroll, commission on the 15th: pay settings (salary, hours, commission 6/1000 or %, own or all sales, regularity bonus, food allowance), attendance sheet, advances paid off monthly, bonuses/deductions, payroll month sheet (calculate → approve → pay from drawer or bank, reopen), commission sheet, slips
-- ⬜ G. Security: working hours, approved devices
+- ✅ G. Security (الرقابة): working hours per group or person (Riyadh time, overnight windows), device lock with owner approval, activity log; owner never locked out
 - ⬜ H. Website two-way: prices, orders → quotations, stock from Jeddah, webhooks
 - ⬜ I. Offline everywhere: auto switch, customers/returns/stores/products offline, Windows app, local hub
