@@ -1,5 +1,8 @@
 "use server";
 
+import { after } from "next/server";
+import { pushStockForInvoice } from "@/lib/website-push";
+
 import { revalidatePath } from "next/cache";
 import { canUseLocation, requireStaff, type Staff } from "@/lib/auth";
 import { db } from "@/lib/supabase/admin";
@@ -309,6 +312,7 @@ export async function postSaleAction(input: SaleInput): Promise<PosResult<{ invo
     },
   });
   if (error) return { ok: false, error: sqlError(error.message) };
+  if (!data.duplicate) after(() => pushStockForInvoice(String(data.invoice_id), input.locationId));
   if (!data.duplicate) await audit(s.id, "pos.sale", "invoice", data.invoice_id, { number: data.number, total: data.gross_total, approved_by: approvedBy, offline: input.offlineTempNo ?? null });
   revalidatePath("/sales");
   return { ok: true, invoiceId: String(data.invoice_id), number: String(data.number), change: fmt(data.change ?? "0"), duplicate: Boolean(data.duplicate) };
@@ -380,6 +384,7 @@ export async function postReturnAction(input: ReturnInput): Promise<PosResult<{ 
     },
   });
   if (error) return { ok: false, error: sqlError(error.message) };
+  if (!data.duplicate) after(() => pushStockForInvoice(String(data.invoice_id), input.locationId));
   if (!data.duplicate) await audit(s.id, "pos.return", "invoice", data.invoice_id, { number: data.number, total: data.gross_total, original: input.originalInvoiceId ?? null, approved_by: a.approverId });
   revalidatePath("/sales");
   return { ok: true, invoiceId: String(data.invoice_id), number: String(data.number), total: fmt(data.gross_total) };
