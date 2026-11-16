@@ -11,7 +11,11 @@ export function AuthCard({ t, title, subtitle, children, path = "/login" }: { t:
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/logo.png" alt="Alhisan Alriyadi" className="h-10 w-auto" />
           </div>
-          <a href={`/lang?to=${other}&next=${encodeURIComponent(path)}`} className="rounded-lg px-2 py-1 text-sm font-medium text-[var(--brand)] hover:bg-[var(--brand-soft)]">{t.switchLang}</a>
+          <div className="flex gap-1 rounded-lg border border-[var(--line)] p-0.5 text-sm font-medium">
+            {(["en", "ar"] as const).map((to) => (
+              <a key={to} href={`/lang?to=${to}&next=${encodeURIComponent(path)}`} lang={to} className={`rounded-md px-2 py-1 ${other === to ? "text-gray-700 hover:bg-gray-100" : "bg-[var(--brand)] text-white"}`}>{to === "en" ? "English" : "العربية"}</a>
+            ))}
+          </div>
         </div>
         <div className="card p-6">
           <h1 className="text-xl font-semibold text-gray-900">{title}</h1>

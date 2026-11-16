@@ -47,13 +47,22 @@ function forgetSavedPages() {
   try { void caches.keys().then((keys) => Promise.all(keys.filter((k) => k.startsWith("pages-")).map((k) => caches.delete(k)))); } catch { /* no Cache API */ }
 }
 
-/** Plain link (full page load) so switching language works even on an outdated tab. */
-function LangLink({ to, label }: { to: "ar" | "en"; label: string }) {
+/**
+ * Language: both choices always shown (English | العربية), the current one highlighted.
+ * Plain links (full page load) so switching works even on an outdated tab.
+ */
+function LangToggle({ current }: { current: "ar" | "en" }) {
   const path = usePathname();
+  const opt = (to: "ar" | "en", label: string) => (
+    <a href={`/lang?to=${to}&next=${encodeURIComponent(path || "/")}`} lang={to} aria-current={current === to ? "true" : undefined} data-testid={`lang-${to}`}
+      className={`flex-1 rounded-md px-2 py-1.5 text-center text-sm font-medium ${current === to ? "bg-[var(--brand)] text-white" : "text-gray-700 hover:bg-gray-100"}`}>{label}</a>
+  );
   return (
-    <a href={`/lang?to=${to}&next=${encodeURIComponent(path || "/")}`} className="flex flex-1 items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100">
-      <Icon name="globe" className="h-4 w-4" /> {label}
-    </a>
+    <div className="flex flex-1 items-center gap-1 rounded-lg border border-[var(--line)] p-0.5">
+      <Icon name="globe" className="mx-1 h-4 w-4 shrink-0 text-gray-500" />
+      {opt("en", "English")}
+      {opt("ar", "العربية")}
+    </div>
   );
 }
 
@@ -79,9 +88,9 @@ function Panel({ p, onNavigate }: { p: Props; onNavigate?: () => void }) {
           <div className="truncate text-xs text-gray-500">{p.user.role}</div>
         </div>
         <div className="flex gap-1">
-          <LangLink to={p.otherLocale} label={p.labels.switchLang} />
-          <form action={p.logout} className="flex-1" onSubmit={forgetSavedPages}>
-            <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100">
+          <LangToggle current={p.otherLocale === "ar" ? "en" : "ar"} />
+          <form action={p.logout} className="shrink-0" onSubmit={forgetSavedPages}>
+            <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm whitespace-nowrap text-gray-600 hover:bg-gray-100">
               <Icon name="logout" className="h-4 w-4" /> {p.labels.logout}
             </button>
           </form>
