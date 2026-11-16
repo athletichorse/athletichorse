@@ -185,7 +185,8 @@ for (const view of VIEWS) {
         const label = (await btn.innerText()).trim().slice(0, 40);
         if (SKIP_CLICK.test(label)) continue;
         // search/filter forms (GET) just show the page again with the filter
-        if (((await f.getAttribute("method")) ?? "").toLowerCase() === "get") continue;
+        const method = ((await f.getAttribute("method")) ?? "").toLowerCase(), action = (await f.getAttribute("action")) ?? "";
+        if (method === "get" || (method === "" && action.startsWith("/"))) continue;
         where = `${view.name} ${path} form "${label}"`;
         const before = page.url();
         const textBefore = await page.locator("main").innerText().catch(() => "");

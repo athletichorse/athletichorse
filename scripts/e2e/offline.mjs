@@ -54,6 +54,8 @@ const ok = (cond, msg) => { results.push(`${cond ? '✓' : '✗'} ${msg}`); cons
   await p.waitForTimeout(300);
   const qty = await p.locator('table input').first().inputValue().catch(() => '');
   ok(qty === '2', `offline scan from the device price list (qty ${qty})`);
+  const unit = await p.locator('table input').nth(1).inputValue().catch(() => '0');
+  const total = (Number(unit) * 2).toFixed(2);
 
   const [popup] = await Promise.all([
     ctx.waitForEvent('page', { timeout: 10000 }).catch(() => null),
@@ -66,7 +68,7 @@ const ok = (cond, msg) => { results.push(`${cond ? '✓' : '✗'} ${msg}`); cons
   if (popup) {
     await popup.waitForLoadState().catch(() => {});
     const rt = await popup.locator('body').innerText().catch(() => '');
-    ok(rt.includes('Temporary receipt') && rt.includes(temp) && rt.includes('14.00'), 'temporary receipt opens for printing (number, total 14.00, note)');
+    ok(rt.includes('Temporary receipt') && rt.includes(temp) && rt.includes(total), `temporary receipt opens for printing (number, total ${total}, note)`);
     await popup.close();
   } else ok(false, 'temporary receipt window opened');
   ok(/Waiting to send: 1/.test(await p.locator('[data-testid=offline-bar]').innerText()), 'queue shows 1 sale waiting');

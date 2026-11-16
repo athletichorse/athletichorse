@@ -34,9 +34,12 @@ sleep 6
 FAILED=""
 run() { local name=$1; shift; step "$name"; if ! "$@" > "$OUT-$name.log" 2>&1; then FAILED="$FAILED|$name"; fi; grep -E "✗|problems|passed" "$OUT-$name.log" | tail -40 || true; }
 mkdir -p "$OUT"
-run crawl env BASE=$BASE OUT=$OUT node scripts/e2e/crawl.mjs
-run offline env BASE=$BASE node scripts/e2e/offline.mjs 100025
-run offline2 env BASE=$BASE CUSTOMER="Test Customer" node scripts/e2e/offline2.mjs
+run crawl env BASE=$BASE OUT=$OUT XLSX=${XLSX:-} node scripts/e2e/crawl.mjs
+# an item with a barcode and a price (made by the crawl), for the till tests
+SKU=$(psql -tA "$DATABASE_URL" -c "select sku from variant_search where sku is not null and price > 0 and active and product_active and not is_service order by sku limit 1")
+echo "till tests use item $SKU"
+run offline env BASE=$BASE node scripts/e2e/offline.mjs "$SKU"
+run offline2 env BASE=$BASE SKU="$SKU" CUSTOMER="Test Customer" node scripts/e2e/offline2.mjs
 run audit env BASE=$BASE OUT=$OUT node scripts/e2e/audit.mjs
 echo
 if [ -n "$FAILED" ]; then echo "NOT READY — failed: ${FAILED#|}"; exit 1; fi
