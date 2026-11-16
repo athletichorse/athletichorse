@@ -4,6 +4,7 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { ROLES } from "@/lib/permissions";
 import { PageHeader } from "@/components/PageHeader";
+import { StaffTabs } from "@/components/StaffTabs";
 import { createStaffAction, updateStaffAction } from "@/app/actions/staff";
 
 type Row = { id: string; username: string; full_name: string; role: string; branch_id: string | null; locale: string; phone: string | null; active: boolean };
@@ -109,6 +110,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
       <PageHeader title={t.staff.title} t={t} filename="staff">
         {me.perms.has("permissions.edit") && <Link className="btn-ghost no-print" href="/permissions">{t.staff.permissionsLink}</Link>}
       </PageHeader>
+      <StaffTabs t={t} perms={me.perms} active="staff" />
       {sp.err && <p className="alert-err">{sp.err === "phone" ? t.staff.badPhone : sp.err}</p>}
       {sp.ok && <p className="alert-ok">{t.saved}</p>}
 
