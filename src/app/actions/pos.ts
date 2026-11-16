@@ -169,7 +169,7 @@ async function priceLines(s: Staff, lines: CartLine[], approver: { u?: string; p
 }
 
 // ---------------------------------------------------------------- quotation (desk)
-export async function saveQuotationAction(input: { clientId: string; locationId: string; salespersonId?: string; customerId?: string; lines: CartLine[]; approverUsername?: string; approverPin?: string }): Promise<PosResult<{ quoteNo: number }>> {
+export async function saveQuotationAction(input: { clientId: string; locationId: string; salespersonId?: string; customerId?: string; lines: CartLine[]; approverUsername?: string; approverPin?: string; offlineTempNo?: string }): Promise<PosResult<{ quoteNo: number }>> {
   const s = await requireStaff();
   if (!has(s, "pos.desk")) return { ok: false, error: "forbidden" };
   if (!isId(input.clientId) || !(await posLocationOk(s, input.locationId))) return { ok: false, error: "location_not_allowed" };
@@ -183,9 +183,20 @@ export async function saveQuotationAction(input: { clientId: string; locationId:
     },
   });
   if (error) return { ok: false, error: sqlError(error.message) };
-  if (!data.duplicate) await audit(s.id, "pos.quotation", "quotation", data.quotation_id, { quote_no: data.quote_no, total: data.gross_total });
+  const temp = String(input.offlineTempNo ?? "");
+  if (/^OFF-[A-Za-z0-9]{1,12}-[A-Z0-9]{4}-Q\d{4,6}$/.test(temp)) await db().from("quotations").update({ offline_temp_no: temp }).eq("id", data.quotation_id).is("offline_temp_no", null);
+  if (!data.duplicate) await audit(s.id, "pos.quotation", "quotation", data.quotation_id, { quote_no: data.quote_no, total: data.gross_total, offline: temp || null });
   revalidatePath("/pos");
   return { ok: true, quoteNo: Number(data.quote_no) };
+}
+
+/** A desk slip made offline: its temporary number → the real quotation number (once sent). */
+export async function quoteNoForTempAction(tempNo: string): Promise<PosResult<{ quoteNo: number | null }>> {
+  const s = await requireStaff();
+  if (!has(s, "pos.collect", "pos.desk")) return { ok: false, error: "forbidden" };
+  const t = String(tempNo ?? "").trim().slice(0, 40);
+  const { data } = await db().from("quotations").select("quote_no").eq("offline_temp_no", t).eq("status", "open").maybeSingle();
+  return { ok: true, quoteNo: data ? Number(data.quote_no) : null };
 }
 
 export async function cancelQuotationAction(quotationId: string): Promise<PosResult> {
@@ -252,6 +263,8 @@ export type SaleInput = {
   offlineTempNo?: string; issuedAt?: string; approverUsername?: string; approverPin?: string;
   /** Several open quotations of one customer collected on this receipt. */
   quotationIds?: string[];
+  /** Sold offline from a desk slip made offline: its quotation is collected too, if it reached the server and is still open. */
+  quoteTempNo?: string;
   /** A new customer typed at the till (e.g. offline): found or created by mobile when the sale is saved. */
   customerPhone?: string; customerName?: string;
 };
@@ -281,7 +294,12 @@ export async function postSaleAction(input: SaleInput): Promise<PosResult<{ invo
 
   let lines: PricedLine[];
   let approvedBy: string | null = null;
-  const quoteIds = [...new Set([...(isId(input.quotationId) ? [input.quotationId] : []), ...(Array.isArray(input.quotationIds) ? input.quotationIds.filter(isId) : [])])].slice(0, 20);
+  let slipQuote: string | null = null;
+  if (input.quoteTempNo && !isId(input.quotationId)) {
+    const { data: q } = await db().from("quotations").select("id").eq("offline_temp_no", String(input.quoteTempNo).slice(0, 40)).eq("status", "open").eq("location_id", input.locationId).maybeSingle();
+    slipQuote = q?.id ?? null;
+  }
+  const quoteIds = [...new Set([...(isId(input.quotationId) ? [input.quotationId] : []), ...(slipQuote ? [slipQuote] : []), ...(Array.isArray(input.quotationIds) ? input.quotationIds.filter(isId) : [])])].slice(0, 20);
   if (quoteIds.length) {
     // Collecting desk quotations: the quoted lines (already checked at the desk) are used, not the browser's.
     lines = [];
@@ -423,7 +441,7 @@ export async function quickAddCustomerAction(phoneRaw: string, name: string): Pr
 /** The device's copy of the price list: every active item with its barcode, extra codes and VAT-inclusive price. */
 export async function posCatalogAction(locale: "ar" | "en" = "en"): Promise<PosResult<{ items: { v: string; n: string; o: string; s: string | null; c: string[]; p: string; x: boolean }[] }>> {
   const s = await requireStaff();
-  if (!has(s, "pos.collect", "pos.quick_sale")) return { ok: false, error: "forbidden" };
+  if (!has(s, "pos.collect", "pos.quick_sale", "pos.desk")) return { ok: false, error: "forbidden" };
   const PAGE = 1000;
   const rows: Record<string, unknown>[] = [];
   for (let from = 0; from < 50_000; from += PAGE) {
@@ -455,6 +473,34 @@ export async function posCatalogAction(locale: "ar" | "en" = "en"): Promise<PosR
 }
 
 /** Customers by mobile, name or serial customer number (with usual discount, balance and credit limit). */
+/** Customers copy kept on the till for offline search (mobile, number, name, usual discount). */
+export async function posCustomersAction(): Promise<PosResult<{ items: { i: string; no: number; n: string; p: string; d: number }[] }>> {
+  const s = await requireStaff();
+  if (!has(s, "customers.view", "pos.collect", "pos.desk", "pos.quick_sale")) return { ok: false, error: "forbidden" };
+  const out: { i: string; no: number; n: string; p: string; d: number }[] = [];
+  for (let from = 0; from < 50_000; from += 1000) {
+    const { data, error } = await db().from("customers").select("id, customer_no, name, phone, discount_pct").order("customer_no").range(from, from + 999);
+    if (error) return { ok: false, error: "bad_request" };
+    for (const r of data ?? []) out.push({ i: r.id, no: Number(r.customer_no), n: String(r.name ?? ""), p: String(r.phone), d: Number(r.discount_pct ?? 0) });
+    if (!data || data.length < 1000) break;
+  }
+  return { ok: true, items: out };
+}
+
+/** Cheap "has the price list changed?" check, so the till can refresh its copy every minute. */
+export async function posCatalogStampAction(): Promise<PosResult<{ stamp: string }>> {
+  const s = await requireStaff();
+  if (!has(s, "pos.collect", "pos.quick_sale", "pos.desk")) return { ok: false, error: "forbidden" };
+  const [{ data: v }, { data: p }, { count }] = await Promise.all([
+    db().from("product_variants").select("updated_at").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+    db().from("products").select("updated_at").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+    db().from("product_codes").select("code", { count: "exact", head: true }),
+  ]);
+  // sale prices start/end by date, so the Riyadh date is part of the stamp
+  const day = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
+  return { ok: true, stamp: `${v?.updated_at ?? ""}|${p?.updated_at ?? ""}|${count ?? 0}|${day}` };
+}
+
 export async function searchCustomersAction(term: string): Promise<PosResult<{ customers: PosCustomer[] }>> {
   const s = await requireStaff();
   if (!has(s, "customers.view", "pos.collect", "pos.desk", "pos.quick_sale")) return { ok: false, error: "forbidden" };

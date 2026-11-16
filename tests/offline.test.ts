@@ -98,3 +98,42 @@ describe("device screen", () => {
     expect(st.data.has("pos-device-screen")).toBe(false);
   });
 });
+
+import { decodeQuoteQr, encodeQuoteQr, enqueueOp, flushOps, loadOps, nextConn, nextQuoteTempNo, searchCustomersLocal, type QueuedOp } from "@/lib/offline";
+import { normalizeSaudiMobile } from "@/lib/saudi";
+
+describe("offline everywhere", () => {
+  const mem = () => { const m = new Map<string, string>(); return { get: (k: string) => m.get(k) ?? null, set: (k: string, v: string) => void m.set(k, v), remove: (k: string) => void m.delete(k) }; };
+  it("connection: offline after two failed pings, back online on the first good one", () => {
+    let s = { online: true, fails: 0, since: 0 };
+    s = nextConn(s, false, 1); expect(s.online).toBe(true);
+    s = nextConn(s, false, 2); expect(s).toEqual({ online: false, fails: 2, since: 2 });
+    s = nextConn(s, false, 3); expect(s.since).toBe(2);
+    s = nextConn(s, true, 4); expect(s).toEqual({ online: true, fails: 0, since: 4 });
+  });
+  it("customers copy: mobile, customer no., then name", () => {
+    const items = [{ i: "a", no: 7, n: "Sara Ali", p: "+966501234567", d: 0 }, { i: "b", no: 8, n: "Ali Omar", p: "+966551112222", d: 10 }];
+    expect(searchCustomersLocal(items, "0501234567", normalizeSaudiMobile).map((c) => c.i)).toEqual(["a"]);
+    expect(searchCustomersLocal(items, "8", normalizeSaudiMobile).map((c) => c.i)).toEqual(["b"]);
+    expect(searchCustomersLocal(items, "ali", normalizeSaudiMobile).map((c) => c.i)).toEqual(["a", "b"]);
+    expect(searchCustomersLocal(items, "", normalizeSaudiMobile)).toEqual([]);
+  });
+  it("drawer entries and quotations wait, are sent once, and refusals stay", async () => {
+    const st = mem();
+    const op = (id: string): QueuedOp => ({ kind: "drawer", clientId: id, shiftId: "s", createdAt: "", label: "", payload: { kind: "expense", amount: "5", reason: "" } });
+    enqueueOp(st, op("1")); enqueueOp(st, op("1")); enqueueOp(st, op("2")); enqueueOp(st, op("3"));
+    expect(loadOps(st)).toHaveLength(3);
+    const r = await flushOps(st, async (o) => (o.clientId === "2" ? { ok: false, error: "bad" } : o.clientId === "3" ? { ok: false, error: "network", network: true } : { ok: true }));
+    expect(r).toEqual({ sent: 1, refused: 1, offline: true, waiting: 2 });
+    expect(loadOps(st).find((x) => x.clientId === "2")?.error).toBe("bad");
+    expect(nextQuoteTempNo(st, "BR01")).toMatch(/^OFF-BR01-[A-Z0-9]{4}-Q0001$/);
+  });
+  it("desk QR carries the quotation and rejects anything else", () => {
+    const lines = [{ variantId: "11111111-2222-4333-8444-555555555555", qty: "2", unitPrice: "7.00", discount: "0.50" }];
+    const text = encodeQuoteQr("OFF-BR01-AB12-Q0001", lines);
+    expect(decodeQuoteQr(text)).toEqual({ no: "OFF-BR01-AB12-Q0001", lines });
+    expect(decodeQuoteQr("100025")).toBeNull();
+    expect(decodeQuoteQr("AHQ1|1|bad,1,1,0")).toBeNull();
+    expect(decodeQuoteQr(text.replace(",2,", ",0,"))).toBeNull();
+  });
+});

@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import type { Dict, Locale } from "@/i18n";
 import { computeTotals, formatDecimal, formatSAR, rateToBp, toHalalas, toMilliQty } from "@/lib/money";
 import { formatDateTime } from "@/lib/time";
-import { looksOffline } from "@/lib/offline";
+import { decodeQuoteQr, looksOffline, type QrLine } from "@/lib/offline";
 import { useOfflineTill, type OfflineTill } from "./useOfflineTill";
-import { OfflineBar, printTempReceipt } from "./OfflineBar";
+import { OfflineBar, printTempQuote, printTempReceipt } from "./OfflineBar";
 import { CameraScan } from "./CameraScan";
 import { searchVariantsAction, type VariantHit } from "@/app/actions/stock";
 import {
   cashMovementAction, closeShiftAction, findInvoiceForReturnAction, loadQuotationAction, openShiftAction,
-  postReturnAction, postSaleAction, quickAddCustomerAction, saveQuotationAction, searchCustomersAction, updateQuotationAction,
+  postReturnAction, postSaleAction, quickAddCustomerAction, quoteNoForTempAction, saveQuotationAction, searchCustomersAction, updateQuotationAction,
   cancelQuotationAction, type DrawerKind, type InvoiceForReturn, type PosCustomer,
 } from "@/app/actions/pos";
 
@@ -97,7 +97,12 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
     if (off.screen && p.tabs.includes(off.screen)) p.setTab(off.screen);
   }, [off.loaded, off.screen, p]);
   /** A server call that fails because there is no connection shows a clear message instead of doing nothing. */
-  const tryOnline = async (fn: () => Promise<void>) => { try { await fn(); } catch (e) { p.setMsg({ ok: false, text: looksOffline(e) ? t.pos.offline.needsOnline : String(e) }); } };
+  const tryOnline = async (fn: () => Promise<void>, whenOffline?: () => void) => {
+    try { await fn(); } catch (e) {
+      if (looksOffline(e) && whenOffline) return whenOffline();
+      p.setMsg({ ok: false, text: looksOffline(e) ? t.pos.offline.needsOnline : String(e) });
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -132,18 +137,32 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
           )}
           {cashKind === "customer_payment" && (
             <>
-              <div className="sm:col-span-2"><CustomerPicker t={t} value={payCustomer} onPick={setPayCustomer} err={err} setMsg={p.setMsg} /></div>
+              <div className="sm:col-span-2"><CustomerPicker t={t} value={payCustomer} onPick={setPayCustomer} err={err} setMsg={p.setMsg} off={off} /></div>
               <select className="input sm:col-span-2" value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
                 {p.methods.filter((m) => m.kind !== "on_account").map((m) => <option key={m.code} value={m.code}>{m.name}</option>)}
               </select>
             </>
           )}
           {((cashKind === "cash_out" && p.approval.cashOut) || ((cashKind === "cash_in" || cashKind === "expense") && p.approval.discount)) && <Approval t={t} mgr={mgr} setMgr={setMgr} />}
-          <button className="btn-primary sm:col-span-2" onClick={() => tryOnline(async () => {
+          <button className="btn-primary sm:col-span-2" onClick={() => {
+            const needsPin = (cashKind === "cash_out" && p.approval.cashOut) || ((cashKind === "cash_in" || cashKind === "expense") && p.approval.discount);
+            const offline = () => {
+              if (!off.enabled) return p.setMsg({ ok: false, text: t.pos.offline.notEnabled });
+              if (needsPin) return p.setMsg({ ok: false, text: t.pos.offline.noApprovalOffline });
+              if (!/^\d{1,9}(\.\d{1,2})?$/.test(amount.trim()) || Number(amount) <= 0) return p.setMsg({ ok: false, text: err("bad_amount") });
+              if (cashKind === "expense" && !expenseType) return p.setMsg({ ok: false, text: err("expense_type_required") });
+              if (cashKind === "customer_payment" && !payCustomer) return p.setMsg({ ok: false, text: err("customer_required") });
+              off.saveDrawer({ clientId: cashId.current, label: `${amount}`, payload: { kind: cashKind, amount: amount.trim(), reason, expenseTypeId: expenseType || undefined, customerId: payCustomer?.id, method: payMethod } });
+              cashId.current = uuid(); setAmount(""); setReason(""); setExpenseType(""); setPayCustomer(null); setPanel("");
+              p.setMsg({ ok: true, text: t.pos.offline.savedOfflineDrawer });
+            };
+            if (!off.online) return offline();
+            return tryOnline(async () => {
             const r = await cashMovementAction({ clientId: cashId.current, shiftId: s.id, kind: cashKind, amount, reason, expenseTypeId: expenseType, customerId: payCustomer?.id, method: payMethod, approverUsername: mgr.u, approverPin: mgr.p });
             if (r.ok) { cashId.current = uuid(); setAmount(""); setReason(""); setExpenseType(""); setPayCustomer(null); setMgr({ u: "", p: "" }); setPanel(""); p.setMsg({ ok: true, text: t.saved }); }
             else p.setMsg({ ok: false, text: err(r.error) });
-          })}>{t.save}</button>
+          }, offline);
+          }}>{t.save}</button>
         </section>
       )}
       {panel === "close" && (
@@ -195,7 +214,14 @@ function Approval({ t, mgr, setMgr }: { t: Dict; mgr: { u: string; p: string }; 
 }
 
 /** Customer by mobile, name or serial number; shows usual discount and balance. */
-function CustomerPicker({ t, value, onPick, err, setMsg, disabled }: { t: Dict; value: PosCustomer | null; onPick: (c: PosCustomer | null) => void; err: (c: string) => string; setMsg: (m: { ok: boolean; text: string } | null) => void; disabled?: boolean }) {
+/** Customer search: online, or the copy kept on this device when there is no connection. */
+async function findCustomers(term: string, off?: OfflineTill): Promise<{ ok: true; customers: PosCustomer[] } | { ok: false; error: string }> {
+  if (off && !off.online) return { ok: true, customers: off.searchCustomersLocal(term) };
+  try { return await searchCustomersAction(term); }
+  catch (e) { if (off && looksOffline(e)) return { ok: true, customers: off.searchCustomersLocal(term) }; throw e; }
+}
+
+function CustomerPicker({ t, value, onPick, err, setMsg, disabled, off }: { t: Dict; value: PosCustomer | null; onPick: (c: PosCustomer | null) => void; err: (c: string) => string; setMsg: (m: { ok: boolean; text: string } | null) => void; disabled?: boolean; off?: OfflineTill }) {
   const [term, setTerm] = useState("");
   const [hits, setHits] = useState<PosCustomer[] | null>(null);
   const X = t.pos.extra;
@@ -216,7 +242,7 @@ function CustomerPicker({ t, value, onPick, err, setMsg, disabled }: { t: Dict; 
         <input className="input" placeholder={X.searchCustomer} value={term} onChange={(e) => setTerm(e.target.value)} disabled={disabled}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.currentTarget.nextSibling as HTMLButtonElement)?.click(); } }} />
         <button type="button" className="btn-ghost" disabled={disabled} onClick={async () => {
-          const r = await searchCustomersAction(term);
+          const r = await findCustomers(term, off);
           if (!r.ok) return setMsg({ ok: false, text: err(r.error) });
           if (r.customers.length === 1) { onPick(r.customers[0]); setTerm(""); setHits(null); } else setHits(r.customers);
         }}>{t.pos.findCustomer}</button>
@@ -231,14 +257,15 @@ function CustomerPicker({ t, value, onPick, err, setMsg, disabled }: { t: Dict; 
   );
 }
 
-function ItemSearch({ t, locale, onPick, off }: { t: Dict; locale: Locale; onPick: (h: VariantHit) => void; off?: OfflineTill }) {
+function ItemSearch({ t, locale, onPick, off, onSlip }: { t: Dict; locale: Locale; onPick: (h: VariantHit) => void; off?: OfflineTill; onSlip?: (text: string) => void }) {
   const [term, setTerm] = useState("");
   const [hits, setHits] = useState<VariantHit[] | null>(null);
   const ref = useRef<HTMLInputElement>(null);
   const pick = (h: VariantHit) => { onPick(h); setTerm(""); setHits(null); };
   const run = async (q: string) => {
+    if (onSlip && (decodeQuoteQr(q) || /^OFF-[A-Za-z0-9-]+-Q\d+$/.test(q.trim()))) { setTerm(""); setHits(null); return onSlip(q); }
     let r: VariantHit[];
-    if (off?.enabled && !navigator.onLine) r = off.searchLocal(q);
+    if (off?.enabled && !off.online) r = off.searchLocal(q);
     else {
       try { r = await searchVariantsAction(q, locale); }
       catch { r = off?.enabled ? off.searchLocal(q) : []; }
@@ -285,9 +312,10 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
   const [quotes, setQuotes] = useState<{ id: string; no: number }[]>([]); // several quotations on one receipt
   const [editId, setEditId] = useState<string | null>(null); // desk: editing an existing quotation
   const [recDisc, setRecDisc] = useState("");
+  const [slipNo, setSlipNo] = useState<string | null>(null); // a desk slip loaded from its QR (no connection)
   const [busy, setBusy] = useState(false);
   const clientId = useRef(uuid());
-  const locked = mode === "collect";
+  const locked = mode === "collect" || slipNo !== null;
 
   const totals = useMemo(() => {
     try {
@@ -344,7 +372,7 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
     }));
     setPayments([]);
   }
-  function reset() { setLines([]); setCustomer(null); setPhone(""); setCustName(""); setPayments([]); setCashGiven(""); setMgr({ u: "", p: "" }); setQuoteId(null); setQuoteNo(""); setQuotes([]); setEditId(null); setRecDisc(""); clientId.current = uuid(); }
+  function reset() { setLines([]); setCustomer(null); setPhone(""); setCustName(""); setPayments([]); setCashGiven(""); setMgr({ u: "", p: "" }); setQuoteId(null); setQuoteNo(""); setQuotes([]); setEditId(null); setRecDisc(""); setSlipNo(null); clientId.current = uuid(); }
 
   /** Every receipt needs the customer unless this person may skip it: a picked customer, or a mobile + name typed here. */
   const typedCustomer = !customer && phone.trim() && custName.trim() ? { customerPhone: phone.trim(), customerName: custName.trim() } : {};
@@ -353,13 +381,13 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
   /** No connection: keep the sale on this device with a temporary number; it is sent automatically later. */
   function saveOffline(cart: { variantId: string; qty: string; unitPrice: string; discount: string }[]) {
     const o = t.pos.offline;
-    if (!p.off.enabled || mode !== "sell") return p.setMsg({ ok: false, text: p.off.enabled ? o.needsOnline : o.notEnabled });
+    if (!p.off.enabled || !(mode === "sell" || (mode === "collect" && !quotes.length))) return p.setMsg({ ok: false, text: p.off.enabled ? o.needsOnline : o.notEnabled });
     if (changed && p.approval.discount) return p.setMsg({ ok: false, text: o.noApprovalOffline });
     if (pays.some((x) => p.methods.find((m) => m.code === x.method)?.kind === "on_account")) return p.setMsg({ ok: false, text: o.noAccountOffline });
     if (customerMissing) return p.setMsg({ ok: false, text: err("customer_required") });
     const sale = p.off.save({
       clientId: clientId.current, createdAt: new Date().toISOString(), locationId: s.locationId, shiftId: s.id, total: formatDecimal(totalH),
-      payload: { salespersonId: salesperson, customerId: customer?.id, ...typedCustomer, lines: cart, payments: pays, cashTendered: cashGiven || undefined },
+      payload: { salespersonId: salesperson, customerId: customer?.id, ...typedCustomer, lines: cart, payments: pays, cashTendered: cashGiven || undefined, quoteTempNo: slipNo ?? undefined },
       lines: lines.map((l) => ({ name: l.options ? `${l.name} - ${l.options}` : l.name, qty: l.qty, price: l.price, discount: l.discount })),
     });
     const branch = p.locations.find((l) => l.id === s.locationId)?.name ?? "";
@@ -368,14 +396,68 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
     reset();
   }
 
+  async function loadQuote(no: number) {
+    const r = await loadQuotationAction(no, locale);
+    if (!r.ok) return p.setMsg({ ok: false, text: err(r.error) });
+    const q = r.quote;
+    const mapped = q.lines.map((l) => ({ ...l, price: l.unitPrice, listPrice: l.unitPrice }));
+    if (mode === "desk") { setEditId(q.id); setLines(mapped); }
+    else {
+      if (quotes.some((x) => x.id === q.id)) return;
+      setQuotes((qs) => [...qs, { id: q.id, no: q.quoteNo }]);
+      if (!quoteId) setQuoteId(q.id);
+      setLines((ls) => [...ls, ...mapped]);
+    }
+    if (q.customer && !customer) setCustomer(q.customer);
+    if (q.salespersonId) setSalesperson(q.salespersonId);
+    setQuoteNo(""); setPayments([]); setSlipNo(null);
+  }
+
+  /** Desk with no connection: the quotation waits on this device (temporary number) and its slip carries a QR. */
+  function saveOfflineQuote(cart: QrLine[]) {
+    const o = t.pos.offline;
+    if (!p.off.enabled) return p.setMsg({ ok: false, text: o.notEnabled });
+    if (changed && p.approval.discount) return p.setMsg({ ok: false, text: o.noApprovalOffline });
+    const tempNo = p.off.saveQuote({ clientId: clientId.current, label: formatDecimal(totalH), payload: { locationId: s.locationId, salespersonId: salesperson, customerId: customer?.id, lines: cart } });
+    const branch = p.locations.find((l) => l.id === s.locationId)?.name ?? "";
+    void printTempQuote({ tempNo, total: formatDecimal(totalH), createdAt: new Date().toISOString(), cart,
+      lines: lines.map((l) => ({ name: l.options ? `${l.name} - ${l.options}` : l.name, qty: l.qty, price: l.price, discount: l.discount })) }, { t, locale, company: p.company, branch });
+    p.setMsg({ ok: true, text: `${o.quoteSavedOffline} ${tempNo}` });
+    reset();
+  }
+
+  /**
+   * A desk slip scanned at the till (its QR, or its temporary number typed). Online: the real
+   * quotation is collected. Offline (or not sent yet): its lines come from the QR itself.
+   */
+  async function fromSlip(text: string) {
+    const qr = decodeQuoteQr(text);
+    const no = qr?.no ?? text.trim();
+    if (p.off.online) {
+      try {
+        const real = /^\d+$/.test(no) ? Number(no) : await quoteNoForTempAction(no).then((r) => (r.ok ? r.quoteNo : null));
+        if (real) { if (mode !== "collect") p.setMsg({ ok: false, text: `${t.pos.extra.slipIsQuote} #${real}` }); else await loadQuote(real); return; }
+      } catch { /* offline: use the QR */ }
+    }
+    if (!qr) return p.setMsg({ ok: false, text: err("quote_not_found") });
+    setLines(qr.lines.map((l) => {
+      const it = p.off.itemById(l.variantId);
+      return { variantId: l.variantId, name: it?.n ?? "—", options: it?.o ?? "", sku: it?.s ?? null, qty: l.qty, price: l.unitPrice, listPrice: l.unitPrice, discount: l.discount, usual: Number(l.discount) > 0 };
+    }));
+    setSlipNo(qr.no); setPayments([]);
+    p.setMsg({ ok: true, text: `${t.pos.extra.slipLoaded} ${qr.no}` });
+  }
+
   async function submit() {
     setBusy(true);
     p.setMsg(null);
     const cart = lines.map((l) => ({ variantId: l.variantId, qty: l.qty, unitPrice: l.price, discount: l.discount }));
     if (customerMissing) { setBusy(false); return p.setMsg({ ok: false, text: err("customer_required") }); }
-    if (mode === "sell" && p.off.enabled && !navigator.onLine) { setBusy(false); return saveOffline(cart); }
+    const offlineOk = mode === "sell" || (mode === "collect" && !quotes.length) || (mode === "desk" && !editId);
+    const keep = () => (mode === "desk" ? saveOfflineQuote(cart) : saveOffline(cart));
+    if (offlineOk && p.off.enabled && !p.off.online) { setBusy(false); return keep(); }
     try { await submitOnline(cart); } catch (e) {
-      if (looksOffline(e)) saveOffline(cart); else p.setMsg({ ok: false, text: String(e) });
+      if (looksOffline(e)) { if (offlineOk) keep(); else p.setMsg({ ok: false, text: t.pos.offline.needsOnline }); } else p.setMsg({ ok: false, text: String(e) });
     } finally { setBusy(false); }
   }
 
@@ -411,22 +493,11 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
           <div className="space-y-3">
             {mode === "desk" && <ItemSearch t={t} locale={locale} onPick={add} off={p.off} />}
             <div className="flex gap-2">
-              <input className="input" dir="ltr" inputMode="numeric" placeholder={mode === "desk" ? t.pos.extra.editQuote : t.pos.quoteNo} value={quoteNo} onChange={(e) => setQuoteNo(e.target.value)} />
+              <input className="input" dir="ltr" inputMode="numeric" placeholder={mode === "desk" ? t.pos.extra.editQuote : t.pos.quoteNo} value={quoteNo} onChange={(e) => setQuoteNo(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.currentTarget.nextSibling as HTMLButtonElement)?.click(); } }} />
               <button className="btn-ghost whitespace-nowrap" onClick={async () => {
-                const r = await loadQuotationAction(Number(quoteNo), locale);
-                if (!r.ok) return p.setMsg({ ok: false, text: err(r.error) });
-                const q = r.quote;
-                const mapped = q.lines.map((l) => ({ ...l, price: l.unitPrice, listPrice: l.unitPrice }));
-                if (mode === "desk") { setEditId(q.id); setLines(mapped); }
-                else {
-                  if (quotes.some((x) => x.id === q.id)) return;
-                  setQuotes((qs) => [...qs, { id: q.id, no: q.quoteNo }]);
-                  if (!quoteId) setQuoteId(q.id);
-                  setLines((ls) => [...ls, ...mapped]);
-                }
-                if (q.customer && !customer) setCustomer(q.customer);
-                if (q.salespersonId) setSalesperson(q.salespersonId);
-                setQuoteNo(""); setPayments([]);
+                if (mode === "collect" && !/^\d+$/.test(quoteNo.trim())) { const v = quoteNo; setQuoteNo(""); return fromSlip(v); }
+                await loadQuote(Number(quoteNo));
               }}>{mode === "desk" ? t.pos.extra.load : quotes.length ? t.pos.extra.addQuote : t.pos.loadQuote}</button>
             </div>
             {(quotes.length > 0 || editId) && (
@@ -451,7 +522,7 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
               </div>
             )}
           </div>        ) : (
-          <ItemSearch t={t} locale={locale} onPick={add} off={p.off} />
+          <ItemSearch t={t} locale={locale} onPick={add} off={p.off} onSlip={(x) => void fromSlip(x)} />
         )}
         {lines.length === 0 ? <p className="py-8 text-center text-sm text-gray-500">{t.pos.cartEmpty}</p> : (
           <table className="table">
@@ -490,13 +561,13 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
         <section className="card space-y-2">
           <label className="label">{t.pos.customer}</label>
           {customer ? (
-            <CustomerPicker t={t} value={customer} onPick={pickCustomer} err={err} setMsg={p.setMsg} disabled={locked} />
+            <CustomerPicker t={t} value={customer} onPick={pickCustomer} err={err} setMsg={p.setMsg} disabled={locked} off={p.off} />
           ) : (
             <>
               <div className="flex gap-2">
                 <input className="input" placeholder={t.pos.extra.searchCustomer} value={phone} onChange={(e) => { setPhone(e.target.value); setCustNotFound(false); setCustHits(null); }} />
                 <button className="btn-ghost" onClick={async () => {
-                  const r = await searchCustomersAction(phone);
+                  const r = await findCustomers(phone, p.off);
                   if (!r.ok) return p.setMsg({ ok: false, text: err(r.error) });
                   if (r.customers.length === 1) pickCustomer(r.customers[0]);
                   else if (r.customers.length > 1) setCustHits(r.customers);

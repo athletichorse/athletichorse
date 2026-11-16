@@ -52,4 +52,5 @@
 - ✅ F. Salespeople, attendance, payroll, commission on the 15th: pay settings (salary, hours, commission 6/1000 or %, own or all sales, regularity bonus, food allowance), attendance sheet, advances paid off monthly, bonuses/deductions, payroll month sheet (calculate → approve → pay from drawer or bank, reopen), commission sheet, slips
 - ✅ G. Security (الرقابة): working hours per group or person (Riyadh time, overnight windows), device lock with owner approval, activity log; owner never locked out
 - ✅ H. Website two-way: prices, orders → quotations, stock from Jeddah, webhooks (all switches off until turned on)
-- ⬜ I. Offline everywhere: auto switch, customers/returns/stores/products offline, Windows app, local hub
+- ✅ I. Offline everywhere: automatic switch (ping), price list checked every minute, customers copy, desk quotations offline with QR slip, drawer entries offline, Windows app (Actions → "Windows app")
+- ⬜ Later: local hub (PCs in one shop sharing offline work without internet), offline returns, offline stock documents and product edits
