@@ -111,7 +111,9 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHeader title={t.sales.title} subtitle={t.sales.subtitle} t={t} filename={`sales-${tab}`} />
+      <PageHeader title={t.sales.title} subtitle={t.sales.subtitle} t={t} filename={`sales-${tab}`}>
+        {me.perms.has("reports.view") && <Link href="/sales/reports" className="btn-primary no-print">{t.reports.open}</Link>}
+      </PageHeader>
       {sp.err === "not_connected" && <p className="alert-err">{t.sales.ordersNotConnected}</p>}
       <AutoRefresh active={running || Boolean(sp.started)} everyMs={4000} />
       <div className="mb-4 grid grid-cols-2 gap-3">

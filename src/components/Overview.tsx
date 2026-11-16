@@ -27,7 +27,9 @@ function Stat({ label, value, icon, href, warn }: { label: string; value: string
 /** Home dashboard. Owners/managers with all-branch access get the full overview. */
 export type CatalogStats = { products: number; website: number; missingSku: number; lastSync: { started_at: string; status: string; error: string | null } | null };
 
-export function Overview({ s, t, locale, now, locs, staff, webLocId, catalog }: {
+export type Pulse = { todaySales: number; todayInvoices: number; belowZero: number; stockByLoc: Record<string, number>; latest: { label: string; at: string; ok: boolean }[] };
+
+export function Overview({ s, t, locale, now, locs, staff, webLocId, catalog, pulse }: {
   s: Pick<Staff, "fullName" | "role" | "branchId" | "perms">;
   t: Dict;
   locale: Locale;
@@ -36,6 +38,7 @@ export function Overview({ s, t, locale, now, locs, staff, webLocId, catalog }: 
   staff: { branch_id: string | null; active: boolean }[];
   webLocId: string | null;
   catalog: CatalogStats;
+  pulse: Pulse;
 }) {
   const seeAll = s.role === "owner" || s.perms.has("sales.view_all_branches");
   const name = (l?: Loc) => (l ? (locale === "ar" ? l.name_ar : l.name_en || l.name_ar) : "—");
@@ -56,6 +59,11 @@ export function Overview({ s, t, locale, now, locs, staff, webLocId, catalog }: 
 
       {seeAll ? (
         <>
+          <div className="mb-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+            <Stat label={t.home.todaySales} value={pulse.todaySales.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} icon="sales" href={s.perms.has("reports.view") ? "/sales/reports" : "/sales"} />
+            <Stat label={t.home.todayInvoices} value={pulse.todayInvoices} icon="pos" href="/sales" />
+            <Stat label={t.home.belowZero} value={pulse.belowZero} icon="stock" href="/stock/shortages?rule=%3C&value=0" warn={pulse.belowZero > 0} />
+          </div>
           <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
             <Stat label={t.home.branches} value={locs.filter((l) => l.kind === "branch" && l.active).length} icon="company" href={s.perms.has("locations.edit") ? "/locations" : undefined} />
             <Stat label={t.home.warehouses} value={locs.filter((l) => l.kind !== "branch" && l.active).length} icon="stock" href={s.perms.has("locations.edit") ? "/locations" : undefined} />
@@ -106,7 +114,7 @@ export function Overview({ s, t, locale, now, locs, staff, webLocId, catalog }: 
             <div className="overflow-x-auto">
               <table className="table" data-export>
                 <thead>
-                  <tr><th>{t.locations.nameEn}</th><th>{t.locations.code}</th><th>{t.locations.kind}</th><th>{t.locations.usesPos}</th><th>{t.home.staffHere}</th><th>{t.home.status}</th></tr>
+                  <tr><th>{t.locations.nameEn}</th><th>{t.locations.code}</th><th>{t.locations.kind}</th><th>{t.locations.usesPos}</th><th>{t.home.staffHere}</th><th>{t.home.stockUnits}</th><th>{t.home.status}</th></tr>
                 </thead>
                 <tbody>
                   {locs.map((l) => (
@@ -119,6 +127,7 @@ export function Overview({ s, t, locale, now, locs, staff, webLocId, catalog }: 
                       <td data-label={t.locations.kind}><span className={kindBadge(l.kind)}>{t.locations.kinds[l.kind]}</span></td>
                       <td data-label={t.locations.usesPos}>{l.uses_pos ? t.yes : t.no}</td>
                       <td data-label={t.home.staffHere}>{staff.filter((p) => p.branch_id === l.id && p.active).length}</td>
+                      <td data-label={t.home.stockUnits}><Link href={`/stock?loc=${l.id}`} className="underline">{(pulse.stockByLoc[l.id] ?? 0).toLocaleString("en-US")}</Link></td>
                       <td data-label={t.home.status}>{l.active ? <span className="badge-green">{t.active}</span> : <span className="badge-gray">{t.inactive}</span>}</td>
                     </tr>
                   ))}
@@ -126,6 +135,19 @@ export function Overview({ s, t, locale, now, locs, staff, webLocId, catalog }: 
               </table>
             </div>
           </div>
+          {pulse.latest.length > 0 && (
+            <div className="card mb-6">
+              <h2 className="card-title">{t.home.latestUploads}</h2>
+              <ul className="space-y-1 text-sm">
+                {pulse.latest.map((x, i) => (
+                  <li key={i} className="flex items-center justify-between gap-3">
+                    <span>{x.label}</span>
+                    <span className="flex items-center gap-2 text-xs text-gray-500">{formatDateTime(new Date(x.at), locale)}<span className={x.ok ? "badge-green" : "badge bg-red-50 text-red-700"}>{x.ok ? "✓" : "!"}</span></span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </>
       ) : (
         <div className="mb-6 grid gap-4 sm:grid-cols-2">
