@@ -114,14 +114,15 @@ create table if not exists public.commission_lines (
   primary key (month, profile_id)
 );
 
-do $$
-declare t text;
-begin
-  foreach t in array array['employees', 'attendance', 'advances', 'pay_adjustments', 'payroll_months', 'payroll_lines', 'commission_months', 'commission_lines'] loop
-    execute format('alter table public.%I enable row level security', t);
-    execute format('revoke all on public.%I from anon, authenticated', t);
-  end loop;
-end $$;
+alter table public.employees enable row level security;
+alter table public.attendance enable row level security;
+alter table public.advances enable row level security;
+alter table public.pay_adjustments enable row level security;
+alter table public.payroll_months enable row level security;
+alter table public.payroll_lines enable row level security;
+alter table public.commission_months enable row level security;
+alter table public.commission_lines enable row level security;
+revoke all on public.employees, public.attendance, public.advances, public.pay_adjustments, public.payroll_months, public.payroll_lines, public.commission_months, public.commission_lines from anon, authenticated;
 
 -- Drawer payouts are expenses of these types.
 insert into public.expense_types (name_en, name_ar, sort) values
