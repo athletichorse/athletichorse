@@ -337,11 +337,30 @@ const customerUrl = page.url().split("#")[0];
 const eForm = page.locator("form#edit");
 await eForm.locator('input[name="discount_pct"]').fill("5");
 await eForm.locator('input[name="notes"]').fill("e2e edit");
+// business details: VAT no., CR no., national address
+await eForm.locator('input[name="vat_number"]').fill("300000000000003");
+await eForm.locator('input[name="cr_number"]').fill("1010123456");
+await eForm.locator('input[name="addr_building"]').fill("1234");
+await eForm.locator('input[name="addr_street"]').fill("King Fahd Road");
+await eForm.locator('input[name="addr_district"]').fill("Al Olaya");
+await eForm.locator('input[name="addr_city"]').fill("Riyadh");
+await eForm.locator('input[name="addr_country"]').fill("Saudi Arabia");
+await eForm.locator('input[name="addr_postal"]').fill("12345");
+await eForm.locator('input[name="addr_additional"]').fill("6789");
 await Promise.all([page.waitForURL(/ok=1|err=/, { waitUntil: "commit" }), eForm.locator('button:text-is("Save")').click()]);
 const cAfter = await page.locator("main").innerText();
 if (!/Saved/.test(cAfter) || !/5%/.test(cAfter)) fail("customers", `edit customer: ${cAfter.slice(0, 200)}`);
 else ok("edit a customer from their page (usual discount 5%)");
+const biz = await page.locator("[data-testid=customer-business]").innerText().catch(() => "");
+for (const w of ["300000000000003", "1010123456", "1234", "King Fahd Road", "Al Olaya", "Riyadh", "12345", "6789", "Saudi Arabia"]) if (!biz.includes(w)) fail("customers", `business details missing "${w}"`);
+ok("customer VAT no., CR no. and national address saved and shown");
+// a wrong postal code is refused with a clear message
+await page.locator("form#edit").locator('input[name="addr_postal"]').fill("12");
+await Promise.all([page.waitForURL(/err=/, { waitUntil: "commit" }), page.locator("form#edit").locator('button:text-is("Save")').click()]);
+if (!/Postal code: 5 digits/.test(await page.locator(".alert-err").innerText().catch(() => ""))) fail("customers", "bad postal code not explained");
+else ok("wrong postal code refused with a clear message");
 await eForm.locator('input[name="discount_pct"]').fill("0");
+await page.locator("form#edit").locator('input[name="addr_postal"]').fill("12345");
 await page.locator("form#edit").locator('button:text-is("Save")').click(); // back to no discount (the till tests use this customer)
 await page.waitForFunction(() => /\b0%/.test(document.querySelector("main")?.innerText ?? ""), null, { timeout: 15000 }).catch(() => fail("customers", "discount not set back to 0"));
 
