@@ -35,6 +35,11 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   const variants = (vData ?? []) as Variant[];
   const ids = variants.map((v) => v.id);
   const { data: codes } = ids.length ? await db().from("product_codes").select("code, variant_id").in("variant_id", ids) : { data: [] };
+  // price levels other than wholesale (that one is the wholesale column)
+  const { data: levelRows } = await db().from("price_levels").select("id, name_en, name_ar").eq("active", true).neq("code", "wholesale").order("sort");
+  const levels = levelRows ?? [];
+  const { data: lpRows } = levels.length && ids.length ? await db().from("variant_level_prices").select("variant_id, level_id, price").in("variant_id", ids) : { data: [] };
+  const levelPrice = (vid: string, lid: string) => lpRows?.find((x) => x.variant_id === vid && x.level_id === lid)?.price;
   const fromWebsite = p.shopify_product_id !== null;
   const opts: string[] = Array.isArray(p.options) ? p.options : [];
   const optionLabel = (v: Variant) => [v.option1, v.option2, v.option3].filter(Boolean).join(" / ") || t.products.none;
@@ -123,6 +128,34 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
               </table>
             </div>
           </section>
+          {levels.length > 0 && (
+            <section className="card overflow-hidden p-0" data-testid="level-prices">
+              <h2 className="card-title px-5 pt-5">{t.levels.pricesTitle}</h2>
+              <p className="hint px-5 -mt-2 mb-3">{t.levels.pricesHint}</p>
+              <div className="overflow-x-auto">
+                <table className="table">
+                  <thead><tr><th>{t.products.options}</th><th>{t.products.price}</th>{levels.map((l) => <th key={l.id}>{(locale === "ar" && l.name_ar) || l.name_en}</th>)}</tr></thead>
+                  <tbody>
+                    {variants.map((v) => (
+                      <tr key={v.id}>
+                        <td className="cell-title font-medium whitespace-nowrap">{optionLabel(v)} <span className="text-xs text-gray-400" dir="ltr">{v.sku ?? ""}</span></td>
+                        <td data-label={t.products.price} dir="ltr">{Number(v.price).toFixed(2)}</td>
+                        {levels.map((l) => {
+                          const name = (locale === "ar" && l.name_ar) || l.name_en;
+                          const cur = levelPrice(v.id, l.id);
+                          return (
+                            <td key={l.id} data-label={name} className="min-w-[110px]">
+                              <input name={`level:${l.id}:${v.id}`} aria-label={`${name} · ${optionLabel(v)}`} defaultValue={cur === undefined || cur === null ? "" : Number(cur).toFixed(2)} placeholder={Number(v.price).toFixed(2)} className="input" dir="ltr" inputMode="decimal" />
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
         </fieldset>
 
         {(images ?? []).length > 0 && (

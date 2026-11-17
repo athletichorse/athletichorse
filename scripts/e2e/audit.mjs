@@ -28,7 +28,7 @@ const fail = (where, what) => {
   if (!problems.has(k)) { problems.set(k, 1); console.log(`  ✗ ${k}`); }
 };
 
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/labels", "/staff", "/staff/employees", "/staff/attendance",
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/products/labels", "/staff", "/staff/employees", "/staff/attendance",
   "/staff/payroll", "/staff/commission", "/staff/advances", "/staff/slips", "/locations", "/company", "/permissions", "/upload", "/pos", "/pos/shifts", "/pos/day",
   "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/stock/new?kind=write_off", "/stock/docs", "/stock/count",
   "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/sales", "/sales?tab=returns", "/sales?tab=website", "/sales/reports", "/customers",

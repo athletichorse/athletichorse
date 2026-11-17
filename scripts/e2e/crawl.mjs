@@ -45,7 +45,7 @@ async function checkPage(page, path, label) {
 }
 
 const browser = await chromium.launch();
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/staff", "/locations", "/company", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
 
 // ---------------------------------------------------------------- 1. setup + flows (desktop, English)
 console.log("\n== Setup and main flows (desktop, English)");
@@ -222,6 +222,42 @@ await page.fill('input[name="price"]', "35");
 await page.fill('input[name="cost"]', "12");
 await Promise.all([page.waitForURL(/\/products\/[0-9a-f-]{36}\?ok=1/), page.click('button:text-is("Add")')]);
 ok("create a new product");
+const ropeUrl = page.url().split("?")[0];
+
+// price levels: add "VIP", give the rope a VIP price of 30
+where = "price levels";
+await page.goto(BASE + "/products/levels");
+const lvForm = page.locator("form").filter({ has: page.locator('button:text-is("Add")') });
+await lvForm.locator('input[name="name_en"]').fill("VIP");
+await lvForm.locator('input[name="name_ar"]').fill("كبار العملاء");
+await Promise.all([page.waitForURL(/ok=1|err=/, { waitUntil: "commit", timeout: 30000 }), lvForm.locator('button:text-is("Add")').click()]);
+if (page.url().includes("err=")) fail("price levels", decodeURIComponent(page.url().split("err=")[1]));
+else if (!(await page.locator('input[name="name_en"][value="VIP"]').count())) fail("price levels", "VIP not listed");
+else ok("add a price level (VIP); Wholesale is there from the start");
+await page.goto(ropeUrl);
+const vipBox = page.locator("[data-testid=level-prices] input").first();
+await vipBox.fill("32");
+await Promise.all([page.waitForURL(/ok=1|err=/, { waitUntil: "commit", timeout: 30000 }), page.click("text=Save changes")]);
+if (page.url().includes("err=")) fail("price levels", decodeURIComponent(page.url().split("err=")[1]));
+else if ((await page.locator("[data-testid=level-prices] input").first().inputValue()) !== "32.00") fail("price levels", "VIP price not saved");
+else ok("item price for the VIP level saved on the product page (32.00 instead of 35.00)");
+// prices file with a column for the level: "سعر VIP" 32 → 30
+{
+  const csv = `${OUT}/prices-levels.csv`;
+  fs.writeFileSync(csv, "Barcode,سعر VIP\nE2E-ROPE-1,30\n");
+  await page.goto(BASE + "/upload", { waitUntil: "networkidle" });
+  if (!/VIP/.test(await page.locator("[data-testid=level-columns]").innerText().catch(() => ""))) fail("price levels", "prices file does not mention the VIP column");
+  await page.locator("#prices input[type=file]").setInputFiles(csv);
+  await page.locator("#prices table tbody tr").first().waitFor({ timeout: 20000 }).catch(() => {});
+  const prev = await page.locator("#prices table").innerText().catch(() => "");
+  if (!/VIP/.test(prev) || !/32\.00/.test(prev) || !/30\.00/.test(prev)) fail("price levels", `file preview: ${prev.replace(/\s+/g, " ").slice(0, 200)}`);
+  await page.locator("#prices button.btn-primary").click();
+  await page.locator("#prices .alert-ok, #prices .alert-err").first().waitFor({ timeout: 20000 }).catch(() => {});
+  const res = await page.locator("#prices .alert-ok, #prices .alert-err").first().innerText().catch(() => "");
+  await page.goto(ropeUrl);
+  if ((await page.locator("[data-testid=level-prices] input").first().inputValue()) !== "30.00") fail("price levels", `prices file did not set the VIP price (${res})`);
+  else ok("prices file: a column per level (\"سعر VIP\") — preview 32.00 → 30.00, saved");
+}
 where = "groups";
 await page.goto(BASE + "/products/groups");
 const gForm = page.locator("form").filter({ has: page.locator('button:text-is("Add")') });
@@ -329,6 +365,15 @@ await cForm2.locator('input[name="phone"]').fill("+966 55 123 4567");
 await Promise.all([page.waitForURL(/err=/, { waitUntil: "commit" }), cForm2.locator('button:text-is("Add")').click()]);
 if (!/already exists/.test(await page.locator(".alert-err").innerText())) fail("customers", "duplicate mobile not refused");
 else ok("duplicate customer mobile is refused");
+// a customer on the VIP price level
+await page.goto(BASE + "/customers");
+const vForm = page.locator("form").filter({ has: page.locator('button:text-is("Add")') }).first();
+await vForm.locator('input[name="phone"]').fill("0559876543");
+await vForm.locator('input[name="name"]').fill("VIP Customer");
+await vForm.locator('select[name="price_level_id"]').selectOption({ label: "VIP" });
+await Promise.all([page.waitForURL(/ok=1|err=/, { waitUntil: "commit" }), vForm.locator('button:text-is("Add")').click()]);
+if (page.url().includes("err=")) fail("customers", "VIP customer: " + decodeURIComponent(page.url().split("err=")[1]));
+else ok("add a customer on the VIP price level");
 // edit from the customer's own page ("Edit customers" permission)
 await page.goto(BASE + "/customers?q=Test");
 await page.locator('a:text-is("Edit")').first().click();
@@ -452,6 +497,17 @@ await cs.locator('[data-testid=finder-qty] button:text-is("Add")').click();
 await page.waitForFunction(() => [...document.querySelectorAll("main table tbody tr input")].some((x) => x.value === "3"), null, { timeout: 10000 })
   .then(() => ok("item finder: ask the quantity → 3 added to the cart")).catch(() => fail("pos", "item finder: quantity not added"));
 await cs.locator('button:text-is("Close the finder")').click();
+// the VIP customer: the rope's price changes to the VIP price, the server accepts it
+await page.locator('input[placeholder="Mobile, name or customer no."]').first().fill("0559876543");
+await page.click('button:text-is("Find")');
+await page.waitForSelector("[data-testid=customer-level]", { timeout: 10000 }).catch(() => fail("pos", "customer's price level not shown"));
+await page.waitForFunction(() => /90\.00/.test(document.querySelector("main aside")?.textContent ?? ""), null, { timeout: 10000 })
+  .then(() => ok("customer on VIP level: 3 × 30.00 = 90.00 at the till")).catch(async () => fail("pos", `VIP total: ${(await page.locator("main aside").innerText()).replace(/\s+/g, " ").slice(0, 160)}`));
+await page.locator('label:has-text("Cash given") + input').fill("90");
+await page.click('button:has-text("Pay SAR")');
+await page.waitForSelector(".alert-ok, .alert-err", { timeout: 20000 });
+const vipMsg = await page.locator(".alert-ok, .alert-err").first().innerText();
+if (!/Sale complete/.test(vipMsg)) fail("pos", `VIP sale: ${vipMsg}`); else ok("VIP sale accepted by the server at the level price");
 
 // quotation at the desk → collect at the cashier
 await page.click('button:text-is("Quotation")');
@@ -489,12 +545,12 @@ await page.click('section >> button:text-is("Save")');
 await page.waitForSelector(".alert-ok, .alert-err", { timeout: 15000 });
 ok("cash out recorded");
 await page.click('button:text-is("Close shift")');
-// expected: 100 + 70 + 35 (quotation, paid cash) − 35 (refund) − 10 (cash out) = 160
-await page.locator('input[placeholder*="Counted cash"]').fill("160");
+// expected: 100 + 70 + 90 (VIP) + 35 (quotation, paid cash) − 35 (refund) − 10 (cash out) = 250
+await page.locator('input[placeholder*="Counted cash"]').fill("250");
 await page.locator('section >> button:text-is("Close shift")').click();
 await page.waitForSelector("text=Shift closed", { timeout: 15000 });
 const closeTxt = await page.locator(".alert-ok").first().innerText();
-if (!/Expected cash 160\.00/.test(closeTxt) || !/Difference 0\.00/.test(closeTxt)) fail("pos", `close: ${closeTxt}`); else ok("close shift: expected 160.00 = counted, difference 0.00");
+if (!/Expected cash 250\.00/.test(closeTxt) || !/Difference 0\.00/.test(closeTxt)) fail("pos", `close: ${closeTxt}`); else ok("close shift: expected 250.00 = counted, difference 0.00");
 
 // sales list
 await page.goto(BASE + "/sales", { waitUntil: "networkidle" });

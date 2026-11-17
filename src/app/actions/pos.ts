@@ -120,18 +120,62 @@ type CartLine = { variantId: string; qty: string; unitPrice?: string; discount?:
 type PricedLine = { variant_id: string; qty: string; unit_price: string; discount: string };
 
 /** Uses the database price unless the person may change prices; checks discounts. */
+/** Price level of each customer (only active levels). */
+async function customerLevels(ids: string[]): Promise<Map<string, { id: string; name: string }>> {
+  const out = new Map<string, { id: string; name: string }>();
+  const clean = ids.filter(isId);
+  if (!clean.length) return out;
+  const { data } = await db().from("customer_details").select("customer_id, price_level_id").in("customer_id", clean).not("price_level_id", "is", null);
+  if (!data?.length) return out;
+  const { data: lv } = await db().from("price_levels").select("id, name_en, name_ar, active").in("id", [...new Set(data.map((d) => d.price_level_id))]);
+  for (const d of data) {
+    const l = lv?.find((x) => x.id === d.price_level_id && x.active);
+    if (l) out.set(d.customer_id, { id: l.id, name: l.name_ar || l.name_en });
+  }
+  return out;
+}
+/** Every price of one level: variant → VAT-inclusive price. */
+async function levelPriceMap(levelId: string): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  for (let from = 0; from < 100_000; from += 1000) {
+    const { data, error } = await db().rpc("level_prices", { p_level: levelId }).range(from, from + 999);
+    if (error) break;
+    for (const r of (data ?? []) as { variant_id: string; price: number }[]) out.set(r.variant_id, fmt(r.price));
+    if (!data || data.length < 1000) break;
+  }
+  return out;
+}
+const withLevel = async <T extends { id: string }>(cs: T[]): Promise<(T & { levelId: string | null; levelName: string | null })[]> => {
+  const m = await customerLevels(cs.map((c) => c.id));
+  return cs.map((c) => ({ ...c, levelId: m.get(c.id)?.id ?? null, levelName: m.get(c.id)?.name ?? null }));
+};
+
+/** Every active price level with all its prices (the till keeps a copy for offline use). */
+export async function posLevelPricesAction(locale: "ar" | "en" = "en"): Promise<PosResult<{ levels: { id: string; name: string; prices: Record<string, string> }[] }>> {
+  const s = await requireStaff();
+  if (!has(s, "pos.collect", "pos.quick_sale", "pos.desk")) return { ok: false, error: "forbidden" };
+  const { data: lv } = await db().from("price_levels").select("id, name_en, name_ar").eq("active", true).order("sort");
+  const levels = [];
+  for (const l of lv ?? []) levels.push({ id: l.id, name: (locale === "ar" && l.name_ar) || l.name_en, prices: Object.fromEntries(await levelPriceMap(l.id)) });
+  return { ok: true, levels };
+}
+
 async function priceLines(s: Staff, lines: CartLine[], approver: { u?: string; p?: string }, customerId?: string | null): Promise<PosResult<{ lines: PricedLine[]; approvedBy: string | null }>> {
   // the customer's usual discount (%) is allowed without a PIN or the discount permission
   let usualPct = 0;
+  let levelPrice = new Map<string, string>();
   if (customerId && isId(customerId)) {
     const { data: c } = await db().from("customers").select("discount_pct").eq("id", customerId).maybeSingle();
     usualPct = Number(c?.discount_pct ?? 0);
+    // the customer's price level: its price replaces the normal price for items that have one
+    const lv = (await customerLevels([customerId])).get(customerId);
+    if (lv) levelPrice = await levelPriceMap(lv.id);
   }
   if (!Array.isArray(lines) || !lines.length || lines.length > 300) return { ok: false, error: "no_lines" };
   if (!lines.every((l) => isId(l.variantId))) return { ok: false, error: "bad_request" };
   const ids = [...new Set(lines.map((l) => l.variantId))];
   const { data: rows } = await db().from("variant_search").select("variant_id, price, active, product_active").in("variant_id", ids);
-  const price = new Map((rows ?? []).filter((r) => r.active && r.product_active).map((r) => [r.variant_id, String(r.price)]));
+  const price = new Map((rows ?? []).filter((r) => r.active && r.product_active).map((r) => [r.variant_id, levelPrice.get(r.variant_id) ?? String(r.price)]));
   let needsDiscountApproval = false;
   const out: PricedLine[] = [];
   for (const l of lines) {
@@ -435,7 +479,7 @@ export async function posRecentInvoicesAction(locationId: string): Promise<PosRe
 }
 
 // ---------------------------------------------------------------- customers at the till
-export type PosCustomer = { id: string; customerNo: number; name: string; phone: string; discountPct?: number; balance?: string; creditLimit?: string | null };
+export type PosCustomer = { id: string; customerNo: number; name: string; phone: string; discountPct?: number; balance?: string; creditLimit?: string | null; levelId?: string | null; levelName?: string | null };
 
 export async function findCustomerAction(phoneOrNo: string): Promise<PosResult<{ customer: PosCustomer | null }>> {
   const s = await requireStaff();
@@ -447,7 +491,9 @@ export async function findCustomerAction(phoneOrNo: string): Promise<PosResult<{
     : /^\d{1,7}$/.test(raw) ? db().from("customers").select("id, customer_no, name, phone").eq("customer_no", Number(raw)) : null;
   if (!q) return { ok: true, customer: null };
   const { data } = await q.maybeSingle();
-  return { ok: true, customer: data ? { id: data.id, customerNo: data.customer_no, name: data.name, phone: data.phone } : null };
+  if (!data) return { ok: true, customer: null };
+  const [c] = await withLevel([{ id: data.id, customerNo: data.customer_no, name: data.name, phone: data.phone }]);
+  return { ok: true, customer: c };
 }
 
 export async function quickAddCustomerAction(phoneRaw: string, name: string): Promise<PosResult<{ customer: PosCustomer }>> {
@@ -456,7 +502,7 @@ export async function quickAddCustomerAction(phoneRaw: string, name: string): Pr
   const phone = normalizeSaudiMobile(String(phoneRaw ?? ""));
   if (!phone) return { ok: false, error: "bad_phone" };
   const { data: existing } = await db().from("customers").select("id, customer_no, name, phone").eq("phone", phone).maybeSingle();
-  if (existing) return { ok: true, customer: { id: existing.id, customerNo: existing.customer_no, name: existing.name, phone: existing.phone } };
+  if (existing) return { ok: true, customer: (await withLevel([{ id: existing.id, customerNo: existing.customer_no, name: existing.name, phone: existing.phone }]))[0] };
   const { data, error } = await db().from("customers").insert({ phone, name: String(name ?? "").trim().slice(0, 200), created_by: s.id }).select("id, customer_no, name, phone").single();
   if (error || !data) return { ok: false, error: error?.message ?? "error" };
   await audit(s.id, "customer.create", "customer", data.id, { customer_no: data.customer_no, from: "pos" });
@@ -500,14 +546,20 @@ export async function posCatalogAction(locale: "ar" | "en" = "en"): Promise<PosR
 
 /** Customers by mobile, name or serial customer number (with usual discount, balance and credit limit). */
 /** Customers copy kept on the till for offline search (mobile, number, name, usual discount). */
-export async function posCustomersAction(): Promise<PosResult<{ items: { i: string; no: number; n: string; p: string; d: number }[] }>> {
+export async function posCustomersAction(): Promise<PosResult<{ items: { i: string; no: number; n: string; p: string; d: number; l?: string }[] }>> {
   const s = await requireStaff();
   if (!has(s, "customers.view", "pos.collect", "pos.desk", "pos.quick_sale")) return { ok: false, error: "forbidden" };
-  const out: { i: string; no: number; n: string; p: string; d: number }[] = [];
+  const out: { i: string; no: number; n: string; p: string; d: number; l?: string }[] = [];
   for (let from = 0; from < 50_000; from += 1000) {
     const { data, error } = await db().from("customers").select("id, customer_no, name, phone, discount_pct").order("customer_no").range(from, from + 999);
     if (error) return { ok: false, error: "bad_request" };
     for (const r of data ?? []) out.push({ i: r.id, no: Number(r.customer_no), n: String(r.name ?? ""), p: String(r.phone), d: Number(r.discount_pct ?? 0) });
+    if (!data || data.length < 1000) break;
+  }
+  // price level of each customer (l)
+  for (let from = 0; from < 50_000; from += 1000) {
+    const { data } = await db().from("customer_details").select("customer_id, price_level_id").not("price_level_id", "is", null).order("customer_id").range(from, from + 999);
+    for (const d of data ?? []) { const c = out.find((x) => x.i === d.customer_id); if (c) c.l = d.price_level_id; }
     if (!data || data.length < 1000) break;
   }
   return { ok: true, items: out };
@@ -517,14 +569,16 @@ export async function posCustomersAction(): Promise<PosResult<{ items: { i: stri
 export async function posCatalogStampAction(): Promise<PosResult<{ stamp: string }>> {
   const s = await requireStaff();
   if (!has(s, "pos.collect", "pos.quick_sale", "pos.desk")) return { ok: false, error: "forbidden" };
-  const [{ data: v }, { data: p }, { count }] = await Promise.all([
+  const [{ data: v }, { data: p }, { count }, { data: lp }, { count: lpCount }] = await Promise.all([
     db().from("product_variants").select("updated_at").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
     db().from("products").select("updated_at").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
     db().from("product_codes").select("code", { count: "exact", head: true }),
+    db().from("variant_level_prices").select("updated_at").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+    db().from("variant_level_prices").select("variant_id", { count: "exact", head: true }),
   ]);
   // sale prices start/end by date, so the Riyadh date is part of the stamp
   const day = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
-  return { ok: true, stamp: `${v?.updated_at ?? ""}|${p?.updated_at ?? ""}|${count ?? 0}|${day}` };
+  return { ok: true, stamp: `${v?.updated_at ?? ""}|${p?.updated_at ?? ""}|${count ?? 0}|${lp?.updated_at ?? ""}|${lpCount ?? 0}|${day}` };
 }
 
 export async function searchCustomersAction(term: string): Promise<PosResult<{ customers: PosCustomer[] }>> {
@@ -540,7 +594,7 @@ export async function searchCustomersAction(term: string): Promise<PosResult<{ c
   if (!rows.length) rows = (await db().from("customer_list").select(cols).ilike("name", `%${t.replace(/[%_\\]/g, "")}%`).order("name").limit(10)).data ?? [];
   return {
     ok: true,
-    customers: rows.map((r) => ({ id: String(r.id), customerNo: Number(r.customer_no), name: String(r.name ?? ""), phone: String(r.phone), discountPct: Number(r.discount_pct ?? 0), balance: fmt(r.balance), creditLimit: r.credit_limit === null ? null : fmt(r.credit_limit) })),
+    customers: await withLevel(rows.map((r) => ({ id: String(r.id), customerNo: Number(r.customer_no), name: String(r.name ?? ""), phone: String(r.phone), discountPct: Number(r.discount_pct ?? 0), balance: fmt(r.balance), creditLimit: r.credit_limit === null ? null : fmt(r.credit_limit) }))),
   };
 }
 

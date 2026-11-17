@@ -18,10 +18,21 @@ export function saleWindow(price: string | null, from: string, to: string):
   return { sale_price: price, sale_from: f || null, sale_to: t || null };
 }
 
-export type PriceRow = { sku: string; name_en?: string; name_ar?: string; price?: string; wholesale?: string; cost?: string };
+/** levels: price level id → price (one column per level in the file) */
+export type PriceRow = { sku: string; name_en?: string; name_ar?: string; price?: string; wholesale?: string; cost?: string; levels?: Record<string, string> };
+/** A price level the file may have a column for: its column may be called by any of these names. */
+export type LevelColumn = { id: string; names: string[] };
+const norm = (x: string) => x.trim().toLowerCase().replace(/\s+/g, " ");
+/** "VIP", "VIP price", "Price VIP", "سعر VIP", "سعر كبار العملاء" → that level. */
+export function levelForHeader(h: string, levels: LevelColumn[]): string | null {
+  const x = norm(h).replace(/^(سعر|price)\s+/, "").replace(/\s+(price|سعر)$/, "");
+  for (const l of levels) if (l.names.some((n) => n.trim() && norm(n) === x)) return l.id;
+  return null;
+}
 
 const HEAD: Record<keyof PriceRow, RegExp> = {
   sku: /^(sku|barcode|code|باركود|الباركود|كود|الكود|رقم الصنف)$/i,
+  levels: /^$/, // not a header: one column per price level (see levelForHeader)
   name_en: /^(name|name.?en|english name|title|الاسم بالإنجليزي|الاسم انجليزي)$/i,
   name_ar: /^(name.?ar|arabic name|الاسم|الاسم بالعربي|اسم الصنف|الاسم عربي)$/i,
   price: /^(price|sale price|selling price|السعر|سعر البيع)$/i,
@@ -39,14 +50,17 @@ const cleanMoney = (v: unknown): string | undefined => {
  * Sheet rows (first row = headers) → price rows. Unknown columns are ignored; rows without
  * a SKU are skipped; a repeated SKU keeps its last row. Returns the columns it understood.
  */
-export function mapPriceSheet(rows: unknown[][]): { rows: PriceRow[]; columns: (keyof PriceRow)[]; skipped: number } {
-  if (!rows.length) return { rows: [], columns: [], skipped: 0 };
+export function mapPriceSheet(rows: unknown[][], levels: LevelColumn[] = []): { rows: PriceRow[]; columns: (keyof PriceRow)[]; levelColumns: string[]; skipped: number } {
+  if (!rows.length) return { rows: [], columns: [], levelColumns: [], skipped: 0 };
   const head = rows[0].map((h) => String(h ?? "").trim());
   const idx: Partial<Record<keyof PriceRow, number>> = {};
+  const levelIdx = new Map<string, number>();
   head.forEach((h, i) => {
-    for (const k of Object.keys(HEAD) as (keyof PriceRow)[]) if (idx[k] === undefined && HEAD[k].test(h)) idx[k] = i;
+    for (const k of Object.keys(HEAD) as (keyof PriceRow)[]) if (k !== "levels" && idx[k] === undefined && HEAD[k].test(h)) return void (idx[k] = i);
+    const lv = levelForHeader(h, levels);
+    if (lv && !levelIdx.has(lv)) levelIdx.set(lv, i);
   });
-  if (idx.sku === undefined) return { rows: [], columns: [], skipped: rows.length - 1 };
+  if (idx.sku === undefined) return { rows: [], columns: [], levelColumns: [], skipped: rows.length - 1 };
   const out = new Map<string, PriceRow>();
   let skipped = 0;
   for (const r of rows.slice(1)) {
@@ -56,7 +70,8 @@ export function mapPriceSheet(rows: unknown[][]): { rows: PriceRow[]; columns: (
     const text = (k: "name_en" | "name_ar") => { const i = idx[k]; const v = i === undefined ? "" : String(r[i] ?? "").trim(); if (v) row[k] = v.slice(0, 200); };
     const num = (k: "price" | "wholesale" | "cost") => { const i = idx[k]; const v = i === undefined ? undefined : cleanMoney(r[i]); if (v !== undefined) row[k] = v; };
     text("name_en"); text("name_ar"); num("price"); num("wholesale"); num("cost");
+    for (const [lv, i] of levelIdx) { const v = cleanMoney(r[i]); if (v !== undefined) (row.levels ??= {})[lv] = v; }
     out.set(sku, row);
   }
-  return { rows: [...out.values()], columns: (Object.keys(idx) as (keyof PriceRow)[]), skipped };
+  return { rows: [...out.values()], columns: (Object.keys(idx) as (keyof PriceRow)[]), levelColumns: [...levelIdx.keys()], skipped };
 }
