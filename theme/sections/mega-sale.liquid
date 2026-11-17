@@ -140,9 +140,24 @@
         </div>
         <div class="ah-rail">
           <ul class="ah-rail__track" data-rail-track role="list">
-            {%- for product in coll.products limit: section.settings.product_count -%}
-              {%- if product.available -%}<li>{%- render 'product-card', product: product -%}</li>{%- endif -%}
-            {%- endfor -%}
+            {%- comment -%} Sort by discount, highest first, independent of the collection's own sort order. {%- endcomment -%}
+            {%- paginate coll.products by 100 -%}
+              {%- liquid
+                assign keyed = ''
+                for p in coll.products
+                  if p.available and p.compare_at_price > p.price
+                    assign p_off = p.compare_at_price | minus: p.price | times: 1000 | divided_by: p.compare_at_price
+                    assign key = p_off | plus: 1000
+                    assign keyed = keyed | append: key | append: '|' | append: p.handle | append: ','
+                  endif
+                endfor
+                assign by_off = keyed | split: ',' | sort | reverse
+              -%}
+              {%- for k in by_off limit: section.settings.product_count -%}
+                {%- assign h = k | split: '|' | last -%}
+                <li>{%- render 'product-card', product: all_products[h] -%}</li>
+              {%- endfor -%}
+            {%- endpaginate -%}
           </ul>
         </div>
       </div>
