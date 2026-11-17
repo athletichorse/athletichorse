@@ -346,6 +346,12 @@ await page.locator('input[inputmode="decimal"]').first().fill("100");
 await page.click('button:text-is("Open shift")');
 await page.waitForSelector("text=Shift open since", { timeout: 20000 });
 ok("open a shift with 100 SAR in the drawer");
+// start screen: big tiles, each named in both languages; Point of sale opens the till
+await page.waitForSelector("[data-testid=pos-tiles]", { timeout: 15000 }).catch(() => {});
+const tileTxt = await page.locator("[data-testid=pos-tiles]").innerText().catch(() => "");
+for (const w of ["Point of sale", "نقاط بيع", "Collect payment", "تحصيل", "Return", "مرتجع", "Close shift", "إغلاق الوردية"]) if (!tileTxt.includes(w)) fail("pos", `start tile missing "${w}"`);
+ok("cashier start screen: big tiles in English + Arabic");
+await page.click("[data-tile=sell]");
 
 async function scan(code) {
   const box = page.locator('input[placeholder*="Scan barcode"]');

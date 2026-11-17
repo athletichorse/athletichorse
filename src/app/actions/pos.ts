@@ -358,6 +358,7 @@ export async function findInvoiceForReturnAction(number: string): Promise<PosRes
 export type ReturnInput = {
   clientId: string; locationId: string; shiftId: string; originalInvoiceId?: string; customerId?: string; reason: string;
   lines: { lineNo?: number; variantId?: string; qty: string }[]; refundMethod: string; approverUsername?: string; approverPin?: string;
+  issuedAt?: string; offlineTempNo?: string; // a return made at the till without internet
 };
 
 export async function postReturnAction(input: ReturnInput): Promise<PosResult<{ invoiceId: string; number: string; total: string }>> {
@@ -399,13 +400,38 @@ export async function postReturnAction(input: ReturnInput): Promise<PosResult<{ 
       reason: String(input.reason ?? "").slice(0, 300), lines,
       payments: [{ method: String(input.refundMethod), amount: formatDecimal(total) }],
       approved_by: a.approverId,
+      issued_at: input.issuedAt && !Number.isNaN(Date.parse(input.issuedAt)) ? new Date(input.issuedAt).toISOString() : null,
+      offline_temp_no: /^OFF-[A-Za-z0-9-]{1,40}$/.test(input.offlineTempNo ?? "") ? input.offlineTempNo : null,
     },
   });
   if (error) return { ok: false, error: sqlError(error.message) };
   if (!data.duplicate) after(() => pushStockForInvoice(String(data.invoice_id), input.locationId));
-  if (!data.duplicate) await audit(s.id, "pos.return", "invoice", data.invoice_id, { number: data.number, total: data.gross_total, original: input.originalInvoiceId ?? null, approved_by: a.approverId });
+  if (!data.duplicate) await audit(s.id, "pos.return", "invoice", data.invoice_id, { number: data.number, total: data.gross_total, original: input.originalInvoiceId ?? null, approved_by: a.approverId, offline: input.offlineTempNo ?? null });
   revalidatePath("/sales");
   return { ok: true, invoiceId: String(data.invoice_id), number: String(data.number), total: fmt(data.gross_total) };
+}
+
+/**
+ * Copy of this branch's recent invoices for the till, so a return can be made without internet:
+ * last 14 days, newest first, at most 1500. i = id, n = number, o = offline temp no., t = time,
+ * c = customer, l = lines [lineNo, name, sku, qty, still returnable, gross].
+ */
+export type RecentInvoice = { i: string; n: string; o: string | null; t: string; c: string | null; l: [number, string, string | null, string, string, string][] };
+export async function posRecentInvoicesAction(locationId: string): Promise<PosResult<{ items: RecentInvoice[] }>> {
+  const s = await requireStaff();
+  if (!has(s, "pos.return")) return { ok: false, error: "forbidden" };
+  if (!(await posLocationOk(s, locationId))) return { ok: false, error: "location_not_allowed" };
+  const since = new Date(Date.now() - 14 * 864e5).toISOString();
+  const { data: invs, error } = await db().from("invoices").select("id, number, offline_temp_no, issued_at, customer_id")
+    .eq("location_id", locationId).eq("kind", "invoice").gte("issued_at", since).order("issued_at", { ascending: false }).limit(1500);
+  if (error) return { ok: false, error: sqlError(error.message) };
+  const ids = (invs ?? []).map((x) => x.id);
+  const lines: Record<string, RecentInvoice["l"]> = {};
+  for (let k = 0; k < ids.length; k += 200) {
+    const { data } = await db().from("invoice_lines").select("invoice_id, line_no, name, sku, qty, returned_qty, gross").in("invoice_id", ids.slice(k, k + 200)).order("line_no");
+    for (const l of data ?? []) (lines[l.invoice_id] ??= []).push([l.line_no, l.name, l.sku, String(l.qty), String(Number(l.qty) - Number(l.returned_qty)), String(l.gross)]);
+  }
+  return { ok: true, items: (invs ?? []).map((x) => ({ i: x.id, n: x.number, o: x.offline_temp_no, t: x.issued_at, c: x.customer_id, l: lines[x.id] ?? [] })) };
 }
 
 // ---------------------------------------------------------------- customers at the till

@@ -137,3 +137,52 @@ describe("offline everywhere", () => {
     expect(decodeQuoteQr(text.replace(",2,", ",0,"))).toBeNull();
   });
 });
+
+import { findInvoiceLocal, loadInvoices, nextReturnTempNo, noReceiptAmount, returnLineAmount, saveInvoices, sumAmounts, takeReturned, type RecentInvoice } from "@/lib/offline";
+
+describe("returns without internet", () => {
+  const mk = () => { const m = new Map<string, string>(); return { get: (k: string) => m.get(k) ?? null, set: (k: string, v: string) => void m.set(k, v), remove: (k: string) => void m.delete(k) }; };
+  const inv: RecentInvoice = { i: "inv-1", n: "BR01-000007", o: "OFF-BR01-AB12-0003", t: "2026-11-10T10:00:00Z", c: null,
+    l: [[1, "Rope", "100100", "3", "3", "100.00"], [2, "Bit", "200200", "1", "1", "45.50"]] };
+
+  it("refund is the line total × returned / sold, rounded to the halala like the server", () => {
+    expect(returnLineAmount(inv.l[0], "1")).toBe("33.33");
+    expect(returnLineAmount(inv.l[0], "2")).toBe("66.67");
+    expect(returnLineAmount(inv.l[0], "3")).toBe("100.00");
+    expect(returnLineAmount(inv.l[1], "1")).toBe("45.50");
+    expect(sumAmounts(["33.33", "45.50"])).toBe("78.83");
+  });
+  it("can't return more than is left, or zero", () => {
+    expect(returnLineAmount(inv.l[0], "4")).toBeNull();
+    expect(returnLineAmount(inv.l[0], "0")).toBeNull();
+    expect(returnLineAmount(inv.l[0], "abc")).toBeNull();
+  });
+  it("no receipt: shelf price × quantity", () => {
+    expect(noReceiptAmount("35.00", "2")).toBe("70.00");
+    expect(noReceiptAmount("10.00", "0.333")).toBe("3.33");
+    expect(noReceiptAmount("10.00", "0")).toBeNull();
+  });
+  it("finds a receipt by its number or its temporary number; returned quantities come off", () => {
+    const st = mk();
+    saveInvoices(st, "loc-1", [inv]);
+    expect(findInvoiceLocal(st, "br01-000007")?.i).toBe("inv-1");
+    expect(findInvoiceLocal(st, "OFF-BR01-AB12-0003")?.i).toBe("inv-1");
+    expect(findInvoiceLocal(st, "BR01-999999")).toBeNull();
+    takeReturned(st, "inv-1", [{ lineNo: 1, qty: "2" }]);
+    expect(loadInvoices(st)!.items[0].l[0][4]).toBe("1");
+    expect(returnLineAmount(loadInvoices(st)!.items[0].l[0], "2")).toBeNull();
+  });
+  it("a fresh copy from the server still counts returns waiting on this device", () => {
+    const st = mk();
+    enqueueOp(st, { kind: "return", clientId: "c1", shiftId: "s1", createdAt: "x", label: "", tempNo: "OFF-BR01-AB12-R0001", total: "33.33",
+      payload: { locationId: "loc-1", originalInvoiceId: "inv-1", reason: "", refundMethod: "cash", lines: [{ lineNo: 1, qty: "1" }] }, slip: { original: null, lines: [] } });
+    saveInvoices(st, "loc-1", [inv]);
+    expect(loadInvoices(st)!.items[0].l[0][4]).toBe("2");
+  });
+  it("temporary return numbers have their own counter", () => {
+    const st = mk();
+    st.set("pos-device-id", "AB12");
+    expect(nextReturnTempNo(st, "BR01")).toBe("OFF-BR01-AB12-R0001");
+    expect(nextReturnTempNo(st, "BR01")).toBe("OFF-BR01-AB12-R0002");
+  });
+});

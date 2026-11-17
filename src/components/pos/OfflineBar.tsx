@@ -4,14 +4,14 @@ import type { Dict, Locale } from "@/i18n";
 import { formatDateTime } from "@/lib/time";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
-import { encodeQuoteQr, type QrLine, type QueuedSale } from "@/lib/offline";
+import { encodeQuoteQr, type QrLine, type QueuedOp, type QueuedSale } from "@/lib/offline";
 import type { OfflineTill } from "./useOfflineTill";
 
 /** Status of the offline till on this device: connection, price list, sales waiting to be sent. */
 export function OfflineBar({ t, locale, off, canManage, err, screens }: { t: Dict; locale: Locale; off: OfflineTill; canManage: boolean; err: (c: string) => string; screens: { key: "sell" | "desk" | "collect"; label: string }[] }) {
   const o = t.pos.offline;
   const refused = [...off.queue.filter((x) => x.error).map((x) => ({ id: x.clientId, no: x.tempNo, total: x.total, error: x.error })),
-    ...off.ops.filter((x) => x.error).map((x) => ({ id: x.clientId, no: x.kind === "quote" ? x.tempNo : "", total: x.label, error: x.error }))];
+    ...off.ops.filter((x) => x.error).map((x) => ({ id: x.clientId, no: x.kind === "drawer" ? "" : x.tempNo, total: x.label, error: x.error }))];
   const waiting = off.queue.length + off.ops.length;
   // seconds without a connection (the switch to offline is automatic)
   const [now, setNow] = useState(() => Date.now());
@@ -54,6 +54,7 @@ export function OfflineBar({ t, locale, off, canManage, err, screens }: { t: Dic
       {off.enabled && (
         <p className="text-xs text-gray-500">
           {off.catalogInfo ? `${o.priceList}: ${off.catalogInfo.count} ${o.items} · ${formatDateTime(new Date(off.catalogInfo.savedAt), locale)}` : o.noPriceList}
+          {off.invoicesInfo && <span className="block" data-testid="receipts-copy">{o.receiptsCopy}: {off.invoicesInfo.count} · {formatDateTime(new Date(off.invoicesInfo.savedAt), locale)}</span>}
         </p>
       )}
 
@@ -127,6 +128,30 @@ export async function printTempQuote(q: { tempNo: string; total: string; created
 <div class="t"><span>${esc(ctx.t.pos.total)}</span><span dir="ltr">${esc(q.total)} SAR</span></div>
 ${qr ? `<div class="c" style="margin-top:8px"><img src="${qr}" alt="" style="width:46mm;height:46mm"></div>` : ""}
 <div class="note">${esc(o.quoteSlipNote)}</div>
+<script>window.onload=function(){window.print()}</script></body></html>`);
+  w.document.close();
+}
+
+/** Prints the slip of a return made offline (the tax credit note is issued once it is sent). */
+export function printTempReturn(r: Extract<QueuedOp, { kind: "return" }>, ctx: { t: Dict; locale: Locale; company: string; branch: string }) {
+  const o = ctx.t.pos.offline;
+  const dir = ctx.locale === "ar" ? "rtl" : "ltr";
+  const rows = r.slip.lines.map((l) => `<tr><td>${esc(l.name)}</td><td class="n">${esc(l.qty)}</td><td class="n">${esc(l.amount)}</td></tr>`).join("");
+  const w = window.open("", "_blank", "width=420,height=640");
+  if (!w) return;
+  w.document.open();
+  w.document.write(`<!doctype html><html lang="${ctx.locale}" dir="${dir}"><head><meta charset="utf-8"><title>${esc(r.tempNo)}</title>
+<style>@page{margin:4mm}body{font:12px system-ui,sans-serif;width:72mm;margin:0 auto}h1{font-size:14px;text-align:center;margin:4px 0}
+.c{text-align:center}table{width:100%;border-collapse:collapse}td{padding:2px 0;vertical-align:top}.n{text-align:end;white-space:nowrap;padding-inline-start:6px}
+.t{border-top:1px dashed #000;margin-top:6px;padding-top:6px;font-weight:700;display:flex;justify-content:space-between}
+.note{border:1px solid #000;padding:4px;margin-top:8px;font-size:11px}</style></head><body>
+<div class="c"><img src="${location.origin}/brand/logo.png" alt="" style="height:40px"></div><h1>${esc(ctx.company)}</h1><div class="c">${esc(ctx.branch)}</div>
+<div class="c" style="margin:6px 0;font-weight:700">${esc(o.tempReturn)}</div>
+<div class="c" dir="ltr">${esc(r.tempNo)}</div><div class="c">${esc(formatDateTime(new Date(r.createdAt), ctx.locale))}</div>
+${r.slip.original ? `<div class="c" dir="ltr">↩ ${esc(r.slip.original)}</div>` : ""}
+<table style="margin-top:6px">${rows}</table>
+<div class="t"><span>${esc(ctx.t.pos.refund)}</span><span dir="ltr">${esc(r.total)} SAR</span></div>
+<div class="note">${esc(o.tempReturnNote)}</div>
 <script>window.onload=function(){window.print()}</script></body></html>`);
   w.document.close();
 }

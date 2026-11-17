@@ -401,6 +401,7 @@ const en: Dict = {
     none: "Nothing recorded yet.",
   },
   pos: {
+    tiles: { sell: "Point of sale", desk: "Quotation", collect: "Collect payment", returns: "Return", cash: "Drawer", close: "Close shift", back: "All", choose: "Choose" },
     extra: {
       slipIsQuote: "This slip is a saved quotation — collect it in Collect:",
       slipLoaded: "Desk slip loaded:",
@@ -568,6 +569,13 @@ const en: Dict = {
       quoteSlip: "Quotation (offline)",
       quoteSlipNote: "Show this slip at the cashier. The cashier scans the QR code.",
       otherWaiting: "Drawer entries / quotations waiting",
+      returnSavedOffline: "Return saved on this device — temporary no.",
+      tempReturn: "Temporary return slip",
+      tempReturnNote: "Not a tax credit note. It is issued automatically when the till is back online.",
+      receiptsCopy: "Receipts on this device",
+      receiptNotOnDevice: "No internet, and this receipt isn't on this device. Without internet you can return receipts of this branch from the last 14 days.",
+      printTempReturn: "Print return slip",
+      noApprovalReturnOffline: "This return needs a manager's approval, which can't be checked without internet.",
     },
   },
   reports: {

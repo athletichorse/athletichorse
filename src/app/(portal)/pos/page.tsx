@@ -1,5 +1,6 @@
 import { requireStaff } from "@/lib/auth";
 import { getDict } from "@/lib/locale";
+import { dictionaries } from "@/i18n";
 import { db } from "@/lib/supabase/admin";
 import { needsApproval } from "@/lib/permissions";
 import { PageHeader } from "@/components/PageHeader";
@@ -38,6 +39,7 @@ export default async function PosPage() {
         locale={locale}
         me={{ id: me.id, name: me.fullName }}
         company={companyName}
+        otherTiles={dictionaries[locale === "ar" ? "en" : "ar"].pos.tiles}
         expenseTypes={(expenseTypes ?? []).map((e) => ({ id: e.id, name: (locale === "ar" && e.name_ar) || e.name_en }))}
         canManageOffline={me.role === "owner" || p("approval.approve")}
         locations={myLocs}

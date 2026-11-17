@@ -6,6 +6,11 @@ const { chromium, devices } = createRequire(import.meta.url)('playwright');
 const BASE = process.env.BASE || 'http://localhost:3105';
 const SKU = process.argv[2] || '100025';
 const results = [];
+/** The cashier opens on big tiles: go to the till (Point of sale) when they show. */
+async function toSell(p) {
+  await p.waitForSelector('[data-tile=sell], [placeholder*="Scan barcode"]', { timeout: 15000 }).catch(() => {});
+  if (await p.locator('[data-tile=sell]').count()) await p.click('[data-tile=sell]');
+}
 const ok = (cond, msg) => { results.push(`${cond ? '✓' : '✗'} ${msg}`); console.log(`${cond ? '✓' : '✗'} ${msg}`); };
 
 (async () => {
@@ -49,6 +54,7 @@ const ok = (cond, msg) => { results.push(`${cond ? '✓' : '✗'} ${msg}`); cons
   await p.reload().catch(() => {});
   await p.waitForSelector('[data-testid=offline-bar]', { timeout: 20000 }).catch(() => {});
   ok(await p.locator('[data-testid=offline-bar]').isVisible(), 'cashier page opens with no internet (reload while offline)');
+  await toSell(p);
   await p.waitForFunction(() => document.body.innerText.includes('No internet'), null, { timeout: 10000 }).catch(() => {});
   ok((await p.locator('body').innerText()).includes('No internet — sales are saved on this device'), 'shows the "No internet" status');
 
@@ -94,6 +100,48 @@ const ok = (cond, msg) => { results.push(`${cond ? '✓' : '✗'} ${msg}`); cons
   const link = await p.locator('[data-testid=offline-bar] details a').first().innerText();
   ok(/^BR0\d-\d{6}$/.test(link), `temporary number linked to the real tax invoice ${link}`);
   console.log('TEMP=' + temp + ' INV=' + link);
+
+  // ---- return without internet, using the copy of recent receipts kept on this device
+  await p.locator('[data-testid=offline-bar]').getByRole('button', { name: 'Update price list' }).click();
+  await p.waitForSelector('[data-testid=receipts-copy]', { timeout: 30000 }).catch(() => {});
+  ok(await p.locator('[data-testid=receipts-copy]').isVisible(), 'recent receipts copied to this device');
+  await ctx.setOffline(true);
+  await p.evaluate(() => window.dispatchEvent(new Event('offline')));
+  await p.waitForFunction(() => document.querySelector('[data-testid=conn]')?.textContent?.includes('No internet'), null, { timeout: 20000 }).catch(() => {});
+  await p.getByRole('button', { name: 'Return', exact: true }).click();
+  await p.getByPlaceholder(/Invoice number/).fill(link);
+  await p.getByRole('button', { name: 'Find', exact: true }).click();
+  await p.waitForSelector('table tbody tr input', { timeout: 10000 }).catch(() => {});
+  ok((await p.locator('table tbody tr').count()) >= 1, 'receipt found on this device with no internet');
+  await p.locator('table tbody tr input').first().fill('1');
+  const half = (Number(total) / 2).toFixed(2);
+  const [slip] = await Promise.all([
+    ctx.waitForEvent('page', { timeout: 10000 }).catch(() => null),
+    p.getByRole('button', { name: 'Refund', exact: true }).click(),
+  ]);
+  await p.waitForSelector('text=/Return saved on this device/', { timeout: 10000 }).catch(() => {});
+  const rmsg = await p.locator('.alert-ok, .alert-err').first().innerText().catch(() => '');
+  const rtemp = rmsg.match(/OFF-BR0\d-[A-Z0-9]{4}-R\d{4}/)?.[0];
+  ok(!!rtemp && rmsg.includes(half), `offline return saved: ${rtemp}, refund ${half} (${rmsg})`);
+  if (slip) {
+    await slip.waitForLoadState().catch(() => {});
+    const st = await slip.locator('body').innerText().catch(() => '');
+    ok(st.includes('Temporary return slip') && st.includes(rtemp ?? '?') && st.includes(half), 'return slip prints offline');
+    await slip.close();
+  } else ok(false, 'return slip window opened');
+  // the same receipt: only 1 left to return now (the screen is cleared after a refund)
+  await p.getByPlaceholder(/Invoice number/).fill(link);
+  await p.getByRole('button', { name: 'Find', exact: true }).click();
+  await p.waitForSelector('table tbody tr td', { timeout: 10000 }).catch(() => {});
+  const left = (await p.locator('table tbody tr').first().locator('td').nth(1).innerText()).trim();
+  ok(left === '1', `returned quantity taken off the receipt on this device (left: ${left})`);
+  await ctx.setOffline(false);
+  await p.evaluate(() => window.dispatchEvent(new Event('online')));
+  await p.waitForFunction(() => !/Waiting to send/.test(document.querySelector('[data-testid=offline-bar]')?.textContent ?? ''), null, { timeout: 30000 }).catch(() => {});
+  await p.evaluate(() => { const d = document.querySelector('[data-testid=offline-bar] details'); if (d) d.open = true; });
+  const sentTxt = await p.locator('[data-testid=offline-bar]').innerText();
+  ok(!/Waiting to send/.test(sentTxt) && /BR0\d-CN-\d{6}/.test(sentTxt), `return sent when the internet is back → credit note ${sentTxt.match(/BR0\d-CN-\d{6}/)?.[0]}`);
+
   ok(errs.length === 0, `no page errors ${errs.slice(0, 3).join(' | ')}`);
   await b.close();
   const bad = results.filter((r) => r.startsWith('✗')).length;

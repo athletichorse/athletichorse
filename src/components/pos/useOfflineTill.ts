@@ -3,15 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Locale } from "@/i18n";
 import type { VariantHit } from "@/app/actions/stock";
-import { cashMovementAction, postSaleAction, posCatalogAction, posCatalogStampAction, posCustomersAction, saveQuotationAction, type PosCustomer } from "@/app/actions/pos";
+import { cashMovementAction, postReturnAction, postSaleAction, posCatalogAction, posCatalogStampAction, posCustomersAction, posRecentInvoicesAction, saveQuotationAction, type PosCustomer } from "@/app/actions/pos";
 import {
   browserStore, enqueue, enqueueOp, flushOps, flushQueue, getDeviceScreen, isOfflineEnabled, setDeviceScreen, type DeviceScreen, loadCatalog, loadCustomers, loadOps, loadQueue, loadSent, nextConn,
-  nextQuoteTempNo, nextTempNo, PING_EVERY_MS, saveCatalog, saveCustomers, searchCatalog, searchCustomersLocal, setOfflineEnabled, type ConnState, type QueuedOp, type QueuedSale, type SentSale,
+  nextQuoteTempNo, nextReturnTempNo, nextTempNo, rememberSent, saveInvoices, findInvoiceLocal, takeReturned, loadInvoices, type RecentInvoice, PING_EVERY_MS, saveCatalog, saveCustomers, searchCatalog, searchCustomersLocal, setOfflineEnabled, type ConnState, type QueuedOp, type QueuedSale, type SentSale,
 } from "@/lib/offline";
 import { normalizeSaudiMobile } from "@/lib/saudi";
 
 const REFRESH_EVERY_MS = 60_000;        // price list: checked every minute, downloaded only when it changed
 const CUSTOMERS_EVERY_MS = 5 * 60_000;
+const INVOICES_EVERY_MS = 2 * 60_000;   // receipts copy (for returns without internet)
 
 /** Pings the server: true = reachable. */
 async function ping(): Promise<boolean> {
@@ -24,8 +25,8 @@ async function ping(): Promise<boolean> {
 export type OfflineTill = ReturnType<typeof useOfflineTill>;
 
 /** State and actions of the offline till for one open shift on this device. */
-export function useOfflineTill(opts: { locale: Locale; branchCode: string; shiftId: string }) {
-  const { locale, branchCode, shiftId } = opts;
+export function useOfflineTill(opts: { locale: Locale; branchCode: string; shiftId: string; locationId: string; canReturn: boolean }) {
+  const { locale, branchCode, shiftId, locationId, canReturn } = opts;
   const [enabled, setEnabledState] = useState(false);
   const [online, setOnline] = useState(true);
   const [queue, setQueue] = useState<QueuedSale[]>([]);
@@ -53,12 +54,26 @@ export function useOfflineTill(opts: { locale: Locale; branchCode: string; shift
     setLoaded(true);
   }, []);
 
+  const [invoicesInfo, setInvoicesInfo] = useState<{ savedAt: string; count: number } | null>(null);
+  const invoicesAt = useRef(0);
+  /** Recent receipts of this branch, so returns work without internet too. */
+  const refreshInvoices = useCallback(async () => {
+    if (canReturn) {
+      try {
+        const ri = await posRecentInvoicesAction(locationId);
+        if (ri.ok) { saveInvoices(browserStore(), locationId, ri.items); invoicesAt.current = Date.now(); }
+      } catch { /* offline: keep the old copy */ }
+    }
+    const c = loadInvoices(browserStore());
+    setInvoicesInfo(c && c.locationId === locationId ? { savedAt: c.savedAt, count: c.items.length } : null);
+  }, [canReturn, locationId]);
   const refreshCustomers = useCallback(async () => {
     try {
       const r = await posCustomersAction();
       if (r.ok) { saveCustomers(browserStore(), r.items); customersAt.current = Date.now(); }
     } catch { /* offline: keep the old copy */ }
-  }, []);
+    await refreshInvoices();
+  }, [refreshInvoices]);
 
   const refreshCatalog = useCallback(async (quiet = false) => {
     if (!quiet) setBusy("catalog");
@@ -82,8 +97,9 @@ export function useOfflineTill(opts: { locale: Locale; branchCode: string; shift
       const r = await posCatalogStampAction();
       if (r.ok && (!c || c.locale !== locale || r.stamp !== stamp.current)) await refreshCatalog(true);
       else if (Date.now() - customersAt.current > CUSTOMERS_EVERY_MS) await refreshCustomers();
+      else if (Date.now() - invoicesAt.current > INVOICES_EVERY_MS) await refreshInvoices();
     } catch { /* offline */ }
-  }, [locale, refreshCatalog, refreshCustomers]);
+  }, [locale, refreshCatalog, refreshCustomers, refreshInvoices]);
 
   const flush = useCallback(async () => {
     const st0 = browserStore();
@@ -92,9 +108,8 @@ export function useOfflineTill(opts: { locale: Locale; branchCode: string; shift
     setBusy("send");
     // quotations first (a cashier may be waiting to collect them), then drawer entries
     await flushOps(browserStore(), async (op) => {
-      const r = op.kind === "quote"
-        ? await saveQuotationAction({ clientId: op.clientId, ...op.payload, offlineTempNo: op.tempNo })
-        : await cashMovementAction({ clientId: op.clientId, shiftId: op.shiftId, ...op.payload });
+      if (op.kind !== "quote") return { ok: true };
+      const r = await saveQuotationAction({ clientId: op.clientId, ...op.payload, offlineTempNo: op.tempNo });
       return r.ok ? { ok: true } : { ok: false, error: r.error };
     }, (op) => op.shiftId === shiftId && op.kind === "quote");
     await flushOps(browserStore(), async (op) => {
@@ -109,6 +124,14 @@ export function useOfflineTill(opts: { locale: Locale; branchCode: string; shift
       });
       return r.ok ? { ok: true, invoiceId: r.invoiceId, number: r.number } : { ok: false, error: r.error };
     }, undefined, (s) => s.shiftId === shiftId); // each cashier sends the sales of their own shift
+    // returns last (they may give back items sold above)
+    await flushOps(browserStore(), async (op) => {
+      if (op.kind !== "return") return { ok: true };
+      const r = await postReturnAction({ clientId: op.clientId, shiftId: op.shiftId, ...op.payload, issuedAt: op.createdAt, offlineTempNo: op.tempNo });
+      if (!r.ok) return { ok: false, error: r.error };
+      rememberSent(browserStore(), { tempNo: op.tempNo, number: r.number, invoiceId: r.invoiceId, sentAt: new Date().toISOString() });
+      return { ok: true };
+    }, (op) => op.shiftId === shiftId && op.kind === "return");
     flushing.current = false;
     setBusy("");
     reload();
@@ -164,6 +187,22 @@ export function useOfflineTill(opts: { locale: Locale; branchCode: string; shift
       enqueueOp(browserStore(), { ...op, kind: "quote", shiftId, tempNo, createdAt: new Date().toISOString() });
       reload();
       return tempNo;
+    },
+    invoicesInfo,
+    /** Find a receipt in the copy kept on this device (number or temporary number). */
+    findInvoiceLocal: (number: string): RecentInvoice | null => {
+      const st = browserStore();
+      return loadInvoices(st)?.locationId === locationId ? findInvoiceLocal(st, number) : null;
+    },
+    /** A return made with no connection: gets a temporary number, sent later with the same client id. */
+    saveReturn(op: Omit<Extract<QueuedOp, { kind: "return" }>, "kind" | "createdAt" | "shiftId" | "tempNo">) {
+      const st = browserStore();
+      const tempNo = nextReturnTempNo(st, branchCode);
+      const full = { ...op, kind: "return" as const, shiftId, tempNo, createdAt: new Date().toISOString() };
+      enqueueOp(st, full);
+      if (op.payload.originalInvoiceId) takeReturned(st, op.payload.originalInvoiceId, op.payload.lines.filter((l) => l.lineNo !== undefined).map((l) => ({ lineNo: l.lineNo!, qty: l.qty })));
+      reload();
+      return full;
     },
     setScreen(v: DeviceScreen | null) {
       setDeviceScreen(browserStore(), v);
