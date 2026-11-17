@@ -375,11 +375,11 @@
       "save_up_to": "Save up to {{ percent }}% — limited stock"
     },
     "mega_sale": {
-      "pill": "Extended until 20 Nov",
+      "pill": "Offer extended",
       "title": "Mega Sale",
       "cta_discount": "Shop biggest discounts",
       "cta_cheapest": "Shop cheapest first",
-      "ends_in": "Sale ends in",
+      "ends_in": "Offer ends in",
       "days": "Days",
       "hours": "Hours",
       "minutes": "Min",
@@ -389,7 +389,18 @@
       "rail_price_eyebrow": "Cheapest first",
       "rail_price": "Lowest prices",
       "nav": "Mega Sale",
-      "subtitle_html": "Up to <strong>{{ percent }}% off</strong> sports gear, swimwear and fitness equipment. Cash on delivery across Saudi Arabia."
+      "subtitle_html": "Up to <strong>{{ percent }}% off</strong> sports gear, swimwear and fitness equipment. Cash on delivery across Saudi Arabia.",
+      "flag": "We've extended the offer!",
+      "title_a": "Mega",
+      "title_b": "Sale",
+      "until": "Until end of November",
+      "strip_off": "Up to {{ percent }}% off",
+      "perk_cod": "Cash on delivery",
+      "perk_delivery": "Delivery across Saudi Arabia",
+      "perk_returns": "Easy returns",
+      "badge_ring": "• OFFER EXTENDED • MEGA SALE • OFFER EXTENDED • MEGA SALE ",
+      "badge_up_to": "UP TO",
+      "badge_off": "OFF"
     }
   }
 }

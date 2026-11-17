@@ -24,12 +24,13 @@
     },
     "mega_sale": {
       "type": "mega-sale",
-      "disabled": true,
       "settings": {
         "collection": "11-11-mega-sale",
         "start_ts": "1794258000",
-        "end_ts": "1797368400",
+        "end_ts": "1796072400",
         "show_rails": false,
+        "show_hero": true,
+        "bg_image": "shopify://shop_images/photo-1646504458774-dbad0e941c14.jpg",
         "product_count": 16
       }
     }

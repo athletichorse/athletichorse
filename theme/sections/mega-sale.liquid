@@ -23,7 +23,7 @@
     The collection is sorted manually, highest discount first, so the top in-stock product carries the headline discount.
   endcomment
   assign max_off = 0
-  for p in coll.products limit: 10
+  for p in coll.products limit: 100
     if p.available and p.compare_at_price > p.price
       assign p_off = p.compare_at_price | minus: p.price | times: 100.0 | divided_by: p.compare_at_price | round
       if p_off > max_off
@@ -36,24 +36,86 @@
 -%}
 <section class="ah-1111" data-ah-mega data-end="{{ end_ts }}">
   {%- if section.settings.show_hero -%}
+  {%- liquid
+    assign picks = ''
+    assign pick_count = 0
+    for p in coll.products limit: 50
+      if pick_count < 4 and p.available and p.featured_image and p.compare_at_price > p.price
+        assign p_off = p.compare_at_price | minus: p.price | times: 100.0 | divided_by: p.compare_at_price | round
+        if p_off >= 35
+          assign picks = picks | append: p.handle | append: ','
+          assign pick_count = pick_count | plus: 1
+        endif
+      endif
+    endfor
+    assign pick_handles = picks | split: ','
+  -%}
   <div class="ah-1111__hero">
+    {%- if section.settings.bg_image -%}
+      {{ section.settings.bg_image | image_url: width: 1800 | image_tag: class: 'ah-1111__bg', loading: 'eager', fetchpriority: 'high', widths: '750,1100,1500,1800', sizes: '100vw', alt: '' }}
+    {%- endif -%}
+    <div class="ah-1111__shapes" aria-hidden="true">
+      <span class="ah-1111__shape ah-1111__shape--ring"></span>
+      <span class="ah-1111__shape ah-1111__shape--dot"></span>
+      <span class="ah-1111__shape ah-1111__shape--blob"></span>
+      <span class="ah-1111__shape ah-1111__shape--dots"></span>
+    </div>
+
+    <div class="ah-1111__strip" aria-hidden="true">
+      <div class="ah-1111__strip-track" dir="ltr">
+        {%- for i in (1..2) -%}
+          <span dir="auto">{%- render 'icon', name: 'flag' -%} We've extended the offer!</span>
+          <span dir="auto">{%- render 'icon', name: 'sale' -%} مددنا العرض!</span>
+          <span dir="auto">{%- render 'icon', name: 'star-outline' -%} {{ 'sections.mega_sale.strip_off' | t: percent: max_off }}</span>
+          <span dir="auto">{%- render 'icon', name: 'clock' -%} {{ 'sections.mega_sale.until' | t }}</span>
+          <span dir="auto">{%- render 'icon', name: 'cash' -%} {{ 'sections.mega_sale.perk_cod' | t }}</span>
+          <span dir="auto">{%- render 'icon', name: 'truck' -%} {{ 'sections.mega_sale.perk_delivery' | t }}</span>
+        {%- endfor -%}
+      </div>
+    </div>
+
     <div class="container ah-1111__inner">
       <div class="ah-1111__copy">
-        <span class="ah-1111__pill">{%- render 'icon', name: 'sale' -%}{{ 'sections.mega_sale.pill' | t }}</span>
-        <h2 class="ah-1111__title"><span class="ah-1111__num" dir="ltr">11.11</span><span class="ah-1111__word">{{ 'sections.mega_sale.title' | t }}</span></h2>
+        <span class="ah-1111__flag">{%- render 'icon', name: 'flag' -%}{{ 'sections.mega_sale.flag' | t }}</span>
+        <h2 class="ah-1111__title"><span class="ah-1111__num">{{ 'sections.mega_sale.title_a' | t }}</span><span class="ah-1111__word">{{ 'sections.mega_sale.title_b' | t }}</span></h2>
+        <p class="ah-1111__until">{%- render 'icon', name: 'clock' -%}<span>{{ 'sections.mega_sale.until' | t }}</span></p>
         <p class="ah-1111__sub">{{ 'sections.mega_sale.subtitle_html' | t: percent: max_off }}</p>
         <div class="ah-1111__ctas">
           <a href="{{ shop_url }}" class="ah-btn ah-1111__btn">{{ 'sections.mega_sale.cta_discount' | t }}</a>
           <a href="{{ cheap_url }}" class="ah-btn ah-1111__btn ah-1111__btn--ghost">{{ 'sections.mega_sale.cta_cheapest' | t }}</a>
         </div>
+        <ul class="ah-1111__perks" role="list">
+          <li>{%- render 'icon', name: 'cash' -%}{{ 'sections.mega_sale.perk_cod' | t }}</li>
+          <li>{%- render 'icon', name: 'truck' -%}{{ 'sections.mega_sale.perk_delivery' | t }}</li>
+          <li>{%- render 'icon', name: 'return' -%}{{ 'sections.mega_sale.perk_returns' | t }}</li>
+        </ul>
       </div>
-      <div class="ah-1111__clock" aria-live="off">
-        <span class="ah-1111__clock-label">{{ 'sections.mega_sale.ends_in' | t }}</span>
-        <div class="ah-1111__units">
-          <span class="ah-1111__unit"><b data-u="d">00</b><small>{{ 'sections.mega_sale.days' | t }}</small></span>
-          <span class="ah-1111__unit"><b data-u="h">00</b><small>{{ 'sections.mega_sale.hours' | t }}</small></span>
-          <span class="ah-1111__unit"><b data-u="m">00</b><small>{{ 'sections.mega_sale.minutes' | t }}</small></span>
-          <span class="ah-1111__unit"><b data-u="s">00</b><small>{{ 'sections.mega_sale.seconds' | t }}</small></span>
+
+      <div class="ah-1111__visual">
+        <div class="ah-1111__badge" aria-hidden="true">
+          <svg class="ah-1111__badge-ring" viewBox="0 0 120 120"><defs><path id="ah1111c" d="M60 60m-46 0a46 46 0 1 1 92 0a46 46 0 1 1 -92 0"/></defs><text><textPath href="#ah1111c">{{ 'sections.mega_sale.badge_ring' | t }}</textPath></text></svg>
+          <span class="ah-1111__badge-core"><small>{{ 'sections.mega_sale.badge_up_to' | t }}</small><b dir="ltr">{{ max_off }}%</b><small>{{ 'sections.mega_sale.badge_off' | t }}</small></span>
+        </div>
+        <div class="ah-1111__tiles">
+          {%- for h in pick_handles -%}
+            {%- assign tp = all_products[h] -%}
+            {%- if tp and tp.featured_image -%}
+              {%- assign t_off = tp.compare_at_price | minus: tp.price | times: 100.0 | divided_by: tp.compare_at_price | round -%}
+              <a href="{{ tp.url }}" class="ah-1111__tile ah-1111__tile--{{ forloop.index }}">
+                {{ tp.featured_image | image_url: width: 360 | image_tag: loading: 'eager', widths: '180,270,360', sizes: '(min-width: 990px) 180px, 30vw', alt: tp.title }}
+                <span class="ah-1111__tile-off" dir="ltr">−{{ t_off }}%</span>
+              </a>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+        <div class="ah-1111__clock" aria-live="off">
+          <span class="ah-1111__clock-label">{{ 'sections.mega_sale.ends_in' | t }}</span>
+          <div class="ah-1111__units">
+            <span class="ah-1111__unit"><b data-u="d">00</b><small>{{ 'sections.mega_sale.days' | t }}</small></span>
+            <span class="ah-1111__unit"><b data-u="h">00</b><small>{{ 'sections.mega_sale.hours' | t }}</small></span>
+            <span class="ah-1111__unit"><b data-u="m">00</b><small>{{ 'sections.mega_sale.minutes' | t }}</small></span>
+            <span class="ah-1111__unit"><b data-u="s">00</b><small>{{ 'sections.mega_sale.seconds' | t }}</small></span>
+          </div>
         </div>
       </div>
     </div>
@@ -144,7 +206,8 @@
   "settings": [
     { "type": "collection", "id": "collection", "label": "Sale collection", "info": "Use manual sort, highest discount first." },
     { "type": "text", "id": "start_ts", "label": "Start (Unix seconds)", "default": "1794258000", "info": "1794258000 = 10 Nov 2026 00:00 Riyadh" },
-    { "type": "text", "id": "end_ts", "label": "End (Unix seconds)", "default": "1797368400", "info": "1797368400 = 16 Dec 2026 00:00 Riyadh (sale runs through 15 Dec)" },
+    { "type": "text", "id": "end_ts", "label": "End (Unix seconds)", "default": "1796072400", "info": "1796072400 = 1 Dec 2026 00:00 Riyadh (offer runs through 30 Nov)" },
+    { "type": "image_picker", "id": "bg_image", "label": "Banner background photo" },
     { "type": "checkbox", "id": "show_hero", "label": "Show sale banner (hero + countdown)", "default": true },
     { "type": "checkbox", "id": "show_rails", "label": "Show product rails", "default": true },
     { "type": "range", "id": "product_count", "label": "Products per rail", "min": 4, "max": 24, "step": 1, "default": 16 }
