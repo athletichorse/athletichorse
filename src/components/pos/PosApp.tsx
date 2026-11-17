@@ -297,7 +297,7 @@ function CustomerPicker({ t, value, onPick, err, setMsg, disabled, off }: { t: D
   );
 }
 
-function ItemSearch({ t, locale, onPick, off, onSlip, locationId }: { t: Dict; locale: Locale; onPick: (h: VariantHit) => void; off?: OfflineTill; onSlip?: (text: string) => void; locationId?: string }) {
+function ItemSearch({ t, locale, onPick, off, onSlip, locationId }: { t: Dict; locale: Locale; onPick: (h: VariantHit, qty?: string) => void; off?: OfflineTill; onSlip?: (text: string) => void; locationId?: string }) {
   const [term, setTerm] = useState("");
   const [cols, setCols] = useState(false);
   const [hits, setHits] = useState<VariantHit[] | null>(null);
@@ -323,7 +323,7 @@ function ItemSearch({ t, locale, onPick, off, onSlip, locationId }: { t: Dict; l
           ▦ <span className="hidden sm:inline">{t.pos.colSearch.open}</span>
         </button>
       </div>
-      {cols && <div className="mt-2"><ColumnSearch t={t} locale={locale} locationId={locationId ?? null} off={off} onClose={() => setCols(false)} onPick={(h) => { onPick(h); }} /></div>}
+      {cols && <div className="mt-2"><ColumnSearch t={t} locale={locale} locationId={locationId ?? null} off={off} onClose={() => setCols(false)} onPick={(h, q) => onPick(h, q)} /></div>}
       {hits && (
         <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-[var(--line)] bg-white shadow-lg">
           {hits.length === 0 && <div className="px-4 py-3 text-sm text-gray-500">{t.stock.notFound}</div>}
@@ -388,11 +388,13 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
   }, [lines]);
   const withUsual = (l: Line, c: PosCustomer | null): Line => (c?.discountPct && (l.usual || (safeH(l.discount) ?? 0n) === 0n) && l.price === l.listPrice
     ? { ...l, discount: usualDiscount(l.price, l.qty, c.discountPct), usual: true } : l);
-  function add(h: VariantHit) {
+  /** Adds an item (scan = 1; the item finder may give a quantity). Same item again = more of it. */
+  function add(h: VariantHit, qty = "1") {
+    const n = Number(qty) > 0 ? qty : "1";
     setLines((ls) => {
       const i = ls.findIndex((l) => l.variantId === h.variantId);
-      if (i >= 0) return ls.map((l, j) => (j === i ? withUsual({ ...l, qty: String(Number(l.qty) + 1) }, customer) : l));
-      return [...ls, withUsual({ variantId: h.variantId, name: h.name, options: h.options, sku: h.sku, qty: "1", price: h.price, listPrice: h.price, discount: "0" }, customer)];
+      if (i >= 0) return ls.map((l, j) => (j === i ? withUsual({ ...l, qty: String(Number(l.qty) + Number(n)) }, customer) : l));
+      return [...ls, withUsual({ variantId: h.variantId, name: h.name, options: h.options, sku: h.sku, qty: n, price: h.price, listPrice: h.price, discount: "0" }, customer)];
     });
     focusQty.current = h.variantId; // the quantity box gets the focus after picking an item
     setPayments([]);
@@ -780,7 +782,7 @@ function ReturnView(p: Props & { off: OfflineTill; setMsg: (m: { ok: boolean; te
         </>
       ) : (
         <>
-          <ItemSearch t={t} locale={locale} off={off} locationId={s.locationId} onPick={(h) => setItems((xs) => (xs.some((x) => x.variantId === h.variantId) ? xs : [...xs, { variantId: h.variantId, name: h.name, qty: "1", price: h.price }]))} />
+          <ItemSearch t={t} locale={locale} off={off} locationId={s.locationId} onPick={(h, q) => setItems((xs) => (xs.some((x) => x.variantId === h.variantId) ? xs : [...xs, { variantId: h.variantId, name: h.name, qty: q && Number(q) > 0 ? q : "1", price: h.price }]))} />
           {items.map((i, k) => (
             <div key={i.variantId} className="flex items-center gap-2 text-sm">
               <span className="flex-1">{i.name} · {i.price}</span>
