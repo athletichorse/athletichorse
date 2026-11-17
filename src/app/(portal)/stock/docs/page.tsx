@@ -4,7 +4,7 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { formatDateTime } from "@/lib/time";
 import { PageHeader } from "@/components/PageHeader";
-import { StockTabs, viewableLocations } from "@/components/StockTabs";
+import { viewableLocations } from "@/components/StockTabs";
 
 export const dynamic = "force-dynamic";
 const KINDS = ["receipt", "transfer", "write_off", "count", "adjust"] as const;
@@ -31,7 +31,6 @@ export default async function StockDocsPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader title={F.tabs.docs} t={t} filename="stock-documents" />
-      <StockTabs t={t} active="docs" canRequests={me.perms.has("stock.requests")} />
       <form className="no-print mb-4 flex flex-wrap gap-2" action="/stock/docs">
         <select name="kind" defaultValue={sp.kind ?? ""} className="input w-auto"><option value="">{F.allKinds}</option>{KINDS.map((k) => <option key={k} value={k}>{kindName(k)}</option>)}</select>
         <select name="status" defaultValue={sp.status ?? ""} className="input w-auto"><option value="">—</option>{(["in_transit", "received", "done"] as const).map((s) => <option key={s} value={s}>{F.status[s]}</option>)}</select>

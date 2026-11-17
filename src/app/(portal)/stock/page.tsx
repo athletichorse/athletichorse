@@ -4,7 +4,7 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { formatDateTime } from "@/lib/time";
 import { PageHeader } from "@/components/PageHeader";
-import { StockTabs, viewableLocations } from "@/components/StockTabs";
+import { viewableLocations } from "@/components/StockTabs";
 
 const PER_PAGE = 50;
 type Row = { location_id: string; variant_id: string; qty: string; updated_at: string; product_id: string; name_en: string; name_ar: string; sku: string | null; option1: string | null; option2: string | null; option3: string | null };
@@ -61,12 +61,11 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           <Link key={k} href={k === "count" ? `/stock/count?loc=${docLoc}` : `/stock/new?kind=${k}&loc=${docLoc}`} className={`${i === 0 ? "btn-primary" : "btn-ghost"} no-print`}>{k === "count" ? t.stock.flow.countSheet : k === "transfer" ? t.stock.flow.send : t.stock[k]}</Link>
         ))}
       </PageHeader>
-      <StockTabs t={t} active="stock" canRequests={me.perms.has("stock.requests")} />
       {(incoming ?? 0) > 0 && (
         <Link href="/stock/docs?status=in_transit" className="alert-ok no-print block font-medium">🚚 {incoming} {t.stock.flow.incoming} →</Link>
       )}
 
-      <div className="no-print mb-3 flex gap-2 overflow-x-auto pb-1">
+      <div className="no-print mb-3 flex flex-wrap gap-2 pb-1">
         {seeAll && tab("all", t.stock.allLocations)}
         {mine.map((l) => tab(l.id, locale === "ar" ? l.name_ar : l.name_en || l.name_ar))}
       </div>

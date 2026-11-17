@@ -433,16 +433,16 @@ if (!/BR01-CN-/.test(await page.locator("table").first().innerText())) fail("sal
 // language switch + logout + login
 where = "language";
 await page.goto(BASE + "/");
-await Promise.all([page.waitForNavigation({ waitUntil: "load" }), page.click("aside >> text=العربية")]);
+await Promise.all([page.waitForNavigation({ waitUntil: "load" }), page.click("[data-testid=lang-ar]")]);
 await page.waitForFunction(() => document.documentElement.lang === "ar", null, { timeout: 15000 }).catch(() => {});
 if ((await page.locator("html").getAttribute("dir")) !== "rtl") fail("language", "switch to Arabic did not change direction");
 else ok("switch to Arabic");
-await Promise.all([page.waitForNavigation({ waitUntil: "load" }), page.click("aside >> text=English")]);
+await Promise.all([page.waitForNavigation({ waitUntil: "load" }), page.click("[data-testid=lang-en]")]);
 await page.waitForFunction(() => document.documentElement.lang === "en", null, { timeout: 15000 }).catch(() => {});
 if ((await page.locator("html").getAttribute("lang")) !== "en") fail("language", "switch back to English failed");
 else ok("switch back to English");
 where = "logout";
-await Promise.all([page.waitForURL(/\/login/, { waitUntil: "commit", timeout: 30000 }), page.click("aside >> text=Log out")]);
+await Promise.all([page.waitForURL(/\/login/, { waitUntil: "commit", timeout: 30000 }), page.click("[data-testid=logout]")]);
 ok("log out");
 await page.fill('input[name="username"]', "owner");
 await page.fill('input[name="password"]', "owner-password-123");
@@ -462,9 +462,10 @@ await cp.goto(BASE + "/login");
 await cp.fill('input[name="username"]', "cashier1");
 await cp.fill('input[name="password"]', "cashier-pass-1");
 await Promise.all([cp.waitForURL(BASE + "/", { waitUntil: "commit", timeout: 30000 }), cp.click('form:has(input[name="password"]) button')]);
-const nav = await cp.locator("aside nav").innerText();
-if (/Permissions|Company details/.test(nav)) fail("cashier", "cashier sees admin menu");
-else ok("cashier menu hides admin pages");
+const nav = await cp.locator("[data-testid=sections]").innerText();
+const navKeys = await cp.$$eval("[data-testid=sections] a", (as) => as.map((a) => a.getAttribute("data-section")));
+if (navKeys.join(",") !== "pos,stock" || (await cp.locator("[data-testid=settings]").count())) fail("cashier", `cashier menu shows: ${nav.replace(/\s+/g, " ")}`);
+else ok("cashier sees only Cashier and Stores, no settings");
 await cp.goto(BASE + "/permissions");
 await cp.waitForURL(/\/forbidden/, { timeout: 15000 }).catch(() => {}); // the redirect arrives in the streamed page (loading screen first)
 if (!cp.url().includes("/forbidden")) fail("cashier", "cashier can open /permissions");
@@ -483,9 +484,7 @@ for (const [device, opts] of [["desktop", { viewport: { width: 1280, height: 900
     await p.goto(BASE + "/");
     const cur = await p.locator("html").getAttribute("lang");
     if (cur !== lang) {
-      const scope = device === "phone" ? '[role="dialog"]' : "aside";
-      if (device === "phone") await p.click('button[aria-label="Open menu"], button[aria-label="فتح القائمة"]');
-      await Promise.all([p.waitForNavigation({ waitUntil: "load" }), p.click(`${scope} >> text=${lang === "ar" ? "العربية" : "English"}`)]);
+      await Promise.all([p.waitForNavigation({ waitUntil: "load" }), p.click(`[data-testid=lang-${lang}]`)]);
       await p.waitForFunction((l) => document.documentElement.lang === l, lang, { timeout: 15000 }).catch(() => {});
     }
     if ((await p.locator("html").getAttribute("lang")) !== lang) fail(w, "could not switch language");
@@ -500,17 +499,16 @@ for (const [device, opts] of [["desktop", { viewport: { width: 1280, height: 900
       if (lang === "ar" && (await p.locator("html").getAttribute("dir")) !== "rtl") fail(w, "not right-to-left in Arabic");
       await p.screenshot({ path: `${OUT}/${device}-${lang}${r.replace(/[\/]/g, "_") || "_home"}.png`, fullPage: false });
     }
-    if (device === "phone") {
-      w = `${device}/${lang} menu`;
-      await p.goto(BASE + "/");
-      await p.click('button[aria-label="Open menu"], button[aria-label="فتح القائمة"]');
-      const drawer = p.locator('[role="dialog"]');
-      await drawer.waitFor();
-      await drawer.locator("a[href='/products']").click();
-      await p.waitForURL(/\/products/, { waitUntil: "commit", timeout: 30000 });
-      if (await drawer.isVisible()) fail(w, "drawer stays open after choosing a page");
-      else ok(`${device}/${lang}: phone menu opens, navigates and closes`);
+    // the 6 main sections: all on screen, each opens its page and is highlighted there
+    w = `${device}/${lang} menu`;
+    await p.goto(BASE + "/");
+    const keys = await p.$$eval("[data-testid=sections] a", (as) => as.map((a) => a.getAttribute("data-section")));
+    if (keys.join(",") !== "pos,stock,sales,products,customers,staff") fail(w, `main sections are ${keys.join(",")}`);
+    for (const k of keys) {
+      await p.click(`[data-testid=sections] a[data-section=${k}]`);
+      await p.waitForFunction((key) => document.querySelector(`[data-testid=sections] a[data-section=${key}]`)?.getAttribute("aria-current") === "page", k, { timeout: 30000 }).catch(() => fail(w, `${k} not highlighted after opening it`));
     }
+    ok(`${device}/${lang}: 6 main sections open their pages`);
     ok(`${device}/${lang}: ${ROUTES.length + 1} pages checked`);
     await c.close();
   }

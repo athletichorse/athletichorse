@@ -34,7 +34,7 @@ export default async function StockLogPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader title={t.stockLog.title} subtitle={t.stockLog.subtitle} t={t} filename="stock-log" />
-      <div className="no-print mb-3 flex gap-2 overflow-x-auto pb-1">
+      <div className="no-print mb-3 flex flex-wrap gap-2 pb-1">
         <Link href={href({ kind: "", page: 1 })} className={`rounded-full px-3.5 py-1.5 text-sm font-medium whitespace-nowrap ${!kind ? "bg-[var(--brand)] text-white" : "border border-[var(--line)] bg-white text-gray-700"}`}>{t.stockLog.allKinds}</Link>
         {KINDS.map((k) => (
           <Link key={k} href={href({ kind: k, page: 1 })} className={`rounded-full px-3.5 py-1.5 text-sm font-medium whitespace-nowrap ${kind === k ? "bg-[var(--brand)] text-white" : "border border-[var(--line)] bg-white text-gray-700"}`}>{t.stock.kinds[k]}</Link>

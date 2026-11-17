@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { POS_DEFAULTS, parsePosSettingsForm, readPosSettings } from "@/lib/pos-settings";
 import { TILL_ROLES, ROLE_DEFAULTS } from "@/lib/permissions";
-import { buildNav } from "@/components/menu";
+import { activeFor, buildSections } from "@/components/menu";
 import en from "@/i18n/en";
 import { resolvePermissions } from "@/lib/permissions";
 
@@ -31,10 +31,20 @@ describe("cashier settings", () => {
 describe("till staff menu", () => {
   it("cashier, desk and cashier+desk see only Cashier and Stores", () => {
     for (const r of TILL_ROLES) {
-      const nav = buildNav(en, resolvePermissions(r, [], []), r);
-      expect(nav.main.map((x) => x.href)).toEqual(["/pos", "/stock"]);
-      expect(nav.admin).toEqual([]);
+      const nav = buildSections(en, resolvePermissions(r, [], []), r);
+      expect(nav.map((x) => x.key)).toEqual(["pos", "stock"]);
+      expect(nav.flatMap((x) => x.tabs.map((y) => y.href))).not.toContain("/locations");
     }
+  });
+  it("the owner sees the 6 sections in order, every page belongs to one", () => {
+    const owner = buildSections(en, resolvePermissions("owner", [], []), "owner");
+    expect(owner.map((x) => x.key)).toEqual(["pos", "stock", "sales", "products", "customers", "staff"]);
+    expect(activeFor(owner, "/stock-log").section?.key).toBe("stock");
+    expect(activeFor(owner, "/pos/shifts/abc")).toMatchObject({ tab: "/pos/shifts" });
+    expect(activeFor(owner, "/pos").tab).toBe("/pos");
+    expect(activeFor(owner, "/audit/hours")).toMatchObject({ tab: "/audit" });
+    expect(activeFor(owner, "/upload").section?.key).toBe("products");
+    expect(activeFor(owner, "/").section).toBeNull();
   });
   it("till staff need the customer by default; managers may skip it", () => {
     for (const r of TILL_ROLES) expect(ROLE_DEFAULTS[r].includes("pos.skip_customer")).toBe(false);

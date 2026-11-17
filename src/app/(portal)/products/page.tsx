@@ -69,8 +69,6 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader title={t.products.title} subtitle={t.products.subtitle} t={t} filename="products">
-        {canEdit && <Link href="/products/groups" className="btn-ghost no-print">{t.products.groups}</Link>}
-        {me.perms.has("products.labels") && <Link href="/products/labels" className="btn-ghost no-print">{t.products.labels.open}</Link>}
         {me.perms.has("products.edit") && <Link href="/upload#prices" className="btn-ghost no-print">{t.products.pricesFile.title}</Link>}
         {(canEdit || me.perms.has("products.add")) && <Link href="/products/new" className="btn-primary no-print">{t.products.newProduct}</Link>}
       </PageHeader>

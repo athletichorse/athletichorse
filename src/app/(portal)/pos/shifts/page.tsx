@@ -21,7 +21,6 @@ export default async function ShiftsPage() {
   return (
     <>
       <PageHeader title={X.pastShifts} t={t} filename="shifts">
-        <Link href="/pos/day" className="btn-ghost no-print">{X.endOfDay}</Link>
       </PageHeader>
       <div className="card overflow-hidden p-0"><div className="overflow-x-auto">
         <table className="table" data-export>

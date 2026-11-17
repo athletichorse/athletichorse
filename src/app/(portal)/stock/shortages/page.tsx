@@ -3,7 +3,7 @@ import { requirePermission } from "@/lib/auth";
 import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { PageHeader } from "@/components/PageHeader";
-import { StockTabs, viewableLocations } from "@/components/StockTabs";
+import { viewableLocations } from "@/components/StockTabs";
 import { RULES, applyRule, type Rule } from "@/lib/stock-rules";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +48,6 @@ export default async function ShortagesPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader title={F.tabs.shortages} t={t} filename="shortages" />
-      <StockTabs t={t} active="shortages" canRequests={me.perms.has("stock.requests")} />
       <form className="card no-print mb-4 flex flex-wrap items-end gap-3" action="/stock/shortages">
         <div><label className="label">{t.stock.location}</label><select name="loc" defaultValue={loc} className="input w-auto">{view.map((l) => <option key={l.id} value={l.id}>{locale === "ar" ? l.name_ar : l.name_en || l.name_ar}</option>)}</select></div>
         <div><label className="label">{F.rule}</label><select name="rule" defaultValue={rule} className="input w-auto" dir="ltr">{RULES.map((r) => <option key={r} value={r}>{r === "!=" ? "≠" : r === ">=" ? "≥" : r === "<=" ? "≤" : r}</option>)}</select></div>

@@ -3,7 +3,7 @@ import type { Dict, Locale } from "@/i18n";
 import type { Staff } from "@/lib/auth";
 import { formatDateTime, formatHijri } from "@/lib/time";
 import { PageHeader } from "@/components/PageHeader";
-import { buildNav } from "@/components/menu";
+import { buildSections } from "@/components/menu";
 import { Icon, type IconName } from "@/components/icons";
 
 export type OverviewLoc = { id: string; code: string; name_ar: string; name_en: string; kind: "branch" | "warehouse" | "sub_store"; uses_pos: boolean; active: boolean };
@@ -44,8 +44,10 @@ export function Overview({ s, t, locale, now, locs, staff, webLocId, catalog, pu
   const name = (l?: Loc) => (l ? (locale === "ar" ? l.name_ar : l.name_en || l.name_ar) : "—");
   const myBranch = locs.find((l) => l.id === s.branchId);
   const webLoc = locs.find((l) => l.id === webLocId);
-  const nav = buildNav(t, s.perms);
-  const shortcuts = [...nav.main, ...nav.admin].filter((i) => i.href !== "/" && !i.soon);
+  const shortcuts = [
+    ...buildSections(t, s.perms, s.role).map(({ label, href, icon }) => ({ label, href, icon })),
+    ...(s.perms.has("settings.edit") ? [{ label: t.nav.company, href: "/company", icon: "company" as const }] : []),
+  ];
   const kindBadge = (k: Loc["kind"]) => (k === "branch" ? "badge-green" : k === "warehouse" ? "badge-blue" : "badge-gray");
 
   return (

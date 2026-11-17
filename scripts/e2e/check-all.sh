@@ -40,7 +40,18 @@ SKU=$(psql -tA "$DATABASE_URL" -c "select sku from variant_search where sku is n
 echo "till tests use item $SKU"
 run offline env BASE=$BASE node scripts/e2e/offline.mjs "$SKU"
 run offline2 env BASE=$BASE SKU="$SKU" CUSTOMER="Test Customer" node scripts/e2e/offline2.mjs
-run audit env BASE=$BASE OUT=$OUT node scripts/e2e/audit.mjs
+# the 4 views side by side (one view alone takes ~25 min)
+step "audit (4 views side by side)"
+PIDS=""
+for v in desktop-en phone-en desktop-ar phone-ar; do
+  (env BASE=$BASE OUT=$OUT VIEW=$v node scripts/e2e/audit.mjs > "$OUT-audit-$v.log" 2>&1; echo "exit $?" >> "$OUT-audit-$v.log") &
+  PIDS="$PIDS $!"
+done
+wait $PIDS
+for v in desktop-en phone-en desktop-ar phone-ar; do
+  echo "-- $v"; grep -E "✗|problems|Error" "$OUT-audit-$v.log" | tail -40 || true
+  grep -q "^exit 0$" "$OUT-audit-$v.log" || FAILED="$FAILED|audit-$v"
+done
 echo
 if [ -n "$FAILED" ]; then echo "NOT READY — failed: ${FAILED#|}"; exit 1; fi
 echo "ALL CHECKS PASSED"

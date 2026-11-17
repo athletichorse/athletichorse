@@ -2,14 +2,13 @@ import { requirePermission } from "@/lib/auth";
 import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { PageHeader } from "@/components/PageHeader";
-import { StaffTabs } from "@/components/StaffTabs";
 import { saveEmployeeAction } from "@/app/actions/payroll";
 
 export const dynamic = "force-dynamic";
 
 /** Pay settings per staff member: salary, hours, commission (6/1000 or 1%), regularity bonus, food allowance. */
 export default async function EmployeesPage({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
-  const me = await requirePermission("staff.payroll_edit");
+  await requirePermission("staff.payroll_edit");
   const { t } = await getDict();
   const P = t.pay;
   const sp = await searchParams;
@@ -21,7 +20,6 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader title={P.tabs.employees} t={t} filename="pay-settings" />
-      <StaffTabs t={t} perms={me.perms} active="employees" />
       {err && <p className="alert-err">{err}</p>}
       {sp.ok && <p className="alert-ok">{P.saved}</p>}
       <div className="space-y-3">

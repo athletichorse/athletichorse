@@ -15,8 +15,11 @@ await p.goto(BASE + '/login');
 await p.fill('input[name=username]', 'owner'); await p.fill('input[name=password]', 'owner-password-123');
 await Promise.all([p.waitForURL(BASE + '/', { waitUntil: 'commit' }), p.locator('form button').last().click()]);
 await p.goto(BASE + '/lang?to=en&next=/pos'); // the tests read English labels
+await p.waitForSelector('[data-testid=offline-bar], button:text-is("Open shift")', { timeout: 30000 }).catch(() => {});
 if (await p.getByRole('button', { name: 'Open shift' }).count()) await p.getByRole('button', { name: 'Open shift' }).click();
-await p.waitForSelector('[data-testid=offline-bar]', { timeout: 20000 });
+if (!(await p.waitForSelector('[data-testid=offline-bar]', { timeout: 20000 }).catch(() => null))) {
+  console.log(`✗ offline bar does not show\npage: ${p.url()}\n${(await p.locator('body').innerText()).slice(0, 1500)}`); await b.close(); process.exit(1);
+}
 const box = p.locator('[data-testid=offline-bar] input[type=checkbox]').first();
 if (!(await box.isChecked())) await box.check();
 await p.waitForFunction(() => /Price list on this device: \d+ items/.test(document.body.innerText), null, { timeout: 30000 });

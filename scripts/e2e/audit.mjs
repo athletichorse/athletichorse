@@ -36,12 +36,14 @@ const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/product
 // never pressed by the audit (they end the session or change who can log in)
 const SKIP_CLICK = /log ?out|تسجيل الخروج|English|العربية/i;
 
-const VIEWS = [
+const ALL_VIEWS = [
   { name: "desktop-en", locale: "en", opts: { viewport: { width: 1280, height: 900 } } },
   { name: "phone-en", locale: "en", opts: { ...devices["iPhone 13"] } },
   { name: "desktop-ar", locale: "ar", opts: { viewport: { width: 1280, height: 900 } } },
   { name: "phone-ar", locale: "ar", opts: { ...devices["iPhone 13"] } },
 ];
+// VIEW=phone-en,desktop-ar runs only those (check-all.sh runs the 4 side by side)
+const VIEWS = process.env.VIEW ? ALL_VIEWS.filter((v) => process.env.VIEW.split(",").includes(v.name)) : ALL_VIEWS;
 
 const browser = await chromium.launch();
 
@@ -79,6 +81,12 @@ async function layoutProblems(page) {
     const inScroller = (el) => { for (let p = el.parentElement; p; p = p.parentElement) { const s = getComputedStyle(p); if (/(auto|scroll)/.test(s.overflowX) && p.scrollWidth > p.clientWidth + 1) return true; } return false; };
     const inClosedMenu = (el) => { const r = el.getBoundingClientRect(); return r.right <= 0 || r.left >= vw; };
     if (document.documentElement.scrollWidth > vw + 1) out.push(`page is wider than the screen (${document.documentElement.scrollWidth}px > ${vw}px)`);
+    // a row of buttons/links that slides sideways hides some of them (tables may scroll, rows of choices may not)
+    for (const el of document.querySelectorAll("div, nav, ul")) {
+      if (!visible(el) || el.querySelector("table")) continue;
+      const st = getComputedStyle(el);
+      if (/(auto|scroll)/.test(st.overflowX) && el.scrollWidth > el.clientWidth + 2 && el.querySelector("a, button")) out.push(`row "${name(el).slice(0, 30)}" slides sideways — some choices are off screen`);
+    }
     const items = [...document.querySelectorAll("a[href], button, input:not([type=hidden]), select, textarea")].filter(visible);
     for (const el of items.slice(0, 400)) {
       const r = el.getBoundingClientRect();
@@ -146,10 +154,13 @@ await first.ctx.close();
 const list = [...pages.values()].filter((p) => !ONLY || ONLY.test(p));
 for (const view of VIEWS) {
   console.log(`\n== ${view.name}`);
-  const { ctx, page } = await login(view);
+  let { ctx, page } = await login(view);
   watch(page);
   for (const path of list) {
     where = `${view.name} ${path}`;
+    // a page that closes itself (or a crashed tab) is a problem, then carry on with a fresh login
+    if (page.isClosed()) { await ctx.close().catch(() => {}); ({ ctx, page } = await login(view)); watch(page); }
+    try {
     const res = await page.goto(BASE + path, { waitUntil: "networkidle" }).catch(() => null);
     if (!res || res.status() >= 400) { fail(where, `HTTP ${res?.status() ?? "no answer"}`); continue; }
     const text = await page.locator("body").innerText();
@@ -182,7 +193,7 @@ for (const view of VIEWS) {
         if (!(await f.count())) break;
         const btn = f.locator("button[type=submit]:visible, button:not([type]):visible").last();
         if (!(await btn.count()) || (await btn.isDisabled())) continue;
-        const label = (await btn.innerText()).trim().slice(0, 40);
+        const label = ((await btn.getAttribute("aria-label")) || (await btn.innerText())).trim().slice(0, 40);
         if (SKIP_CLICK.test(label)) continue;
         // search/filter forms (GET) just show the page again with the filter
         const method = ((await f.getAttribute("method")) ?? "").toLowerCase(), action = (await f.getAttribute("action")) ?? "";
@@ -204,6 +215,10 @@ for (const view of VIEWS) {
           if (!invalid) fail(where, "no message and nothing changed after sending");
         }
       }
+    }
+    } catch (e) {
+      fail(where, `the page stopped answering: ${String(e.message).split("\n")[0].slice(0, 120)}`);
+      await ctx.close().catch(() => {}); ({ ctx, page } = await login(view)); watch(page);
     }
   }
   await ctx.close();

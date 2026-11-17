@@ -3,7 +3,6 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { riyadhDate } from "@/lib/time";
 import { PageHeader } from "@/components/PageHeader";
-import { StaffTabs } from "@/components/StaffTabs";
 import { addAdjustmentAction, addAdvanceAction } from "@/app/actions/payroll";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +27,6 @@ export default async function AdvancesPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader title={P.tabs.advances} t={t} filename="advances" />
-      <StaffTabs t={t} perms={me.perms} active="advances" />
       {err && <p className="alert-err">{err}</p>}
       {sp.ok && <p className="alert-ok">{P.saved}</p>}
       {canEdit && (
