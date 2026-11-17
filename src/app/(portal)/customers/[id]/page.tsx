@@ -24,6 +24,8 @@ export default async function CustomerPage({ params, searchParams }: { params: P
     db().from("customer_statement").select("at, kind, ref, invoice_id, amount").eq("customer_id", id).order("at"),
     db().from("sales_list").select("id, number, kind, issued_at, gross_total, methods").eq("customer_id", id).order("issued_at", { ascending: false }).limit(100),
   ]);
+  const { data: details } = await db().from("customer_details").select("cr_number, addr_building, addr_street, addr_district, addr_city, addr_country, addr_postal, addr_additional").eq("customer_id", id).maybeSingle();
+  const address = details ? [details.addr_building, details.addr_street, details.addr_district, details.addr_city, details.addr_postal, details.addr_additional && `${t.customers.additional.split(" (")[0]} ${details.addr_additional}`, details.addr_country].filter(Boolean).join("، ") : "";
   const X = t.pos.extra;
   const lines = (st ?? []).reduce<{ at: string; kind: string; ref: string; invoice_id: string | null; amount: string; balance: number }[]>(
     (acc, r) => [...acc, { ...r, balance: (acc.at(-1)?.balance ?? 0) + Number(r.amount) }], []);
@@ -39,10 +41,17 @@ export default async function CustomerPage({ params, searchParams }: { params: P
         <div className="card"><div className="text-xs text-gray-500">{X.creditLimit}</div><div className="text-2xl font-semibold" dir="ltr">{c.credit_limit === null ? X.noLimit : Number(c.credit_limit).toFixed(2)}</div></div>
         <div className="card"><div className="text-xs text-gray-500">{X.usualDiscount}</div><div className="text-2xl font-semibold" dir="ltr">{Number(c.discount_pct)}%</div></div>
       </div>
+      {(c.vat_number || details?.cr_number || address) && (
+        <div className="card mb-4 grid gap-2 text-sm sm:grid-cols-3" data-testid="customer-business">
+          {c.vat_number && <div><div className="text-xs text-gray-500">{t.customers.vat}</div><div dir="ltr" className="font-medium">{c.vat_number}</div></div>}
+          {details?.cr_number && <div><div className="text-xs text-gray-500">{t.customers.cr}</div><div dir="ltr" className="font-medium">{details.cr_number}</div></div>}
+          {address && <div className="sm:col-span-3"><div className="text-xs text-gray-500">{t.customers.nationalAddress}</div><div className="font-medium">{address}</div></div>}
+        </div>
+      )}
       {me.perms.has("customers.update") && (
         <form action={saveCustomerAction} id="edit" className="card no-print mb-6 scroll-mt-24">
           <h2 className="card-title">{t.customers.editCustomer}</h2>
-          <CustomerFields t={t} c={c as CustomerRow} />
+          <CustomerFields t={t} c={{ ...(c as CustomerRow), details }} />
           <div className="mt-5 flex justify-end"><button className="btn-primary">{t.save}</button></div>
         </form>
       )}

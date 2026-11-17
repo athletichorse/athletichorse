@@ -22,6 +22,10 @@ export async function ReceiptView({ inv, locale }: { inv: Inv; locale: "ar" | "e
     db().from("payment_methods").select("code, name_en, name_ar"),
     db().from("settings").select("key, value").in("key", ["receipt_footer_ar", "receipt_footer_en", "receipt_width_mm"]),
   ]);
+  const { data: custD } = inv.customer_id
+    ? await db().from("customer_details").select("cr_number, addr_building, addr_street, addr_district, addr_city, addr_country, addr_postal, addr_additional").eq("customer_id", inv.customer_id).maybeSingle()
+    : { data: null };
+  const custAddress = custD ? [custD.addr_building, custD.addr_street, custD.addr_district, custD.addr_city, custD.addr_postal, custD.addr_additional, custD.addr_country].filter(Boolean).join("، ") : "";
   const ps = readPosSettings(posRows);
   const qrSvg = await QRCode.toString(inv.qr, { type: "svg", errorCorrectionLevel: "M", margin: 0, width: 150 });
   const barcode = code128Svg(inv.number, 42, 1.4);
@@ -54,6 +58,8 @@ export async function ReceiptView({ inv, locale }: { inv: Inv; locale: "ar" | "e
         {inv.salesperson_id && <div className="flex justify-between"><span>البائع / Salesperson</span><span>{who(inv.salesperson_id)}</span></div>}
         {cust && <div className="flex justify-between"><span>العميل / Customer</span><span>{cust.name || ""} <span dir="ltr">{cust.phone}</span> #{cust.customer_no}</span></div>}
         {cust?.vat_number && <div className="flex justify-between"><span>رقم العميل الضريبي</span><span dir="ltr">{cust.vat_number}</span></div>}
+        {custD?.cr_number && <div className="flex justify-between"><span>السجل التجاري / CR</span><span dir="ltr">{custD.cr_number}</span></div>}
+        {custAddress && <div className="flex justify-between gap-2"><span className="shrink-0">العنوان الوطني</span><span className="text-end">{custAddress}</span></div>}
         {inv.offline_temp_no && <div className="flex justify-between"><span>رقم مؤقت / Offline</span><span dir="ltr">{inv.offline_temp_no}</span></div>}
       </div>
       <table className="mt-2 w-full border-t border-black text-[11px]">

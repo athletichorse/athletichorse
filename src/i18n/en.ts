@@ -374,6 +374,20 @@ const en: Dict = {
     allKinds: "All types",
   },
   customers: {
+    countryDefault: "Saudi Arabia",
+    cr: "Commercial registration no. (10 digits)",
+    nationalAddress: "National address",
+    building: "Building no. (4 digits)",
+    street: "Street",
+    district: "District",
+    city: "City",
+    country: "Country",
+    postal: "Postal code (5 digits)",
+    additional: "Additional no. (4 digits)",
+    badCr: "Commercial registration no.: 10 digits.",
+    badBuilding: "Building no.: 4 digits.",
+    badPostal: "Postal code: 5 digits.",
+    badAdditional: "Additional no.: 4 digits.",
     statement: "Statement",
     entry: "Entry",
     title: "Customers",
@@ -405,6 +419,7 @@ const en: Dict = {
     none: "Nothing recorded yet.",
   },
   pos: {
+    colSearch: { open: "Search by columns", title: "Item finder", code: "Code", name: "Item name", options: "Colour / size", group: "Group", price: "Sale price", cost: "Cost", stock: "Stock here", showNoStock: "Show items with no stock", askQty: "Ask the quantity after each item", firstOf: "First {n} of {total} items", narrow: "add a filter to narrow them down", none: "No items match.", close: "Close the finder", offline: "No internet: searching the price list on this device (code, name, colour/size, price).", add: "Add", qty: "Quantity", match: "Match", ops: { starts: "Starts with (a*)", ends: "Ends with (*a)", contains: "Contains (*a*)", eq: "Equals (=)", gt: "Greater than (>)", gte: "Greater or equal (≥)", lt: "Less than (<)", lte: "Less or equal (≤)" } },
     tiles: { sell: "Point of sale", desk: "Quotation", collect: "Collect payment", returns: "Return", cash: "Drawer", close: "Close shift", back: "All", choose: "Choose" },
     extra: {
       slipIsQuote: "This slip is a saved quotation — collect it in Collect:",

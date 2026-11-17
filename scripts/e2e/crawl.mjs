@@ -337,11 +337,30 @@ const customerUrl = page.url().split("#")[0];
 const eForm = page.locator("form#edit");
 await eForm.locator('input[name="discount_pct"]').fill("5");
 await eForm.locator('input[name="notes"]').fill("e2e edit");
+// business details: VAT no., CR no., national address
+await eForm.locator('input[name="vat_number"]').fill("300000000000003");
+await eForm.locator('input[name="cr_number"]').fill("1010123456");
+await eForm.locator('input[name="addr_building"]').fill("1234");
+await eForm.locator('input[name="addr_street"]').fill("King Fahd Road");
+await eForm.locator('input[name="addr_district"]').fill("Al Olaya");
+await eForm.locator('input[name="addr_city"]').fill("Riyadh");
+await eForm.locator('input[name="addr_country"]').fill("Saudi Arabia");
+await eForm.locator('input[name="addr_postal"]').fill("12345");
+await eForm.locator('input[name="addr_additional"]').fill("6789");
 await Promise.all([page.waitForURL(/ok=1|err=/, { waitUntil: "commit" }), eForm.locator('button:text-is("Save")').click()]);
 const cAfter = await page.locator("main").innerText();
 if (!/Saved/.test(cAfter) || !/5%/.test(cAfter)) fail("customers", `edit customer: ${cAfter.slice(0, 200)}`);
 else ok("edit a customer from their page (usual discount 5%)");
+const biz = await page.locator("[data-testid=customer-business]").innerText().catch(() => "");
+for (const w of ["300000000000003", "1010123456", "1234", "King Fahd Road", "Al Olaya", "Riyadh", "12345", "6789", "Saudi Arabia"]) if (!biz.includes(w)) fail("customers", `business details missing "${w}"`);
+ok("customer VAT no., CR no. and national address saved and shown");
+// a wrong postal code is refused with a clear message
+await page.locator("form#edit").locator('input[name="addr_postal"]').fill("12");
+await Promise.all([page.waitForURL(/err=/, { waitUntil: "commit" }), page.locator("form#edit").locator('button:text-is("Save")').click()]);
+if (!/Postal code: 5 digits/.test(await page.locator(".alert-err").innerText().catch(() => ""))) fail("customers", "bad postal code not explained");
+else ok("wrong postal code refused with a clear message");
 await eForm.locator('input[name="discount_pct"]').fill("0");
+await page.locator("form#edit").locator('input[name="addr_postal"]').fill("12345");
 await page.locator("form#edit").locator('button:text-is("Save")').click(); // back to no discount (the till tests use this customer)
 await page.waitForFunction(() => /\b0%/.test(document.querySelector("main")?.innerText ?? ""), null, { timeout: 15000 }).catch(() => fail("customers", "discount not set back to 0"));
 
@@ -401,6 +420,38 @@ for (const s of ["فاتورة ضريبية مبسطة", "Simplified Tax Invoice
 if ((await rp.locator("article svg").count()) < 2) fail("receipt", "QR code or barcode missing");
 else ok("80 mm receipt: bilingual title, VAT no., totals, ZATCA QR and Code 128 barcode");
 await rp.close();
+
+// item finder (search by columns): each column has its own match type
+await page.click("[data-testid=column-search-open]");
+const cs = page.locator("[data-testid=column-search]");
+await cs.locator("[data-testid=finder-count]").waitFor({ timeout: 15000 }).catch(() => {});
+if (!/First \d+ of \d+ items/.test(await cs.locator("[data-testid=finder-count]").innerText().catch(() => ""))) fail("pos", "item finder: count of items not shown");
+await cs.locator('input[aria-label="Item name"]').fill("jump rope");                          // contains (default)
+await cs.locator('select[aria-label="Code · Match"]').selectOption("ends");
+await cs.locator('input[aria-label="Code"]').fill("rope-1");                                  // ends with
+await page.waitForFunction(() => /E2E-ROPE-1/.test(document.querySelector("[data-testid=column-search] tbody")?.textContent ?? ""), null, { timeout: 15000 }).catch(() => {});
+const csRow = await cs.locator("tbody tr").first().innerText().catch(() => "");
+if (!/E2E-ROPE-1/.test(csRow) || !/35\.00/.test(csRow)) fail("pos", `item finder: ${csRow}`);
+else ok("item finder: name contains + code ends with → the item, its price and stock here");
+await cs.locator('select[aria-label="Code · Match"]').selectOption("starts");
+await page.waitForFunction(() => /No items match/.test(document.querySelector("[data-testid=column-search]")?.textContent ?? ""), null, { timeout: 15000 })
+  .then(() => ok("item finder: code starts with (no match for the end of a code)")).catch(() => fail("pos", "item finder: starts with should not match the end of a code"));
+await cs.locator('select[aria-label="Code · Match"]').selectOption("contains");
+await cs.locator('select[aria-label="Sale price · Match"]').selectOption("gt");
+await cs.locator('input[aria-label="Sale price"]').fill("100");
+await page.waitForFunction(() => /No items match/.test(document.querySelector("[data-testid=column-search]")?.textContent ?? ""), null, { timeout: 15000 })
+  .then(() => ok("item finder: price greater than 100 → none")).catch(() => fail("pos", "item finder: price filter"));
+await cs.locator('select[aria-label="Sale price · Match"]').selectOption("lte");
+await cs.locator('input[aria-label="Sale price"]').fill("35");
+await cs.locator("tbody tr").first().waitFor({ timeout: 15000 }).catch(() => {});
+// ask the quantity: pick the item → quantity box → 3 in the cart
+await cs.locator('label:has-text("Ask the quantity") input').check();
+await cs.locator("tbody tr").first().click();
+await cs.locator("[data-testid=finder-qty] input").fill("3");
+await cs.locator('[data-testid=finder-qty] button:text-is("Add")').click();
+await page.waitForFunction(() => [...document.querySelectorAll("main table tbody tr input")].some((x) => x.value === "3"), null, { timeout: 10000 })
+  .then(() => ok("item finder: ask the quantity → 3 added to the cart")).catch(() => fail("pos", "item finder: quantity not added"));
+await cs.locator('button:text-is("Close the finder")').click();
 
 // quotation at the desk → collect at the cashier
 await page.click('button:text-is("Quotation")');
