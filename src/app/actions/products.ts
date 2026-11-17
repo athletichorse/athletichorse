@@ -208,7 +208,8 @@ export async function syncNowAction() {
 // ---------------------------------------------------------------- names & prices file
 export type PricePreview = {
   sku: string; found: boolean; onWebsite: boolean; name: string;
-  changes: { field: "name_en" | "name_ar" | "price" | "wholesale" | "cost"; old: string; new: string }[];
+  /** field: name_en | name_ar | price | wholesale | cost | level:<price level id> */
+  changes: { field: string; old: string; new: string }[];
 };
 
 /** Old → new for every row of a names & prices file (nothing is saved). */
@@ -223,6 +224,16 @@ export async function previewPricesAction(rows: PriceRow[]): Promise<{ ok: true;
     const { data } = await db().from("variant_prices").select("sku, name_en, name_ar, price, wholesale_price, cost, on_website").in("sku", skus);
     for (const d of data ?? []) found.set(String(d.sku), d);
   }
+  // current prices on each price level (for the level columns)
+  const withLevels = list.filter((r) => r.levels && Object.keys(r.levels).length);
+  const cur = new Map<string, string>(); // `${sku}|${level}` → price
+  const vidOf = new Map<string, string>();
+  for (let i = 0; i < withLevels.length; i += 500) {
+    const { data: vs } = await db().from("product_variants").select("id, sku").in("sku", withLevels.slice(i, i + 500).map((r) => r.sku));
+    for (const v of vs ?? []) vidOf.set(v.id, v.sku);
+    const { data: lp } = vs?.length ? await db().from("variant_level_prices").select("variant_id, level_id, price").in("variant_id", vs.map((v) => v.id)) : { data: [] };
+    for (const x of lp ?? []) cur.set(`${vidOf.get(x.variant_id)}|${x.level_id}`, String(x.price));
+  }
   const str = (v: unknown) => (v === null || v === undefined ? "" : String(v));
   const money2 = (v: unknown) => { try { return v === null || v === undefined || v === "" ? "" : formatDecimal(toHalalas(String(v))); } catch { return str(v); } };
   const items: PricePreview[] = list.map((r) => {
@@ -235,6 +246,10 @@ export async function previewPricesAction(rows: PriceRow[]): Promise<{ ok: true;
     if (r.price && !web && r.price !== money2(d.price)) changes.push({ field: "price", old: money2(d.price), new: r.price });
     if (r.wholesale && r.wholesale !== money2(d.wholesale_price)) changes.push({ field: "wholesale", old: money2(d.wholesale_price), new: r.wholesale });
     if (canCost && r.cost && r.cost !== money2(d.cost)) changes.push({ field: "cost", old: money2(d.cost), new: r.cost });
+    for (const [lv, price] of Object.entries(r.levels ?? {})) {
+      const old = money2(cur.get(`${r.sku}|${lv}`));
+      if (price !== old) changes.push({ field: `level:${lv}`, old, new: price });
+    }
     return { sku: r.sku, found: true, onWebsite: web, name: str(d.name_ar) || str(d.name_en), changes };
   });
   return { ok: true, items };
@@ -251,6 +266,29 @@ export async function applyPricesAction(rows: PriceRow[]): Promise<{ ok: true; u
     if (error) return { ok: false, error: error.message };
     updated += Number(data?.updated ?? 0); notFound += Number(data?.not_found ?? 0); websiteKept += Number(data?.website_price_kept ?? 0);
   }
+  // one column per price level: upsert those prices (website items too: levels are portal-only)
+  const { data: lvs } = await db().from("price_levels").select("id").neq("code", "wholesale");
+  const okLevel = new Set((lvs ?? []).map((l) => l.id));
+  const lvRows = list.filter((r) => r.levels && Object.keys(r.levels).length);
+  for (let i = 0; i < lvRows.length; i += 500) {
+    const chunk = lvRows.slice(i, i + 500);
+    const { data: vs } = await db().from("product_variants").select("id, sku").in("sku", chunk.map((r) => r.sku));
+    const up: { variant_id: string; level_id: string; price: string; updated_at: string }[] = [];
+    for (const r of chunk) {
+      const v = vs?.find((x) => x.sku === r.sku);
+      if (!v) continue;
+      for (const [lv, price] of Object.entries(r.levels ?? {})) {
+        if (!okLevel.has(lv) || !/^\d{1,9}\.\d{2}$/.test(price)) continue;
+        up.push({ variant_id: v.id, level_id: lv, price, updated_at: new Date().toISOString() });
+      }
+    }
+    if (up.length) {
+      const { error } = await db().from("variant_level_prices").upsert(up);
+      if (error) return { ok: false, error: error.message };
+      updated += new Set(up.map((x) => x.variant_id)).size;
+    }
+  }
+  if (lvRows.length) await audit(s.id, "products.level_prices_file", "price_level", null, { rows: lvRows.length });
   // portal prices go to the website: website items take the file's price too
   if ((await webSwitches()).push_prices) {
     const changed: string[] = [];

@@ -374,6 +374,7 @@ const en: Dict = {
     allKinds: "All types",
   },
   levels: {
+    fileHint: "Price levels: add a column named after the level (or \"<level> price\" / \"سعر <level>\"):",
     title: "Price levels",
     subtitle: "Several prices per item. Put a customer on a level and the till uses that level's price for items that have one; other items keep the normal price.",
     level: "Price level",

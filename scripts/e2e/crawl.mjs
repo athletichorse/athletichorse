@@ -236,11 +236,28 @@ else if (!(await page.locator('input[name="name_en"][value="VIP"]').count())) fa
 else ok("add a price level (VIP); Wholesale is there from the start");
 await page.goto(ropeUrl);
 const vipBox = page.locator("[data-testid=level-prices] input").first();
-await vipBox.fill("30");
+await vipBox.fill("32");
 await Promise.all([page.waitForURL(/ok=1|err=/, { waitUntil: "commit", timeout: 30000 }), page.click("text=Save changes")]);
 if (page.url().includes("err=")) fail("price levels", decodeURIComponent(page.url().split("err=")[1]));
-else if ((await page.locator("[data-testid=level-prices] input").first().inputValue()) !== "30.00") fail("price levels", "VIP price not saved");
-else ok("item price for the VIP level saved (30.00 instead of 35.00)");
+else if ((await page.locator("[data-testid=level-prices] input").first().inputValue()) !== "32.00") fail("price levels", "VIP price not saved");
+else ok("item price for the VIP level saved on the product page (32.00 instead of 35.00)");
+// prices file with a column for the level: "سعر VIP" 32 → 30
+{
+  const csv = `${OUT}/prices-levels.csv`;
+  fs.writeFileSync(csv, "Barcode,سعر VIP\nE2E-ROPE-1,30\n");
+  await page.goto(BASE + "/upload", { waitUntil: "networkidle" });
+  if (!/VIP/.test(await page.locator("[data-testid=level-columns]").innerText().catch(() => ""))) fail("price levels", "prices file does not mention the VIP column");
+  await page.locator("#prices input[type=file]").setInputFiles(csv);
+  await page.locator("#prices table tbody tr").first().waitFor({ timeout: 20000 }).catch(() => {});
+  const prev = await page.locator("#prices table").innerText().catch(() => "");
+  if (!/VIP/.test(prev) || !/32\.00/.test(prev) || !/30\.00/.test(prev)) fail("price levels", `file preview: ${prev.replace(/\s+/g, " ").slice(0, 200)}`);
+  await page.locator("#prices button.btn-primary").click();
+  await page.locator("#prices .alert-ok, #prices .alert-err").first().waitFor({ timeout: 20000 }).catch(() => {});
+  const res = await page.locator("#prices .alert-ok, #prices .alert-err").first().innerText().catch(() => "");
+  await page.goto(ropeUrl);
+  if ((await page.locator("[data-testid=level-prices] input").first().inputValue()) !== "30.00") fail("price levels", `prices file did not set the VIP price (${res})`);
+  else ok("prices file: a column per level (\"سعر VIP\") — preview 32.00 → 30.00, saved");
+}
 where = "groups";
 await page.goto(BASE + "/products/groups");
 const gForm = page.locator("form").filter({ has: page.locator('button:text-is("Add")') });

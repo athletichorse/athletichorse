@@ -32,3 +32,25 @@ describe("names & prices file", () => {
     expect(mapPriceSheet([["Name", "Price"], ["x", "1"]]).rows).toEqual([]);
   });
 });
+
+import { levelForHeader, mapPriceSheet as mapSheet2 } from "@/lib/product-prices";
+describe("prices file: one column per price level", () => {
+  const levels = [{ id: "vip", names: ["VIP", "كبار العملاء"] }, { id: "dist", names: ["Distributor", "موزع"] }];
+  it("finds a level by its name, 'X price', 'price X' or 'سعر X'", () => {
+    expect(levelForHeader("VIP", levels)).toBe("vip");
+    expect(levelForHeader("vip price", levels)).toBe("vip");
+    expect(levelForHeader("سعر كبار العملاء", levels)).toBe("vip");
+    expect(levelForHeader("Price  Distributor", levels)).toBe("dist");
+    expect(levelForHeader("Retail", levels)).toBeNull();
+  });
+  it("reads each level column; empty cells change nothing; wholesale keeps its own column", () => {
+    const m = mapSheet2([
+      ["Barcode", "Price", "سعر الجملة", "VIP", "سعر موزع"],
+      ["A1", "35", "28", "30", ""],
+      ["B2", "", "", "١٢٫٥٠".replace("٫", "."), "10"],
+    ], levels);
+    expect(m.levelColumns).toEqual(["vip", "dist"]);
+    expect(m.rows[0]).toEqual({ sku: "A1", price: "35.00", wholesale: "28.00", levels: { vip: "30.00" } });
+    expect(m.rows[1]).toEqual({ sku: "B2", levels: { vip: "12.50", dist: "10.00" } });
+  });
+});

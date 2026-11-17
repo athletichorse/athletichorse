@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { readSheet } from "read-excel-file/browser";
 import type { Dict } from "@/i18n";
-import { mapPriceSheet, type PriceRow } from "@/lib/product-prices";
+import { mapPriceSheet, type LevelColumn, type PriceRow } from "@/lib/product-prices";
 import { applyPricesAction, previewPricesAction, type PricePreview } from "@/app/actions/products";
 
 /** CSV → rows (handles quotes and a UTF-8 BOM). */
@@ -23,22 +23,25 @@ function parseCsv(text: string): string[][] {
 }
 
 /** Names & prices file: preview old → new, then save. */
-export function PriceFile({ t }: { t: Dict }) {
+export function PriceFile({ t, levels = [] }: { t: Dict; levels?: (LevelColumn & { label: string })[] }) {
   const p = t.products.pricesFile;
   const [rows, setRows] = useState<PriceRow[]>([]);
   const [cols, setCols] = useState<string[]>([]);
   const [items, setItems] = useState<PricePreview[] | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const label: Record<string, string> = { name_en: t.locations.nameEn, name_ar: t.locations.nameAr, price: t.products.price, wholesale: t.products.extras.wholesale, cost: t.products.cost };
+  const label: Record<string, string> = {
+    name_en: t.locations.nameEn, name_ar: t.locations.nameAr, price: t.products.price, wholesale: t.products.extras.wholesale, cost: t.products.cost,
+    ...Object.fromEntries(levels.map((l) => [`level:${l.id}`, `${t.levels.level}: ${l.label}`])),
+  };
 
   async function pick(file: File) {
     setMsg(null); setItems(null); setBusy(true);
     try {
       const data: unknown[][] = file.name.toLowerCase().endsWith(".csv") ? parseCsv(await file.text()) : (await readSheet(file)) as unknown[][];
-      const m = mapPriceSheet(data);
+      const m = mapPriceSheet(data, levels);
       if (!m.columns.includes("sku")) { setBusy(false); return setMsg({ ok: false, text: p.noSku }); }
-      setRows(m.rows); setCols(m.columns);
+      setRows(m.rows); setCols([...m.columns.map((c) => label[c] ?? c), ...m.levelColumns.map((id) => label[`level:${id}`] ?? id)]);
       const r = await previewPricesAction(m.rows);
       if (r.ok) setItems(r.items); else setMsg({ ok: false, text: r.error });
     } catch (e) { setMsg({ ok: false, text: String(e) }); }
@@ -51,6 +54,7 @@ export function PriceFile({ t }: { t: Dict }) {
     <section className="card space-y-4" id="prices">
       <h2 className="card-title">{p.title}</h2>
       <p className="hint -mt-2">{p.hint}</p>
+      {levels.length > 0 && <p className="hint -mt-2" data-testid="level-columns">{t.levels.fileHint} {levels.map((l) => `"${l.label}"`).join(" · ")}</p>}
       <label className="btn-ghost cursor-pointer">
         {p.choose}
         <input type="file" accept=".xlsx,.csv" className="hidden" onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])} />
