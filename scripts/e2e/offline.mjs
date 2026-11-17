@@ -19,12 +19,16 @@ const ok = (cond, msg) => { results.push(`${cond ? '✓' : '✗'} ${msg}`); cons
   await p.fill('input[name=password]', 'owner-password-123');
   await Promise.all([p.waitForURL(BASE + '/', { waitUntil: 'commit' }), p.locator('form button').last().click()]);
   await p.goto(BASE + '/lang?to=en&next=/pos'); // the tests read English labels
+  // wait until the cashier page shows either the till or the "Open shift" button
+  await p.waitForSelector('[data-testid=offline-bar], button:text-is("Open shift")', { timeout: 30000 }).catch(() => {});
   if (await p.getByRole('button', { name: 'Open shift' }).count()) {
     await p.getByRole('button', { name: 'Open shift' }).click();
     await p.waitForSelector('[data-testid=offline-bar]', { timeout: 20000 });
   }
   await p.waitForSelector('[data-testid=offline-bar]', { timeout: 20000 }).catch(() => {});
-  ok(await p.locator('[data-testid=offline-bar]').isVisible(), 'offline bar shows on the cashier for the owner');
+  const barShown = await p.locator('[data-testid=offline-bar]').isVisible();
+  ok(barShown, 'offline bar shows on the cashier for the owner');
+  if (!barShown) { console.log(`page: ${p.url()}\n${(await p.locator('body').innerText()).slice(0, 1500)}`); await b.close(); process.exit(1); }
 
   // turn on offline for this device → price list is downloaded
   const box = p.locator('[data-testid=offline-bar] input[type=checkbox]');
