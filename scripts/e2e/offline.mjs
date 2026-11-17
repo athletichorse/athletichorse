@@ -129,15 +129,16 @@ const ok = (cond, msg) => { results.push(`${cond ? '✓' : '✗'} ${msg}`); cons
     ok(st.includes('Temporary return slip') && st.includes(rtemp ?? '?') && st.includes(half), 'return slip prints offline');
     await slip.close();
   } else ok(false, 'return slip window opened');
-  // the same receipt: only 1 left to return now
+  // the same receipt: only 1 left to return now (the screen is cleared after a refund)
+  await p.getByPlaceholder(/Invoice number/).fill(link);
   await p.getByRole('button', { name: 'Find', exact: true }).click();
-  await p.waitForTimeout(300);
+  await p.waitForSelector('table tbody tr td', { timeout: 10000 }).catch(() => {});
   const left = (await p.locator('table tbody tr').first().locator('td').nth(1).innerText()).trim();
   ok(left === '1', `returned quantity taken off the receipt on this device (left: ${left})`);
   await ctx.setOffline(false);
   await p.evaluate(() => window.dispatchEvent(new Event('online')));
   await p.waitForFunction(() => !/Waiting to send/.test(document.querySelector('[data-testid=offline-bar]')?.textContent ?? ''), null, { timeout: 30000 }).catch(() => {});
-  await p.locator('[data-testid=offline-bar] details summary').click().catch(() => {});
+  await p.evaluate(() => { const d = document.querySelector('[data-testid=offline-bar] details'); if (d) d.open = true; });
   const sentTxt = await p.locator('[data-testid=offline-bar]').innerText();
   ok(!/Waiting to send/.test(sentTxt) && /BR0\d-CN-\d{6}/.test(sentTxt), `return sent when the internet is back → credit note ${sentTxt.match(/BR0\d-CN-\d{6}/)?.[0]}`);
 
