@@ -170,3 +170,74 @@ export async function cancelRequestAction(form: FormData) {
   await audit(staff.id, "stock.request_cancel", "stock_request", id, {});
   revalidatePath("/stock/requests");
 }
+
+// ---------------------------------------------------------------- search by columns (till and stock screens)
+export type ColumnFilters = { name?: string; options?: string; sku?: string; group?: string; priceMin?: string; priceMax?: string; inStock?: boolean };
+export type ColumnHit = VariantHit & { group: string; stock: string | null };
+
+/** Items matching every filled column; stock = quantity at `locationId` (if given). At most 60 rows. */
+export async function columnSearchAction(f: ColumnFilters, locationId: string | null, locale: "ar" | "en" = "en"): Promise<ColumnHit[]> {
+  const s = await requireStaff();
+  if (!["stock.view", "pos.collect", "pos.desk", "pos.quick_sale", "products.view"].some((k) => s.perms.has(k as PermissionKey))) return [];
+  // characters with a meaning in the filter syntax are dropped
+  const clean = (x?: string) => String(x ?? "").replace(/[%_\\,()*.:"]/g, " ").trim().slice(0, 60);
+  const name = clean(f.name), options = clean(f.options), sku = clean(f.sku), group = clean(f.group);
+  const num = (x?: string) => (/^\d{1,9}(\.\d{1,2})?$/.test(String(x ?? "").trim()) ? String(x).trim() : null);
+  const min = num(f.priceMin), max = num(f.priceMax);
+  if (!name && !options && !sku && !group && !min && !max && !f.inStock) return [];
+
+  let productIds: string[] | null = null;
+  if (group) {
+    const { data: gs } = await db().from("product_groups").select("id").or(`name_en.ilike.*${group}*,name_ar.ilike.*${group}*`).limit(50);
+    const gids = (gs ?? []).map((g) => g.id);
+    if (!gids.length) return [];
+    const { data: ps } = await db().from("products").select("id").or(`group_id.in.(${gids.join(",")}),subgroup_id.in.(${gids.join(",")})`).limit(2000);
+    productIds = (ps ?? []).map((p) => p.id);
+    if (!productIds.length) return [];
+  }
+  let inStockIds: string[] | null = null;
+  if (f.inStock && locationId && UUID.test(locationId)) {
+    const { data: sl } = await db().from("stock_levels").select("variant_id").eq("location_id", locationId).gt("qty", 0).limit(5000);
+    inStockIds = (sl ?? []).map((x) => x.variant_id);
+    if (!inStockIds.length) return [];
+  }
+
+  let q = db().from("variant_search").select("variant_id, product_id, sku, price, option1, option2, option3, image_url, name_en, name_ar, is_service")
+    .eq("active", true).eq("product_active", true);
+  // every word must match (name: English or Arabic; colour/size: any option) — one logic filter
+  const words = [
+    ...name.split(/\s+/).filter(Boolean).map((w) => `or(name_en.ilike.*${w}*,name_ar.ilike.*${w}*)`),
+    ...options.split(/\s+/).filter(Boolean).map((w) => `or(option1.ilike.*${w}*,option2.ilike.*${w}*,option3.ilike.*${w}*)`),
+  ].slice(0, 8);
+  if (words.length) q = q.or(`and(${words.join(",")})`);
+  if (sku) q = q.ilike("sku", `%${sku}%`);
+  if (min) q = q.gte("price", min);
+  if (max) q = q.lte("price", max);
+  if (productIds) q = q.in("product_id", productIds.slice(0, 1000));
+  if (inStockIds) q = q.in("variant_id", inStockIds.slice(0, 1000));
+  const { data } = await q.order(locale === "ar" ? "name_ar" : "name_en").limit(60);
+  const rows = data ?? [];
+  if (!rows.length) return [];
+
+  const pids = [...new Set(rows.map((r) => r.product_id))];
+  const { data: prods } = await db().from("products").select("id, group_id").in("id", pids);
+  const gids = [...new Set((prods ?? []).map((p) => p.group_id).filter(Boolean))] as string[];
+  const { data: groups } = gids.length ? await db().from("product_groups").select("id, name_en, name_ar").in("id", gids) : { data: [] };
+  const groupOf = (pid: string) => {
+    const g = groups?.find((x) => x.id === prods?.find((p) => p.id === pid)?.group_id);
+    return g ? String((locale === "ar" && g.name_ar) || g.name_en || "") : "";
+  };
+  const stock: Record<string, string> = {};
+  if (locationId && UUID.test(locationId)) {
+    const { data: sl } = await db().from("stock_levels").select("variant_id, qty").eq("location_id", locationId).in("variant_id", rows.map((r) => r.variant_id));
+    for (const x of sl ?? []) stock[x.variant_id] = String(Number(x.qty));
+  }
+  return rows.map((r) => ({
+    variantId: String(r.variant_id),
+    name: String((locale === "ar" && r.name_ar) || r.name_en || r.name_ar),
+    options: [r.option1, r.option2, r.option3].filter(Boolean).join(" / "),
+    sku: r.sku ?? null, price: String(r.price), image: r.image_url ?? null, isService: Boolean(r.is_service), exact: false,
+    group: groupOf(r.product_id),
+    stock: locationId ? (stock[r.variant_id] ?? (r.is_service ? null : "0")) : null,
+  }));
+}

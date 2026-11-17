@@ -9,6 +9,7 @@ import { decodeQuoteQr, looksOffline, noReceiptAmount, returnLineAmount, sumAmou
 import { useOfflineTill, type OfflineTill } from "./useOfflineTill";
 import { OfflineBar, printTempQuote, printTempReceipt, printTempReturn } from "./OfflineBar";
 import { CameraScan } from "./CameraScan";
+import { ColumnSearch } from "./ColumnSearch";
 import { Icon, type IconName } from "../icons";
 import { searchVariantsAction, type VariantHit } from "@/app/actions/stock";
 import {
@@ -296,8 +297,9 @@ function CustomerPicker({ t, value, onPick, err, setMsg, disabled, off }: { t: D
   );
 }
 
-function ItemSearch({ t, locale, onPick, off, onSlip }: { t: Dict; locale: Locale; onPick: (h: VariantHit) => void; off?: OfflineTill; onSlip?: (text: string) => void }) {
+function ItemSearch({ t, locale, onPick, off, onSlip, locationId }: { t: Dict; locale: Locale; onPick: (h: VariantHit) => void; off?: OfflineTill; onSlip?: (text: string) => void; locationId?: string }) {
   const [term, setTerm] = useState("");
+  const [cols, setCols] = useState(false);
   const [hits, setHits] = useState<VariantHit[] | null>(null);
   const ref = useRef<HTMLInputElement>(null);
   const pick = (h: VariantHit) => { onPick(h); setTerm(""); setHits(null); };
@@ -317,7 +319,11 @@ function ItemSearch({ t, locale, onPick, off, onSlip }: { t: Dict; locale: Local
         <input ref={ref} autoFocus className="input" placeholder={t.pos.scan} value={term} onChange={(e) => setTerm(e.target.value)}
           onKeyDown={(e) => { if (e.key !== "Enter") return; e.preventDefault(); void run(term); }} />
         <CameraScan label={t.pos.extra.camera} unsupported={t.pos.extra.cameraUnsupported} onCode={(c) => void run(c)} />
+        <button type="button" className={`btn-ghost shrink-0 whitespace-nowrap ${cols ? "border-[var(--brand)] text-[var(--brand)]" : ""}`} aria-expanded={cols} data-testid="column-search-open" onClick={() => setCols(!cols)}>
+          ▦ <span className="hidden sm:inline">{t.pos.colSearch.open}</span>
+        </button>
       </div>
+      {cols && <div className="mt-2"><ColumnSearch t={t} locale={locale} locationId={locationId ?? null} off={off} onClose={() => setCols(false)} onPick={(h) => { onPick(h); }} /></div>}
       {hits && (
         <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-[var(--line)] bg-white shadow-lg">
           {hits.length === 0 && <div className="px-4 py-3 text-sm text-gray-500">{t.stock.notFound}</div>}
@@ -530,7 +536,7 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
       <section className="card space-y-3">
         {mode === "collect" || mode === "desk" ? (
           <div className="space-y-3">
-            {mode === "desk" && <ItemSearch t={t} locale={locale} onPick={add} off={p.off} />}
+            {mode === "desk" && <ItemSearch t={t} locale={locale} onPick={add} off={p.off} locationId={s.locationId} />}
             <div className="flex gap-2">
               <input className="input" dir="ltr" inputMode="numeric" placeholder={mode === "desk" ? t.pos.extra.editQuote : t.pos.quoteNo} value={quoteNo} onChange={(e) => setQuoteNo(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.currentTarget.nextSibling as HTMLButtonElement)?.click(); } }} />
@@ -561,7 +567,7 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
               </div>
             )}
           </div>        ) : (
-          <ItemSearch t={t} locale={locale} onPick={add} off={p.off} onSlip={(x) => void fromSlip(x)} />
+          <ItemSearch t={t} locale={locale} onPick={add} off={p.off} locationId={s.locationId} onSlip={(x) => void fromSlip(x)} />
         )}
         {lines.length === 0 ? <p className="py-8 text-center text-sm text-gray-500">{t.pos.cartEmpty}</p> : (
           <table className="table">
@@ -774,7 +780,7 @@ function ReturnView(p: Props & { off: OfflineTill; setMsg: (m: { ok: boolean; te
         </>
       ) : (
         <>
-          <ItemSearch t={t} locale={locale} off={off} onPick={(h) => setItems((xs) => (xs.some((x) => x.variantId === h.variantId) ? xs : [...xs, { variantId: h.variantId, name: h.name, qty: "1", price: h.price }]))} />
+          <ItemSearch t={t} locale={locale} off={off} locationId={s.locationId} onPick={(h) => setItems((xs) => (xs.some((x) => x.variantId === h.variantId) ? xs : [...xs, { variantId: h.variantId, name: h.name, qty: "1", price: h.price }]))} />
           {items.map((i, k) => (
             <div key={i.variantId} className="flex items-center gap-2 text-sm">
               <span className="flex-1">{i.name} · {i.price}</span>

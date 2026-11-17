@@ -421,6 +421,19 @@ if ((await rp.locator("article svg").count()) < 2) fail("receipt", "QR code or b
 else ok("80 mm receipt: bilingual title, VAT no., totals, ZATCA QR and Code 128 barcode");
 await rp.close();
 
+// search by columns: name + colour/size + SKU + price boxes, stock at this branch
+await page.click("[data-testid=column-search-open]");
+const cs = page.locator("[data-testid=column-search]");
+await cs.locator('input[aria-label="Name"]').fill("jump rope");
+await cs.locator('input[aria-label="SKU / barcode"]').fill("e2e-rope");
+await cs.locator("tbody tr").first().waitFor({ timeout: 15000 }).catch(() => {});
+const csRow = await cs.locator("tbody tr").first().innerText().catch(() => "");
+if (!/E2E-ROPE-1/.test(csRow) || !/35\.00/.test(csRow)) fail("pos", `search by columns: ${csRow}`);
+else ok("search by columns finds the item (name + SKU) with its price and stock here");
+await cs.locator('input[aria-label="Price From"]').fill("100");
+await cs.locator("text=No items match.").waitFor({ timeout: 15000 }).then(() => ok("search by columns: price filter")).catch(() => fail("pos", "price filter in search by columns"));
+await cs.locator('button:text-is("Close")').click();
+
 // quotation at the desk → collect at the cashier
 await page.click('button:text-is("Quotation")');
 await scan("E2E-ROPE-1");

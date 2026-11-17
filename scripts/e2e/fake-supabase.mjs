@@ -81,11 +81,29 @@ function splitTop(s) {
 }
 const unquote = (v) => (v.startsWith('"') && v.endsWith('"') ? v.slice(1, -1) : v);
 
+/** PostgREST logic trees: or=(a.eq.1,and(b.gt.2,c.ilike.*x*)) and and=(…), nested. */
+function logicTree(kind, inner, args) {
+  const parts = splitTop(inner.replace(/^\(/, "").replace(/\)$/, "")).map((x) => {
+    const m = /^(not\.)?(or|and)(\(.*\))$/.exec(x);
+    if (m) { const c = logicTree(m[2], m[3], args); return m[1] ? `not (${c})` : c; }
+    const d = x.indexOf(".");
+    return oneCond(q(x.slice(0, d)), x.slice(d + 1), args);
+  });
+  return `(${parts.join(kind === "or" ? " or " : " and ")})`;
+}
+
 function buildWhere(params, args) {
   const conds = [];
   for (const [key, raw] of params) {
     if (["select", "order", "limit", "offset", "on_conflict", "columns"].includes(key)) continue;
-    const col = q(key);
+    if (key === "or" || key === "and") { conds.push(logicTree(key, raw, args)); continue; }
+    conds.push(oneCond(q(key), raw, args));
+  }
+  return conds.length ? `where ${conds.join(" and ")}` : "";
+}
+
+function oneCond(col, raw, args) {
+  {
     let v = raw, neg = false;
     if (v.startsWith("not.")) {
       neg = true;
@@ -121,9 +139,8 @@ function buildWhere(params, args) {
       default:
         throw httpErr(400, `operator ${op} not supported by the e2e stand-in`);
     }
-    conds.push(neg ? `not (${c})` : c);
+    return neg ? `not (${c})` : c;
   }
-  return conds.length ? `where ${conds.join(" and ")}` : "";
 }
 
 function buildSelect(sel) {

@@ -419,6 +419,7 @@ const en: Dict = {
     none: "Nothing recorded yet.",
   },
   pos: {
+    colSearch: { open: "Search by columns", title: "Search by columns", name: "Name", options: "Colour / size", sku: "SKU / barcode", group: "Group", price: "Price", min: "From", max: "To", stock: "Stock here", inStock: "In stock here only", hint: "Type in any column — the list updates. Tap an item to add it.", none: "No items match.", close: "Close", offline: "No internet: searching the price list on this device (name, colour/size, SKU, price).", add: "Add" },
     tiles: { sell: "Point of sale", desk: "Quotation", collect: "Collect payment", returns: "Return", cash: "Drawer", close: "Close shift", back: "All", choose: "Choose" },
     extra: {
       slipIsQuote: "This slip is a saved quotation — collect it in Collect:",

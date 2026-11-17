@@ -213,6 +213,11 @@ export function useOfflineTill(opts: { locale: Locale; branchCode: string; shift
       reload();
       if (on) void refreshCatalog();
     },
+    /** The whole price list kept on this device (search by columns without internet). */
+    searchAll(): VariantHit[] {
+      const c = loadCatalog(browserStore());
+      return (c?.items ?? []).map((item) => ({ variantId: item.v, name: item.n, options: item.o, sku: item.s, price: item.p, image: null, isService: item.x, exact: false }));
+    },
     /** Search the copy of the price list kept on this device. */
     searchLocal(term: string): VariantHit[] {
       const c = loadCatalog(browserStore());
