@@ -35,6 +35,7 @@
   assign cheap_url = coll.url | append: '?sort_by=price-ascending'
 -%}
 <section class="ah-1111" data-ah-mega data-end="{{ end_ts }}">
+  {%- if section.settings.show_hero -%}
   <div class="ah-1111__hero">
     <div class="container ah-1111__inner">
       <div class="ah-1111__copy">
@@ -57,6 +58,7 @@
       </div>
     </div>
   </div>
+  {%- endif -%}
 
   {%- if section.settings.show_rails -%}
     <div class="ah-section ah-1111__rail">
@@ -124,6 +126,7 @@
     function tick() {
       var left = Math.floor((end - Date.now()) / 1000);
       if (left <= 0) { el.hidden = true; return; }
+      if (!units.d) { setTimeout(tick, 60000); return; }
       units.d.textContent = pad(Math.floor(left / 86400));
       units.h.textContent = pad(Math.floor(left % 86400 / 3600));
       units.m.textContent = pad(Math.floor(left % 3600 / 60));
@@ -141,7 +144,8 @@
   "settings": [
     { "type": "collection", "id": "collection", "label": "Sale collection", "info": "Use manual sort, highest discount first." },
     { "type": "text", "id": "start_ts", "label": "Start (Unix seconds)", "default": "1794258000", "info": "1794258000 = 10 Nov 2026 00:00 Riyadh" },
-    { "type": "text", "id": "end_ts", "label": "End (Unix seconds)", "default": "1795208400", "info": "1795208400 = 21 Nov 2026 00:00 Riyadh (sale runs through 20 Nov)" },
+    { "type": "text", "id": "end_ts", "label": "End (Unix seconds)", "default": "1797368400", "info": "1797368400 = 16 Dec 2026 00:00 Riyadh (sale runs through 15 Dec)" },
+    { "type": "checkbox", "id": "show_hero", "label": "Show sale banner (hero + countdown)", "default": true },
     { "type": "checkbox", "id": "show_rails", "label": "Show product rails", "default": true },
     { "type": "range", "id": "product_count", "label": "Products per rail", "min": 4, "max": 24, "step": 1, "default": 16 }
   ],

@@ -361,7 +361,8 @@
       "settings": {
         "collection": "11-11-mega-sale",
         "start_ts": "1794258000",
-        "end_ts": "1795208400",
+        "end_ts": "1797368400",
+        "show_hero": false,
         "show_rails": true,
         "product_count": 16
       }
