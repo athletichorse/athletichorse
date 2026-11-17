@@ -380,7 +380,8 @@
         var msg = $('[data-coupon-msg]', coupon.parentNode);
         var code = input.value.trim();
         if (!code) { if (msg) msg.textContent = drawerEl.dataset.strCouponEmpty; return; }
-        window.location.href = root + 'discount/' + encodeURIComponent(code) + '?redirect=' + encodeURIComponent(root + 'checkout');
+        var toCheckout = function () { window.location.href = root + 'discount/' + encodeURIComponent(code) + '?redirect=' + encodeURIComponent(root + 'checkout'); };
+        (window.ahSaveAttribution ? window.ahSaveAttribution() : Promise.resolve()).then(toCheckout, toCheckout);
       });
     }
   }
@@ -708,6 +709,21 @@
         .then(function () { addBtn.classList.remove('is-loading'); addBtn.disabled = false; addBtn.textContent = label; refreshDrawer().then(openDrawer); })
         .catch(function (err) { addError(addBtn, err, label); });
     });
+
+    // Buy now: add to the cart (so the order keeps its "Came from" details), then go straight to checkout
+    var buyNow = $('[data-buy-now]', rootEl);
+    if (buyNow) {
+      buyNow.addEventListener('click', function () {
+        if (addBtn.disabled) return;
+        var label = buyNow.textContent;
+        buyNow.disabled = true; buyNow.classList.add('is-loading');
+        Cart.add({ items: [{ id: parseInt(idInput.value, 10), quantity: parseInt(qtyInput ? qtyInput.value : 1, 10) || 1 }] })
+          .then(function () { return window.ahSaveAttribution ? window.ahSaveAttribution() : null; })
+          .then(function () { window.location.href = root + 'checkout'; })
+          .catch(function (err) { buyNow.classList.remove('is-loading'); addError(buyNow, err, label); });
+      });
+      new MutationObserver(function () { buyNow.disabled = addBtn.disabled && !addBtn.classList.contains('is-loading'); }).observe(addBtn, { attributes: true, attributeFilter: ['disabled'] });
+    }
 
     // Sticky add-to-cart bar on mobile
     var sticky = $('[data-sticky-atc]');
@@ -1048,20 +1064,22 @@
     var last = src;
     if (!last) { try { last = sessionStorage.getItem('ah_last_touch'); } catch (e) {} }
     var pushed = false;
-    function pushAuto() {
-      if (pushed) return pushed;
+    function pushAuto(force) {
+      if (pushed && force !== true) return pushed;
       var attrs = { 'Came from': stored.source, 'Landing page': stored.landing, 'First visit': stored.at, 'Last source': last || stored.source };
       if (stored.campaign) attrs['Campaign'] = stored.campaign;
       pushed = saveAttributes(attrs);
       return pushed;
     }
-    document.addEventListener('cart:added', pushAuto);
+    document.addEventListener('cart:added', function () { pushAuto(true); });
     if (window.location.pathname.indexOf('/cart') > -1) pushAuto();
+    // Re-save right before every checkout: the cart may have changed since the last save
+    window.ahSaveAttribution = function () { return pushAuto(true); };
     document.addEventListener('click', function (e) {
       var go = e.target.closest('[data-checkout]');
-      if (!go || pushed) return;
+      if (!go) return;
       e.preventDefault();
-      pushAuto().then(function () { window.location.href = go.href || (root + 'checkout'); });
+      pushAuto(true).then(function () { window.location.href = go.href || (root + 'checkout'); });
     }, true);
   }
 

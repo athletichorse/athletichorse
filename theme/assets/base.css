@@ -2026,3 +2026,7 @@ html[dir="rtl"] .ah-1111__flag { padding: 9px 16px 9px 20px; clip-path: polygon(
 .ah-1111__badge-ring { direction: ltr; unicode-bidi: isolate; }
 html[dir="rtl"] .ah-1111__badge-ring { font-size: 12.5px; letter-spacing: 0; }
 @media (max-width: 989px) { .ah-1111__visual { padding-top: 96px; } }
+
+/* Own "Buy it now" button (replaces Shopify's payment button so cart attributes reach the order) */
+.ah-buy__now-btn { --btn-bg: #fff; --btn-fg: var(--ink); min-height: 50px; border: 1.5px solid var(--ink); font-size: 15px; font-weight: 600; }
+.ah-buy__now-btn:hover:not([disabled]) { --btn-bg: var(--ink); --btn-fg: #fff; }

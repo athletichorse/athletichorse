@@ -265,7 +265,9 @@
         {%- endif -%}
       </div>
       {%- if section.settings.show_dynamic_checkout -%}
-        <div class="ah-buy__now">{{ form | payment_button }}</div>
+        <div class="ah-buy__now">
+          <button type="button" class="ah-btn ah-btn--block ah-buy__now-btn" data-buy-now {% unless current_variant.available %}disabled{% endunless %}>{{ 'sections.product.buy_now' | t }}</button>
+        </div>
       {%- endif -%}
     {%- endform -%}
 
