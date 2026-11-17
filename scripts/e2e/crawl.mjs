@@ -329,6 +329,21 @@ await cForm2.locator('input[name="phone"]').fill("+966 55 123 4567");
 await Promise.all([page.waitForURL(/err=/, { waitUntil: "commit" }), cForm2.locator('button:text-is("Add")').click()]);
 if (!/already exists/.test(await page.locator(".alert-err").innerText())) fail("customers", "duplicate mobile not refused");
 else ok("duplicate customer mobile is refused");
+// edit from the customer's own page ("Edit customers" permission)
+await page.goto(BASE + "/customers?q=Test");
+await page.locator('a:text-is("Edit")').first().click();
+await page.waitForSelector("#edit", { timeout: 15000 });
+const customerUrl = page.url().split("#")[0];
+const eForm = page.locator("form#edit");
+await eForm.locator('input[name="discount_pct"]').fill("5");
+await eForm.locator('input[name="notes"]').fill("e2e edit");
+await Promise.all([page.waitForURL(/ok=1|err=/, { waitUntil: "commit" }), eForm.locator('button:text-is("Save")').click()]);
+const cAfter = await page.locator("main").innerText();
+if (!/Saved/.test(cAfter) || !/5%/.test(cAfter)) fail("customers", `edit customer: ${cAfter.slice(0, 200)}`);
+else ok("edit a customer from their page (usual discount 5%)");
+await eForm.locator('input[name="discount_pct"]').fill("0");
+await page.locator("form#edit").locator('button:text-is("Save")').click(); // back to no discount (the till tests use this customer)
+await page.waitForFunction(() => /\b0%/.test(document.querySelector("main")?.innerText ?? ""), null, { timeout: 15000 }).catch(() => fail("customers", "discount not set back to 0"));
 
 // audit
 where = "audit";
@@ -476,6 +491,10 @@ await cp.goto(BASE + "/permissions");
 await cp.waitForURL(/\/forbidden/, { timeout: 15000 }).catch(() => {}); // the redirect arrives in the streamed page (loading screen first)
 if (!cp.url().includes("/forbidden")) fail("cashier", "cashier can open /permissions");
 else ok("cashier is blocked from admin pages");
+// without "Edit customers" the customer page has no edit form (cashiers can still add customers at the till)
+await cp.goto(customerUrl, { waitUntil: "networkidle" });
+if (await cp.locator("form#edit").count()) fail("cashier", "cashier sees the customer edit form without the permission");
+else ok("customer edit form only for people given \"Edit customers\"");
 await cctx.close();
 
 // ---------------------------------------------------------------- 2. every page × desktop/phone × en/ar

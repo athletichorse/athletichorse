@@ -5,14 +5,18 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { formatDateTime } from "@/lib/time";
 import { PageHeader } from "@/components/PageHeader";
+import { saveCustomerAction } from "@/app/actions/customers";
+import { CustomerFields, customerError, type CustomerRow } from "@/components/CustomerFields";
 
 export const dynamic = "force-dynamic";
 
 /** Customer statement: on-account sales and refunds, payments received, running balance. */
-export default async function CustomerPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CustomerPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; err?: string }> }) {
   const me = await requirePermission("customers.view");
   const { t, locale } = await getDict();
   const { id } = await params;
+  const sp = await searchParams;
+  const err = customerError(t, sp.err);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const { data: c } = await db().from("customer_list").select("*").eq("id", id).maybeSingle();
   if (!c) notFound();
@@ -28,11 +32,20 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
       <PageHeader title={c.name || c.phone} subtitle={`#${c.customer_no} · ${c.phone}`} t={t} filename={`customer-${c.customer_no}`}>
         <Link href="/customers" className="btn-ghost no-print">← {t.customers.title}</Link>
       </PageHeader>
+      {err && <p className="alert-err">{err}</p>}
+      {sp.ok && <p className="alert-ok">{t.saved}</p>}
       <div className="mb-4 grid gap-4 sm:grid-cols-3">
         <div className="card"><div className="text-xs text-gray-500">{X.balance}</div><div className="text-2xl font-semibold" dir="ltr">{Number(c.balance).toFixed(2)}</div></div>
         <div className="card"><div className="text-xs text-gray-500">{X.creditLimit}</div><div className="text-2xl font-semibold" dir="ltr">{c.credit_limit === null ? X.noLimit : Number(c.credit_limit).toFixed(2)}</div></div>
         <div className="card"><div className="text-xs text-gray-500">{X.usualDiscount}</div><div className="text-2xl font-semibold" dir="ltr">{Number(c.discount_pct)}%</div></div>
       </div>
+      {me.perms.has("customers.update") && (
+        <form action={saveCustomerAction} id="edit" className="card no-print mb-6 scroll-mt-24">
+          <h2 className="card-title">{t.customers.editCustomer}</h2>
+          <CustomerFields t={t} c={c as CustomerRow} />
+          <div className="mt-5 flex justify-end"><button className="btn-primary">{t.save}</button></div>
+        </form>
+      )}
       <section className="card mb-6 overflow-hidden p-0">
         <h2 className="card-title px-5 pt-5">{t.customers.statement}</h2>
         <div className="overflow-x-auto"><table className="table" data-export>

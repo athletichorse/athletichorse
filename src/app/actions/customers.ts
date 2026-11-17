@@ -25,11 +25,16 @@ function read(form: FormData) {
 
 const friendly = (m: string) => (/duplicate key/i.test(m) ? "duplicate_phone" : m);
 
+/** New customer: "customers.edit" (add). Changing an existing one: "customers.update" (given per person). */
 export async function saveCustomerAction(form: FormData) {
-  const staff = await assertPermission("customers.edit");
-  const id = String(form.get("id") ?? "") || null;
+  const rawId = String(form.get("id") ?? "");
+  const id = /^[0-9a-f-]{36}$/i.test(rawId) ? rawId : null;
+  const staff = await assertPermission(id ? "customers.update" : "customers.edit");
+  // editing from the customer's own page goes back there
   const back = (err?: string, cid?: string) =>
-    redirect(err ? `/customers?err=${encodeURIComponent(err)}${id ? `&edit=${id}` : ""}` : `/customers?ok=1${cid ? `&q=${cid}` : ""}`);
+    id
+      ? redirect(`/customers/${id}?${err ? `err=${encodeURIComponent(err)}` : "ok=1"}`)
+      : redirect(err ? `/customers?err=${encodeURIComponent(err)}` : `/customers?ok=1${cid ? `&q=${cid}` : ""}`);
   const c = read(form);
   if (!c.phone) return back("phone");
   if (!c.vatOk) return back("vat");

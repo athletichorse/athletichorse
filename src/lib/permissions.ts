@@ -57,7 +57,8 @@ export const PERMISSION_KEYS = [
   "products.labels", // print barcode stickers
   // Customers / العملاء
   "customers.view",
-  "customers.edit",
+  "customers.edit", // add new customers (also at the till)
+  "customers.update", // change existing customers: name, mobile, discount, credit limit, active
   // Staff / الموظفين
   "staff.view",
   "staff.edit",
