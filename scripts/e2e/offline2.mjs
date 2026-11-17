@@ -17,6 +17,9 @@ await Promise.all([p.waitForURL(BASE + '/', { waitUntil: 'commit' }), p.locator(
 await p.goto(BASE + '/lang?to=en&next=/pos'); // the tests read English labels
 await p.waitForSelector('[data-testid=offline-bar], button:text-is("Open shift")', { timeout: 30000 }).catch(() => {});
 if (await p.getByRole('button', { name: 'Open shift' }).count()) await p.getByRole('button', { name: 'Open shift' }).click();
+// the cashier opens on big tiles: go to the till
+await p.waitForSelector('[data-tile=sell], [placeholder*="Scan barcode"]', { timeout: 20000 }).catch(() => {});
+if (await p.locator('[data-tile=sell]').count()) await p.click('[data-tile=sell]');
 if (!(await p.waitForSelector('[data-testid=offline-bar]', { timeout: 20000 }).catch(() => null))) {
   console.log(`✗ offline bar does not show\npage: ${p.url()}\n${(await p.locator('body').innerText()).slice(0, 1500)}`); await b.close(); process.exit(1);
 }

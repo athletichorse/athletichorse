@@ -209,7 +209,10 @@ export function searchCustomersLocal(items: CustomerItem[], term: string, normal
 // ------------------------------------------------------------ other offline work (drawer entries, desk quotations)
 export type QueuedOp =
   | { kind: "drawer"; clientId: string; shiftId: string; createdAt: string; label: string; payload: { kind: "cash_out" | "cash_in" | "expense" | "customer_payment"; amount: string; reason: string; expenseTypeId?: string; customerId?: string; method?: string }; error?: string }
-  | { kind: "quote"; clientId: string; shiftId: string; createdAt: string; label: string; tempNo: string; payload: { locationId: string; salespersonId?: string; customerId?: string; lines: { variantId: string; qty: string; unitPrice: string; discount: string }[] }; error?: string };
+  | { kind: "quote"; clientId: string; shiftId: string; createdAt: string; label: string; tempNo: string; payload: { locationId: string; salespersonId?: string; customerId?: string; lines: { variantId: string; qty: string; unitPrice: string; discount: string }[] }; error?: string }
+  | { kind: "return"; clientId: string; shiftId: string; createdAt: string; label: string; tempNo: string; total: string;
+      payload: { locationId: string; originalInvoiceId?: string; customerId?: string; reason: string; refundMethod: string; lines: { lineNo?: number; variantId?: string; qty: string }[] };
+      slip: { original: string | null; lines: { name: string; qty: string; amount: string }[] }; error?: string };
 const KO = "pos-offline-ops-v1";
 export const loadOps = (st: Store) => readJson<QueuedOp[]>(st, KO, []);
 const saveOps = (st: Store, q: QueuedOp[]) => (q.length ? st.set(KO, JSON.stringify(q)) : st.remove(KO));
@@ -260,3 +263,82 @@ export function decodeQuoteQr(text: string): { no: string; lines: QrLine[] } | n
   }
   return lines.length ? { no: m[1], lines } : null;
 }
+
+// ------------------------------------------------------------ returns without internet
+/** Temporary return number: OFF-<branch>-<device>-R0001 (own counter). */
+export function nextReturnTempNo(st: Store, branchCode: string): string {
+  const seq = Number(st.get("pos-offline-rseq") || "0") + 1;
+  st.set("pos-offline-rseq", String(seq));
+  return `OFF-${branchCode}-${deviceId(st)}-R${String(seq).padStart(4, "0")}`;
+}
+
+/** A sent temporary number and the real one it became (shown in the offline bar). */
+export function rememberSent(st: Store, x: SentSale) {
+  st.set(K.sent, JSON.stringify([x, ...loadSent(st)].slice(0, 50)));
+}
+
+/** i = id, n = number, o = offline temp no., t = time, c = customer, l = [lineNo, name, sku, qty, returnable, gross] */
+export type RecentInvoice = { i: string; n: string; o: string | null; t: string; c: string | null; l: [number, string, string | null, string, string, string][] };
+const KI = "pos-invoices-v1";
+export const loadInvoices = (st: Store) => readJson<{ savedAt: string; locationId: string; items: RecentInvoice[] } | null>(st, KI, null);
+export const saveInvoices = (st: Store, locationId: string, items: RecentInvoice[], savedAt = new Date().toISOString()) => {
+  // returns made here but not sent yet are still taken off what can be returned
+  const pending = loadOps(st).filter((o): o is Extract<QueuedOp, { kind: "return" }> => o.kind === "return");
+  st.set(KI, JSON.stringify({ savedAt, locationId, items: items.map((inv) => applyPendingReturns(inv, pending)) }));
+};
+function applyPendingReturns(inv: RecentInvoice, pending: Extract<QueuedOp, { kind: "return" }>[]): RecentInvoice {
+  const mine = pending.filter((o) => o.payload.originalInvoiceId === inv.i);
+  if (!mine.length) return inv;
+  return { ...inv, l: inv.l.map((l) => {
+    const q = mine.reduce((sum, o) => sum + o.payload.lines.filter((x) => x.lineNo === l[0]).reduce((a, x) => a + toMilli(x.qty), 0n), 0n);
+    return q ? [l[0], l[1], l[2], l[3], fromMilli(toMilli(l[4]) - q > 0n ? toMilli(l[4]) - q : 0n), l[5]] : l;
+  }) };
+}
+/** Find a receipt in the copy by its number or its temporary (offline) number. */
+export function findInvoiceLocal(st: Store, number: string): RecentInvoice | null {
+  const n = number.trim().toUpperCase();
+  if (!n) return null;
+  return loadInvoices(st)?.items.find((x) => x.n.toUpperCase() === n || (x.o ?? "").toUpperCase() === n) ?? null;
+}
+/** After an offline return: take the quantities off what can still be returned on this device. */
+export function takeReturned(st: Store, invoiceId: string, lines: { lineNo: number; qty: string }[]) {
+  const c = loadInvoices(st);
+  if (!c) return;
+  const items = c.items.map((inv) => (inv.i !== invoiceId ? inv : { ...inv, l: inv.l.map((l) => {
+    const q = lines.filter((x) => x.lineNo === l[0]).reduce((a, x) => a + toMilli(x.qty), 0n);
+    const left = toMilli(l[4]) - q;
+    return q ? ([l[0], l[1], l[2], l[3], fromMilli(left > 0n ? left : 0n), l[5]] as RecentInvoice["l"][number]) : l;
+  }) }));
+  st.set(KI, JSON.stringify({ ...c, items }));
+}
+
+// exact decimal maths (no floats): quantities in thousandths, money in halalas
+const toMilli = (q: string) => {
+  const m = /^(\d+)(?:\.(\d{0,3}))?$/.exec(String(q).trim());
+  return m ? BigInt(m[1]) * 1000n + BigInt((m[2] ?? "").padEnd(3, "0") || "0") : 0n;
+};
+const fromMilli = (m: bigint) => { const w = m / 1000n, f = m % 1000n; return f ? `${w}.${String(f).padStart(3, "0").replace(/0+$/, "")}` : String(w); };
+const toHal = (a: string) => {
+  const m = /^(-?)(\d+)(?:\.(\d{0,2}))?$/.exec(String(a).trim());
+  if (!m) return 0n;
+  const v = BigInt(m[2]) * 100n + BigInt((m[3] ?? "").padEnd(2, "0") || "0");
+  return m[1] ? -v : v;
+};
+const fromHal = (h: bigint) => `${h < 0n ? "-" : ""}${(h < 0n ? -h : h) / 100n}.${String((h < 0n ? -h : h) % 100n).padStart(2, "0")}`;
+
+/**
+ * Refund for returning part of a receipt line: the line's total × returned / sold, rounded to
+ * the halala the same way the server does. Returns null if the quantity is not allowed.
+ */
+export function returnLineAmount(line: RecentInvoice["l"][number], qty: string): string | null {
+  const q = toMilli(qty), sold = toMilli(line[3]), left = toMilli(line[4]);
+  if (q <= 0n || q > left || sold <= 0n) return null;
+  return fromHal((toHal(line[5]) * q * 2n + sold) / (sold * 2n));
+}
+/** No receipt: shelf price × quantity, rounded to the halala. */
+export function noReceiptAmount(price: string, qty: string): string | null {
+  const q = toMilli(qty);
+  if (q <= 0n) return null;
+  return fromHal((toHal(price) * q * 2n + 1000n) / 2000n);
+}
+export const sumAmounts = (xs: string[]) => fromHal(xs.reduce((a, x) => a + toHal(x), 0n));

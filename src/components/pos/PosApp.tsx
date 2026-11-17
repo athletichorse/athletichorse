@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import type { Dict, Locale } from "@/i18n";
 import { computeTotals, formatDecimal, formatSAR, rateToBp, toHalalas, toMilliQty } from "@/lib/money";
 import { formatDateTime } from "@/lib/time";
-import { decodeQuoteQr, looksOffline, type QrLine } from "@/lib/offline";
+import { decodeQuoteQr, looksOffline, noReceiptAmount, returnLineAmount, sumAmounts, type QrLine } from "@/lib/offline";
 import { useOfflineTill, type OfflineTill } from "./useOfflineTill";
-import { OfflineBar, printTempQuote, printTempReceipt } from "./OfflineBar";
+import { OfflineBar, printTempQuote, printTempReceipt, printTempReturn } from "./OfflineBar";
 import { CameraScan } from "./CameraScan";
+import { Icon, type IconName } from "../icons";
 import { searchVariantsAction, type VariantHit } from "@/app/actions/stock";
 import {
   cashMovementAction, closeShiftAction, findInvoiceForReturnAction, loadQuotationAction, openShiftAction,
@@ -28,6 +29,8 @@ type Props = {
   t: Dict; locale: Locale; me: { id: string; name: string };
   locations: { id: string; name: string; code: string }[];
   company: string; canManageOffline: boolean;
+  /** tile names in the other language (shown small under each tile) */
+  otherTiles: Dict["pos"]["tiles"];
   expenseTypes: { id: string; name: string }[];
   shift: { id: string; locationId: string; openedAt: string; openingCash: string } | null;
   methods: Method[]; people: { id: string; name: string }[]; vatRate: string;
@@ -78,7 +81,15 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
   const { t, locale, shift, router, err } = p;
   const s = shift!;
   const locName = p.locations.find((l) => l.id === s.locationId)?.name ?? "";
-  const [panel, setPanel] = useState<"" | "cash" | "close">("");
+  // the cashier's start screen is a set of big tiles; a tile opens that screen ("home" = the tiles)
+  const [view, setView] = useState<"home" | "sale" | "cash" | "close">("home");
+  const panel = view === "cash" || view === "close" ? view : "";
+  const setPanel = (v: "" | "cash" | "close") => setView(v || "sale");
+  const open = (k: "sell" | "desk" | "collect" | "returns" | "cash" | "close") => {
+    p.setMsg(null);
+    if (k === "cash" || k === "close") return setView(k);
+    p.setTab(k); setView("sale");
+  };
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [cashKind, setCashKind] = useState<DrawerKind>("cash_out");
@@ -88,13 +99,14 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
   const [mgr, setMgr] = useState({ u: "", p: "" });
   const [closeRes, setCloseRes] = useState<{ expected: string; difference: string } | null>(null);
   const cashId = useRef(uuid());
-  const off = useOfflineTill({ locale, branchCode: p.locations.find((l) => l.id === s.locationId)?.code ?? "POS", shiftId: s.id });
+  const off = useOfflineTill({ locale, branchCode: p.locations.find((l) => l.id === s.locationId)?.code ?? "POS", shiftId: s.id, locationId: s.locationId, canReturn: p.can.ret });
   // Open on the screen chosen for this device (once, when its setting has been read).
   const screenApplied = useRef(false);
   useEffect(() => {
     if (!off.loaded || screenApplied.current) return;
     screenApplied.current = true;
-    if (off.screen && p.tabs.includes(off.screen)) p.setTab(off.screen);
+    const k = off.screen;
+    if (k && p.tabs.includes(k)) queueMicrotask(() => { p.setTab(k); setView("sale"); });
   }, [off.loaded, off.screen, p]);
   /** A server call that fails because there is no connection shows a clear message instead of doing nothing. */
   const tryOnline = async (fn: () => Promise<void>, whenOffline?: () => void) => {
@@ -104,6 +116,16 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
     }
   };
 
+  const T = t.pos.tiles, O = p.otherTiles;
+  const tiles: { key: "sell" | "desk" | "collect" | "returns" | "cash" | "close"; icon: IconName; label: string; other: string; chip: string }[] = [
+    ...p.tabs.map((k) => ({
+      key: k, icon: (k === "sell" ? "receipt" : k === "desk" ? "quote" : k === "collect" ? "cash" : "undo") as IconName,
+      label: T[k], other: O[k], chip: k === "sell" ? t.pos.sell : k === "desk" ? t.pos.desk : k === "collect" ? t.pos.collect : t.pos.returns,
+    })),
+    ...(p.can.cashOut || p.can.collect || p.can.shift ? [{ key: "cash" as const, icon: "drawer" as IconName, label: T.cash, other: O.cash, chip: t.pos.extra.drawer }] : []),
+    ...(p.can.shift ? [{ key: "close" as const, icon: "card" as IconName, label: T.close, other: O.close, chip: t.pos.closeShift }] : []),
+  ];
+
   return (
     <div className="space-y-4">
       <div className="card flex flex-wrap items-center gap-3 p-4">
@@ -111,9 +133,7 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
           <div className="font-semibold text-gray-900">{locName}</div>
           <div className="text-xs text-gray-500">{t.pos.shiftOpen} {formatDateTime(new Date(s.openedAt), locale)} · {p.me.name}</div>
         </div>
-        {(p.can.cashOut || p.can.collect || p.can.shift) && <button className="btn-ghost" onClick={() => setPanel(panel === "cash" ? "" : "cash")}>{t.pos.extra.drawer}</button>}
         <a href={`/pos/shifts/${s.id}`} className="btn-ghost">{t.pos.extra.shiftReport}</a>
-        {p.can.shift && <button className="btn-ghost" onClick={() => setPanel(panel === "close" ? "" : "close")}>{t.pos.closeShift}</button>}
       </div>
 
       <OfflineBar t={t} locale={locale} off={off} canManage={p.canManageOffline} err={err}
@@ -188,17 +208,36 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
         </p>
       )}
 
-      <div className="flex flex-wrap gap-2 pb-1">
-        {p.tabs.map((k) => (
-          <button key={k} onClick={() => { p.setTab(k); p.setMsg(null); }} className={`rounded-full px-4 py-1.5 text-sm font-medium whitespace-nowrap ${p.tab === k ? "bg-[var(--brand)] text-white" : "border border-[var(--line)] bg-white text-gray-700"}`}>
-            {k === "sell" ? t.pos.sell : k === "desk" ? t.pos.desk : k === "collect" ? t.pos.collect : t.pos.returns}
+      {view === "home" ? (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3" data-testid="pos-tiles">
+          {tiles.map((x, i) => (
+            <button key={x.key} data-tile={x.key} onClick={() => open(x.key)}
+              className={`flex min-h-32 flex-col items-center justify-center gap-2 rounded-2xl border p-4 text-center shadow-sm transition sm:min-h-40 ${i === 0 ? "border-[var(--brand)] bg-[var(--brand)] text-white hover:opacity-95" : "border-[var(--line)] bg-white text-gray-900 hover:border-[var(--brand)]"}`}>
+              <Icon name={x.icon} className="h-9 w-9 sm:h-11 sm:w-11" />
+              <span className="text-lg font-bold leading-tight sm:text-2xl">{x.label}</span>
+              <span className={`text-sm sm:text-base ${i === 0 ? "text-white/85" : "text-gray-500"}`} lang={locale === "ar" ? "en" : "ar"}>{x.other}</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2 pb-1">
+          <button onClick={() => { setView("home"); p.setMsg(null); }} data-testid="tiles-back" className="flex items-center gap-1 rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-sm font-medium text-gray-700">
+            <Icon name="back" className="h-4 w-4 rtl:rotate-180" />{t.pos.tiles.back}
           </button>
-        ))}
-      </div>
+          {tiles.map((x) => {
+            const on = (view === "sale" && p.tab === x.key) || view === x.key;
+            return (
+              <button key={x.key} onClick={() => open(x.key)} className={`rounded-full px-4 py-1.5 text-sm font-medium whitespace-nowrap ${on ? "bg-[var(--brand)] text-white" : "border border-[var(--line)] bg-white text-gray-700"}`}>
+                {x.chip}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-      {(p.tab === "sell" || p.tab === "desk") && <SaleView key={p.tab} {...p} mode={p.tab} off={off} />}
-      {p.tab === "collect" && <SaleView key="collect" {...p} mode="collect" off={off} />}
-      {p.tab === "returns" && <ReturnView {...p} />}
+      {view === "sale" && (p.tab === "sell" || p.tab === "desk") && <SaleView key={p.tab} {...p} mode={p.tab} off={off} />}
+      {view === "sale" && p.tab === "collect" && <SaleView key="collect" {...p} mode="collect" off={off} />}
+      {view === "sale" && p.tab === "returns" && <ReturnView {...p} off={off} />}
     </div>
   );
 }
@@ -625,7 +664,7 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
   );
 }
 
-function ReturnView(p: Props & { setMsg: (m: { ok: boolean; text: string; href?: string } | null) => void; err: (c: string) => string; router: ReturnType<typeof useRouter> }) {
+function ReturnView(p: Props & { off: OfflineTill; setMsg: (m: { ok: boolean; text: string; href?: string; onClick?: () => void; label?: string } | null) => void; err: (c: string) => string; router: ReturnType<typeof useRouter> }) {
   const { t, locale, err } = p;
   const s = p.shift!;
   const [number, setNumber] = useState("");
@@ -639,17 +678,73 @@ function ReturnView(p: Props & { setMsg: (m: { ok: boolean; text: string; href?:
   const [busy, setBusy] = useState(false);
   const clientId = useRef(uuid());
 
+  const reset = () => { setInv(null); setQty({}); setItems([]); setNumber(""); setReason(""); setMgr({ u: "", p: "" }); clientId.current = uuid(); };
+  const o = t.pos.offline;
+  const off = p.off;
+
+  /** No internet: the return is kept on this device with a temporary number and sent later (same client id). */
+  function saveOffline(lines: { lineNo?: number; variantId?: string; qty: string }[]) {
+    if (!off.enabled) return p.setMsg({ ok: false, text: o.notEnabled });
+    if (p.approval.ret) return p.setMsg({ ok: false, text: o.noApprovalReturnOffline });
+    const amounts: { name: string; qty: string; amount: string }[] = [];
+    if (!noReceipt) {
+      if (!inv) return;
+      for (const l of lines) {
+        const line = inv.lines.find((x) => x.lineNo === l.lineNo);
+        const a = line ? returnLineAmount([line.lineNo, line.name, line.sku, line.qty, line.returnable, line.gross], l.qty) : null;
+        if (!line || !a) return p.setMsg({ ok: false, text: err("bad_qty") });
+        amounts.push({ name: line.name, qty: l.qty, amount: a });
+      }
+    } else {
+      for (const i of items) {
+        const a = noReceiptAmount(i.price, i.qty);
+        if (!a) return p.setMsg({ ok: false, text: err("bad_qty") });
+        amounts.push({ name: i.name, qty: i.qty, amount: a });
+      }
+    }
+    const total = sumAmounts(amounts.map((x) => x.amount));
+    const saved = off.saveReturn({
+      clientId: clientId.current, label: `${t.pos.refund} ${total}`, total,
+      payload: { locationId: s.locationId, originalInvoiceId: noReceipt ? undefined : inv?.id, customerId: inv?.customerId ?? undefined, reason, refundMethod: method, lines },
+      slip: { original: noReceipt ? null : inv?.number ?? null, lines: amounts },
+    });
+    const branch = p.locations.find((l) => l.id === s.locationId)?.name ?? "";
+    printTempReturn(saved, { t, locale, company: p.company, branch });
+    p.setMsg({ ok: true, text: `${o.returnSavedOffline} ${saved.tempNo} · ${t.pos.refund} ${total}` });
+    reset();
+  }
+
   async function submit() {
-    setBusy(true);
     const lines = noReceipt
       ? items.map((i) => ({ variantId: i.variantId, qty: i.qty }))
       : Object.entries(qty).filter(([, q]) => Number(q) > 0).map(([lineNo, q]) => ({ lineNo: Number(lineNo), qty: q }));
-    const r = await postReturnAction({ clientId: clientId.current, locationId: s.locationId, shiftId: s.id, originalInvoiceId: noReceipt ? undefined : inv?.id, customerId: inv?.customerId ?? undefined, reason, lines, refundMethod: method, approverUsername: mgr.u, approverPin: mgr.p });
-    setBusy(false);
-    if (r.ok) {
-      p.setMsg({ ok: true, text: `${t.pos.returnDone} ${r.number} · ${t.pos.refund} ${r.total}`, href: `/sales/${r.invoiceId}?print=1` });
-      setInv(null); setQty({}); setItems([]); setNumber(""); setReason(""); setMgr({ u: "", p: "" }); clientId.current = uuid();
-    } else p.setMsg({ ok: false, text: err(r.error) });
+    if (!lines.length) return p.setMsg({ ok: false, text: err("no_lines") });
+    if (!off.online) return saveOffline(lines);
+    setBusy(true);
+    try {
+      const r = await postReturnAction({ clientId: clientId.current, locationId: s.locationId, shiftId: s.id, originalInvoiceId: noReceipt ? undefined : inv?.id, customerId: inv?.customerId ?? undefined, reason, lines, refundMethod: method, approverUsername: mgr.u, approverPin: mgr.p });
+      if (r.ok) {
+        p.setMsg({ ok: true, text: `${t.pos.returnDone} ${r.number} · ${t.pos.refund} ${r.total}`, href: `/sales/${r.invoiceId}?print=1` });
+        reset();
+      } else p.setMsg({ ok: false, text: err(r.error) });
+    } catch (e) {
+      if (looksOffline(e)) saveOffline(lines); else p.setMsg({ ok: false, text: String(e) });
+    } finally { setBusy(false); }
+  }
+
+  /** Find the receipt: on the server, or (no internet) in the copy kept on this device. */
+  async function find() {
+    const local = () => {
+      const x = off.findInvoiceLocal(number);
+      if (!x) return p.setMsg({ ok: false, text: o.receiptNotOnDevice });
+      setInv({ id: x.i, number: x.n, issuedAt: x.t, customerId: x.c, total: "", lines: x.l.map(([lineNo, name, sku, q, returnable, gross]) => ({ lineNo, name, sku, qty: q, returnable, gross })) });
+      setQty({}); p.setMsg(null);
+    };
+    if (!off.online) return local();
+    try {
+      const r = await findInvoiceForReturnAction(number);
+      if (r.ok) { setInv(r.invoice); setQty({}); } else p.setMsg({ ok: false, text: err(r.error) });
+    } catch (e) { if (looksOffline(e)) local(); else p.setMsg({ ok: false, text: String(e) }); }
   }
 
   return (
@@ -660,10 +755,7 @@ function ReturnView(p: Props & { setMsg: (m: { ok: boolean; text: string; href?:
           <div className="flex gap-2">
             <input className="input" dir="ltr" placeholder={t.pos.invoiceNo} value={number} onChange={(e) => setNumber(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget.nextElementSibling as HTMLButtonElement)?.click(); }} />
-            <button className="btn-ghost" onClick={async () => {
-              const r = await findInvoiceForReturnAction(number);
-              if (r.ok) { setInv(r.invoice); setQty({}); } else p.setMsg({ ok: false, text: err(r.error) });
-            }}>{t.pos.find}</button>
+            <button className="btn-ghost" onClick={() => void find()}>{t.pos.find}</button>
           </div>
           {inv && (
             <table className="table">
@@ -682,7 +774,7 @@ function ReturnView(p: Props & { setMsg: (m: { ok: boolean; text: string; href?:
         </>
       ) : (
         <>
-          <ItemSearch t={t} locale={locale} onPick={(h) => setItems((xs) => (xs.some((x) => x.variantId === h.variantId) ? xs : [...xs, { variantId: h.variantId, name: h.name, qty: "1", price: h.price }]))} />
+          <ItemSearch t={t} locale={locale} off={off} onPick={(h) => setItems((xs) => (xs.some((x) => x.variantId === h.variantId) ? xs : [...xs, { variantId: h.variantId, name: h.name, qty: "1", price: h.price }]))} />
           {items.map((i, k) => (
             <div key={i.variantId} className="flex items-center gap-2 text-sm">
               <span className="flex-1">{i.name} · {i.price}</span>
