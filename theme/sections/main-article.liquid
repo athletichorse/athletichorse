@@ -1,0 +1,53 @@
+{%- liquid
+  assign chars = article.content | strip_html | size
+  assign minutes = chars | divided_by: 900 | plus: 1 | at_least: 2
+-%}
+<article class="ah-article">
+  <div class="container container--narrow">
+    {%- render 'breadcrumbs', parent_title: blog.title, parent_url: blog.url, current: article.title -%}
+    <header class="ah-article__head">
+      <h1 class="ah-article__title">{{ article.title }}</h1>
+      <p class="ah-article__meta">
+        <time datetime="{{ article.published_at | date: '%Y-%m-%d' }}">{{ article.published_at | time_tag: format: 'date' }}</time>
+        <span aria-hidden="true">·</span>
+        <span>{{ 'sections.blog.min_read' | t: count: minutes }}</span>
+      </p>
+    </header>
+    {%- if article.image -%}
+      <div class="ah-article__media">
+        {{ article.image | image_url: width: 1400 | image_tag: loading: 'eager', fetchpriority: 'high', widths: '700,1000,1400', sizes: '(min-width: 990px) 820px, 100vw', alt: article.image.alt | default: article.title }}
+      </div>
+    {%- endif -%}
+    <div class="rte ah-article__body">
+      {{ article.content }}
+    </div>
+    <aside class="ah-article__cta">
+      <div>
+        <h2>{{ 'sections.blog.cta_title' | t }}</h2>
+        <p>{{ 'sections.blog.cta_text' | t }}</p>
+      </div>
+      <a class="ah-btn ah-btn--brand" href="{{ routes.all_products_collection_url }}">{{ 'sections.blog.cta_button' | t }}</a>
+    </aside>
+    <a class="ah-link-arrow ah-article__back" href="{{ blog.url }}">{{ 'sections.blog.back' | t: blog: blog.title }}</a>
+  </div>
+</article>
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": {{ article.title | json }},
+    "description": {{ article.excerpt_or_content | strip_html | truncate: 200 | json }},
+    {%- if article.image %}"image": {{ article.image | image_url: width: 1200 | prepend: 'https:' | json }},{% endif %}
+    "datePublished": {{ article.published_at | date: '%Y-%m-%dT%H:%M:%S%z' | json }},
+    "dateModified": {{ article.updated_at | date: '%Y-%m-%dT%H:%M:%S%z' | json }},
+    "inLanguage": {{ request.locale.iso_code | json }},
+    "mainEntityOfPage": {{ request.origin | append: article.url | json }},
+    "author": { "@type": "Organization", "name": {{ shop.name | json }}, "url": {{ request.origin | append: routes.root_url | json }} },
+    "publisher": { "@type": "Organization", "name": {{ shop.name | json }}{% if settings.logo %}, "logo": { "@type": "ImageObject", "url": {{ settings.logo | image_url: width: 600 | prepend: 'https:' | json }} }{% endif %} }
+  }
+</script>
+
+{% schema %}
+{ "name": "Article", "settings": [] }
+{% endschema %}

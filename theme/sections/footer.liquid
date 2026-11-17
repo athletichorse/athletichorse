@@ -34,6 +34,7 @@
           {%- endfor -%}
           <li><a href="{{ pages.contact.url | default: '/pages/contact' }}">{{ 'general.footer.contact' | t }}</a></li>
           <li><a href="{{ routes.account_url }}">{{ 'general.footer.track_order' | t }}</a></li>
+          {%- if blogs.guides.articles_count > 0 -%}<li><a href="{{ blogs.guides.url }}">{{ 'general.footer.guides' | t }}</a></li>{%- endif -%}
         </ul>
       </details>
 

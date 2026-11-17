@@ -46,6 +46,12 @@ Work branch: `claude/epic-thompson-9cypg1`. Theme source lives in `theme/`.
 - **17 Nov:** Shopify's "Buy it now" payment button skipped the cart, so those orders had no attributes. It is replaced on product pages by our own `[data-buy-now]` button ("Buy it now" / "اشترِ الآن") that adds to cart → saves attributes → `/checkout`. Don't bring back `{{ form | payment_button }}`.
 - 13 older orders without attributes (#1007–#1033) were back-filled from Shopify's `customerJourneySummary` (extra attribute "Filled in from: Shopify visit data").
 
+## SEO (17 Nov 2026)
+- All 56 non-sale collections have hand-written SEO (EN title ≤70 + description 120–160 ending "Cash on delivery across Saudi Arabia.", AR meta_title "… | الحصان الرياضي" + meta_description ending "الدفع عند الاستلام في جميع أنحاء المملكة."). Source text: `tools/collection_seo_copy.py`. New collections need the same.
+- Homepage meta description comes from locale `general.meta.home_description` (EN/AR), not `shop.description` (theme.liquid). Avoid "&" in locale meta strings (double-escaped).
+- **Blog "Sports Guides" / "أدلة رياضية"** `/blogs/guides` (Blog 111013363962), theme sections `main-blog` / `main-article` (BlogPosting JSON-LD, reading time, CTA). Footer "Sports guides" link. Articles (EN + AR translations, SEO metafields, collection links) — source in `content/guides/*.json`: resistance bands, kids' swimming checklist, football training equipment for academies. Arabic internal links use `/ar/...`.
+- Owner to do: verify Google Search Console + Bing Webmaster Tools (Bing also feeds DuckDuckGo and ChatGPT search), submit sitemap.xml; Google Business Profile for the Jeddah store.
+
 ## Recurring work
 - Nightly scheduled check (trigger `trig_01VGXG5GyJzr2BvvoctNSQth`) runs `tools/CATALOG_VALIDATION.md` on ACTIVE products changed in the last 26h + Arabic email templates (`notifications/templates.json`).
 

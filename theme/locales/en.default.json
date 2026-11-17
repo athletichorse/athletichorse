@@ -11,7 +11,7 @@
   "general": {
     "meta": {
       "home_title": "Athletic Horse | Sports Equipment & Activewear Store in Saudi Arabia",
-      "home_description": "Shop authentic sports equipment & activewear at Athletic Horse (Alhisan Alriyadi): football, swimming, gym, padel, martial arts & more. Fast delivery across Saudi Arabia, cash on delivery and returns within 3 days."
+      "home_description": "Shop sports equipment and activewear at Athletic Horse: football, swimming, gym, padel, boxing and more. Cash on delivery across Saudi Arabia."
     },
     "announcement": {
       "label": "Announcements",
@@ -52,7 +52,8 @@
       "cr": "CR No.",
       "vat": "VAT No.",
       "payment": "Payment methods",
-      "store_address": "Al Boghdadiyah Al Sharqiyah, Jeddah 22235, Saudi Arabia"
+      "store_address": "Al Boghdadiyah Al Sharqiyah, Jeddah 22235, Saudi Arabia",
+      "guides": "Sports guides"
     },
     "newsletter": {
       "heading": "Get exclusive offers",
@@ -402,6 +403,16 @@
       "badge_ring": "• OFFER EXTENDED • MEGA SALE • OFFER EXTENDED • MEGA SALE ",
       "badge_up_to": "UP TO",
       "badge_off": "OFF"
+    },
+    "blog": {
+      "intro": "Practical buying guides and training tips from Athletic Horse, to help you choose the right sports gear in Saudi Arabia.",
+      "read_more": "Read the guide",
+      "min_read": "{{ count }} min read",
+      "back": "Back to {{ blog }}",
+      "cta_title": "Ready to train?",
+      "cta_text": "Cash on delivery and delivery to every city in Saudi Arabia.",
+      "cta_button": "Shop now",
+      "empty": "New guides are coming soon."
     }
   }
 }

@@ -14,7 +14,7 @@
     endif
 
     assign meta_description = page_description
-    if meta_description == blank and template.name == 'index'
+    if template.name == 'index'
       assign meta_description = 'general.meta.home_description' | t
     endif
     if meta_description == blank
