@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Locale } from "@/i18n";
 import type { VariantHit } from "@/app/actions/stock";
-import { cashMovementAction, postReturnAction, postSaleAction, posCatalogAction, posCatalogStampAction, posCustomersAction, posRecentInvoicesAction, saveQuotationAction, type PosCustomer } from "@/app/actions/pos";
+import { cashMovementAction, posLevelPricesAction, postReturnAction, postSaleAction, posCatalogAction, posCatalogStampAction, posCustomersAction, posRecentInvoicesAction, saveQuotationAction, type PosCustomer } from "@/app/actions/pos";
 import {
   browserStore, enqueue, enqueueOp, flushOps, flushQueue, getDeviceScreen, isOfflineEnabled, setDeviceScreen, type DeviceScreen, loadCatalog, loadCustomers, loadOps, loadQueue, loadSent, nextConn,
-  nextQuoteTempNo, nextReturnTempNo, nextTempNo, rememberSent, saveInvoices, findInvoiceLocal, takeReturned, loadInvoices, type RecentInvoice, PING_EVERY_MS, saveCatalog, saveCustomers, searchCatalog, searchCustomersLocal, setOfflineEnabled, type ConnState, type QueuedOp, type QueuedSale, type SentSale,
+  loadLevels, saveLevels, type LevelCopy, nextQuoteTempNo, nextReturnTempNo, nextTempNo, rememberSent, saveInvoices, findInvoiceLocal, takeReturned, loadInvoices, type RecentInvoice, PING_EVERY_MS, saveCatalog, saveCustomers, searchCatalog, searchCustomersLocal, setOfflineEnabled, type ConnState, type QueuedOp, type QueuedSale, type SentSale,
 } from "@/lib/offline";
 import { normalizeSaudiMobile } from "@/lib/saudi";
 
@@ -80,6 +80,8 @@ export function useOfflineTill(opts: { locale: Locale; branchCode: string; shift
     try {
       const r = await posCatalogAction(locale);
       if (r.ok) saveCatalog(browserStore(), { savedAt: new Date().toISOString(), locale, items: r.items });
+      const lv = await posLevelPricesAction(locale);
+      if (lv.ok) saveLevels(browserStore(), lv.levels);
       const st = await posCatalogStampAction();
       if (st.ok) stamp.current = st.stamp;
     } catch { /* offline: keep the old copy */ }
@@ -174,8 +176,11 @@ export function useOfflineTill(opts: { locale: Locale; branchCode: string; shift
     /** Search the customers copy kept on this device. */
     searchCustomersLocal(term: string): PosCustomer[] {
       const c = loadCustomers(browserStore());
-      return searchCustomersLocal(c?.items ?? [], term, normalizeSaudiMobile).map((x) => ({ id: x.i, customerNo: x.no, name: x.n, phone: x.p, discountPct: x.d }));
+      const levels = loadLevels(browserStore())?.levels ?? [];
+      return searchCustomersLocal(c?.items ?? [], term, normalizeSaudiMobile).map((x) => ({ id: x.i, customerNo: x.no, name: x.n, phone: x.p, discountPct: x.d, levelId: x.l ?? null, levelName: levels.find((l) => l.id === x.l)?.name ?? null }));
     },
+    /** A price level from the copy on this device (no internet). */
+    levelLocal: (id: string): LevelCopy | null => loadLevels(browserStore())?.levels.find((l) => l.id === id) ?? null,
     /** A drawer entry made with no connection (only those that need no manager PIN). */
     saveDrawer(op: Omit<Extract<QueuedOp, { kind: "drawer" }>, "kind" | "createdAt" | "shiftId">) {
       enqueueOp(browserStore(), { ...op, kind: "drawer", shiftId, createdAt: new Date().toISOString() });

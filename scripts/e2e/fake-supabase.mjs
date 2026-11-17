@@ -196,8 +196,16 @@ async function rest(req, url, body) {
         : Array.isArray(v) && v.length && typeof v[0] === "object" ? JSON.stringify(v)
         : v;
     });
-    const sql = `select public.${fn}(${names.map((n, i) => `${q(n)} => $${i + 1}`).join(", ")}) as r`;
-    const r = await pool.query(sql, vals);
+    const call = `public.${fn}(${names.map((n, i) => `${q(n)} => $${i + 1}`).join(", ")})`;
+    // functions that return rows (returns table / setof) answer with an array, like PostgREST
+    const set = await pool.query("select bool_or(proretset) as s from pg_proc where proname = $1 and pronamespace = 'public'::regnamespace", [path.slice(4)]);
+    if (set.rows[0]?.s) {
+      const lim = Number(url.searchParams.get("limit")), off = Number(url.searchParams.get("offset"));
+      const page = `${Number.isFinite(lim) && lim > 0 ? ` limit ${Math.floor(lim)}` : ""}${off > 0 ? ` offset ${Math.floor(off)}` : ""}`;
+      const r = await pool.query(`select * from ${call}${page}`, vals);
+      return { status: 200, body: r.rows };
+    }
+    const r = await pool.query(`select ${call} as r`, vals);
     return { status: 200, body: r.rows[0]?.r ?? null };
   }
 

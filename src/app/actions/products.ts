@@ -108,6 +108,23 @@ export async function saveProductAction(form: FormData) {
       if (e2) return back(friendly(e2.message));
     }
   }
+  // prices per price level (the wholesale level uses the wholesale column above): empty = normal price
+  const { data: levels } = await db().from("price_levels").select("id").neq("code", "wholesale");
+  const levelIds = new Set((levels ?? []).map((l) => l.id));
+  for (const v of variants ?? []) {
+    const upsert: { variant_id: string; level_id: string; price: string; updated_at: string }[] = [];
+    const clear: string[] = [];
+    for (const lid of levelIds) {
+      const key = `level:${lid}:${v.id}`;
+      if (!form.has(key)) continue;
+      let m: string | null;
+      try { m = money(form.get(key)); } catch { m = "bad"; }
+      if (m === "bad") return back("money");
+      if (m === null) clear.push(lid); else upsert.push({ variant_id: v.id, level_id: lid, price: m, updated_at: new Date().toISOString() });
+    }
+    if (upsert.length) { const { error: e } = await db().from("variant_level_prices").upsert(upsert); if (e) return back(e.message); }
+    if (clear.length) await db().from("variant_level_prices").delete().eq("variant_id", v.id).in("level_id", clear);
+  }
   await audit(staff.id, "product.update", "product", id, { variants: (variants ?? []).length });
   if (webPrices) {
     const vids = (variants ?? []).map((v) => v.id);

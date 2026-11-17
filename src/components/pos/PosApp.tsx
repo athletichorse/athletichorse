@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Dict, Locale } from "@/i18n";
 import { computeTotals, formatDecimal, formatSAR, rateToBp, toHalalas, toMilliQty } from "@/lib/money";
 import { formatDateTime } from "@/lib/time";
-import { decodeQuoteQr, looksOffline, noReceiptAmount, returnLineAmount, sumAmounts, type QrLine } from "@/lib/offline";
+import { decodeQuoteQr, looksOffline, noReceiptAmount, priceFor, returnLineAmount, sumAmounts, type LevelCopy, type QrLine } from "@/lib/offline";
 import { useOfflineTill, type OfflineTill } from "./useOfflineTill";
 import { OfflineBar, printTempQuote, printTempReceipt, printTempReturn } from "./OfflineBar";
 import { CameraScan } from "./CameraScan";
@@ -13,12 +13,13 @@ import { ColumnSearch } from "./ColumnSearch";
 import { Icon, type IconName } from "../icons";
 import { searchVariantsAction, type VariantHit } from "@/app/actions/stock";
 import {
-  cashMovementAction, closeShiftAction, findInvoiceForReturnAction, loadQuotationAction, openShiftAction,
+  cashMovementAction, closeShiftAction, findInvoiceForReturnAction, posLevelPricesAction, loadQuotationAction, openShiftAction,
   postReturnAction, postSaleAction, quickAddCustomerAction, quoteNoForTempAction, saveQuotationAction, searchCustomersAction, updateQuotationAction,
   cancelQuotationAction, type DrawerKind, type InvoiceForReturn, type PosCustomer,
 } from "@/app/actions/pos";
 
-type Line = { variantId: string; name: string; options: string; sku: string | null; qty: string; price: string; listPrice: string; discount: string; usual?: boolean };
+/** base = the normal price; listPrice = the price for this customer (their price level), price = what is charged */
+type Line = { variantId: string; name: string; options: string; sku: string | null; qty: string; price: string; listPrice: string; discount: string; usual?: boolean; base?: string };
 
 /** The customer's usual discount for one line, same rounding as the server (down to the halala). */
 function usualDiscount(price: string, qty: string, pct: number | undefined): string {
@@ -269,6 +270,7 @@ function CustomerPicker({ t, value, onPick, err, setMsg, disabled, off }: { t: D
     return (
       <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm" data-testid="customer">
         <span><b>{value.name || "—"}</b> · <span dir="ltr">{value.phone}</span> · #{value.customerNo}
+          {value.levelName && <span className="badge-green ms-2" data-testid="customer-level">{t.levels.level}: {value.levelName}</span>}
           {!!value.discountPct && <span className="badge-blue ms-2">{X.usualDiscount} {value.discountPct}%</span>}
           {value.balance !== undefined && Number(value.balance) !== 0 && <span className="badge-gray ms-2">{X.balance} {value.balance}</span>}
           <span className="ms-2 text-xs text-gray-500">{X.creditLimit}: {value.creditLimit ?? X.noLimit}</span></span>
@@ -344,6 +346,8 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
   const s = p.shift!;
   const [lines, setLines] = useState<Line[]>([]);
   const [customer, setCustomer] = useState<PosCustomer | null>(null);
+  const [level, setLevel] = useState<LevelCopy | null>(null); // the customer's price level (null = normal prices)
+  const levelsCache = useRef<LevelCopy[] | null>(null);
   const [phone, setPhone] = useState("");
   const [custName, setCustName] = useState("");
   const [custNotFound, setCustNotFound] = useState(false);
@@ -394,15 +398,36 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
     setLines((ls) => {
       const i = ls.findIndex((l) => l.variantId === h.variantId);
       if (i >= 0) return ls.map((l, j) => (j === i ? withUsual({ ...l, qty: String(Number(l.qty) + Number(n)) }, customer) : l));
-      return [...ls, withUsual({ variantId: h.variantId, name: h.name, options: h.options, sku: h.sku, qty: n, price: h.price, listPrice: h.price, discount: "0" }, customer)];
+      const pr = priceFor(h.price, h.variantId, level);
+      return [...ls, withUsual({ variantId: h.variantId, name: h.name, options: h.options, sku: h.sku, qty: n, price: pr, listPrice: pr, base: h.price, discount: "0" }, customer)];
     });
     focusQty.current = h.variantId; // the quantity box gets the focus after picking an item
     setPayments([]);
   }
+  /** The prices of a level: from the server (all levels, once), or the copy on this device when offline. */
+  async function levelFor(id: string | null | undefined): Promise<LevelCopy | null> {
+    if (!id) return null;
+    if (!levelsCache.current) {
+      try { const r = await posLevelPricesAction(locale); if (r.ok) levelsCache.current = r.levels; } catch { /* offline */ }
+    }
+    return levelsCache.current?.find((l) => l.id === id) ?? p.off.levelLocal(id);
+  }
   function pickCustomer(c: PosCustomer | null) {
     setCustomer(c);
-    if (!locked) setLines((ls) => ls.map((l) => (c ? withUsual(l, c) : l.usual ? { ...l, discount: "0", usual: false } : l)));
     setPayments([]);
+    void levelFor(c?.levelId).then((lv) => {
+      setLevel(lv);
+      if (locked) return;
+      // lines whose price was not changed by hand follow the customer's level (or go back to normal)
+      setLines((ls) => ls.map((l) => {
+        let x = l;
+        if (l.price === l.listPrice) {
+          const pr = priceFor(l.base ?? l.listPrice, l.variantId, lv);
+          x = { ...l, price: pr, listPrice: pr, base: l.base ?? l.listPrice, ...(l.usual ? { discount: "0", usual: false } : {}) };
+        }
+        return c ? withUsual(x, c) : x.usual ? { ...x, discount: "0", usual: false } : x;
+      }));
+    });
   }
   /** Receipt discount: spread over the lines by value; the last line takes the rounding remainder. */
   function applyReceiptDiscount(amount: string) {

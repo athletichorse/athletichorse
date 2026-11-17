@@ -190,7 +190,7 @@ export function nextConn(s: ConnState, pingOk: boolean, now: number): ConnState 
 
 // ------------------------------------------------------------ customers copy
 /** i = id, no = customer no., n = name, p = +9665… mobile, d = usual discount % */
-export type CustomerItem = { i: string; no: number; n: string; p: string; d: number };
+export type CustomerItem = { i: string; no: number; n: string; p: string; d: number; l?: string };
 const KC = "pos-customers-v1";
 export const loadCustomers = (st: Store) => readJson<{ savedAt: string; items: CustomerItem[] } | null>(st, KC, null);
 export const saveCustomers = (st: Store, items: CustomerItem[], savedAt = new Date().toISOString()) => st.set(KC, JSON.stringify({ savedAt, items }));
@@ -342,3 +342,12 @@ export function noReceiptAmount(price: string, qty: string): string | null {
   return fromHal((toHal(price) * q * 2n + 1000n) / 2000n);
 }
 export const sumAmounts = (xs: string[]) => fromHal(xs.reduce((a, x) => a + toHal(x), 0n));
+
+// ------------------------------------------------------------ price levels copy
+/** Every price level with its prices (variant → price), for customers on a level when offline. */
+export type LevelCopy = { id: string; name: string; prices: Record<string, string> };
+const KL = "pos-levels-v1";
+export const loadLevels = (st: Store) => readJson<{ savedAt: string; levels: LevelCopy[] } | null>(st, KL, null);
+export const saveLevels = (st: Store, levels: LevelCopy[], savedAt = new Date().toISOString()) => st.set(KL, JSON.stringify({ savedAt, levels }));
+/** The price an item has for a customer: their level's price if the item has one, else the normal price. */
+export const priceFor = (base: string, variantId: string, level: LevelCopy | null | undefined) => level?.prices[variantId] ?? base;

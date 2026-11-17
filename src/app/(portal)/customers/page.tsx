@@ -26,6 +26,8 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   const { data, count } = await query.order("customer_no", { ascending: false }).range((page - 1) * 50, page * 50 - 1);
   const rows = (data ?? []) as C[];
   const err = customerError(t, sp.err);
+  const { data: lvRows } = await db().from("price_levels").select("id, name_en, name_ar").eq("active", true).order("sort");
+  const levels = (lvRows ?? []).map((l) => ({ id: l.id, name: (locale === "ar" && l.name_ar) || l.name_en }));
   const canChange = me.perms.has("customers.update");
 
 
@@ -68,7 +70,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       {canEdit && (
         <form action={saveCustomerAction} className="card no-print max-w-3xl">
           <h2 className="card-title">{t.customers.newCustomer}</h2>
-          <CustomerFields t={t} />
+          <CustomerFields t={t} levels={levels} />
           <div className="mt-5 flex justify-end"><button className="btn-primary">{t.add}</button></div>
         </form>
       )}

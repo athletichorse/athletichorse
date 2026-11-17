@@ -186,3 +186,13 @@ describe("returns without internet", () => {
     expect(nextReturnTempNo(st, "BR01")).toBe("OFF-BR01-AB12-R0002");
   });
 });
+
+import { priceFor } from "@/lib/offline";
+describe("price levels", () => {
+  const vip = { id: "l1", name: "VIP", prices: { "v-1": "30.00" } };
+  it("a customer on a level pays its price for items that have one, the normal price otherwise", () => {
+    expect(priceFor("35.00", "v-1", vip)).toBe("30.00");
+    expect(priceFor("12.00", "v-2", vip)).toBe("12.00");
+    expect(priceFor("35.00", "v-1", null)).toBe("35.00");
+  });
+});

@@ -52,7 +52,7 @@ export function buildSections(t: Dict, perms: Perms, role?: Role): Section[] {
       show: !till && perms.has("products.view"),
       tabs: [
         { label: t.menu.products, href: "/products" },
-        ...(perms.has("products.edit") ? [{ label: t.products.groups, href: "/products/groups" }] : []),
+        ...(perms.has("products.edit") ? [{ label: t.products.groups, href: "/products/groups" }, { label: t.levels.title, href: "/products/levels" }] : []),
         ...(perms.has("products.labels") ? [{ label: t.products.labels.title, href: "/products/labels" }] : []),
         ...(perms.has("upload.import") ? [{ label: t.menu.upload, href: "/upload" }] : []),
       ],

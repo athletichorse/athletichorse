@@ -11,7 +11,9 @@ import { audit } from "@/lib/audit";
 function readDetails(form: FormData) {
   const num = (k: string) => toLatinDigits(String(form.get(k) ?? "")).replace(/\s/g, "") || null;
   const txt = (k: string, max: number) => String(form.get(k) ?? "").trim().slice(0, max) || null;
+  const lv = String(form.get("price_level_id") ?? "");
   const d = {
+    ...(form.has("price_level_id") ? { price_level_id: /^[0-9a-f-]{36}$/i.test(lv) ? lv : null } : {}),
     cr_number: num("cr_number"), addr_building: num("addr_building"), addr_street: txt("addr_street", 120), addr_district: txt("addr_district", 120),
     addr_city: txt("addr_city", 80), addr_country: txt("addr_country", 80), addr_postal: num("addr_postal"), addr_additional: num("addr_additional"),
   };
@@ -72,6 +74,10 @@ export async function saveCustomerAction(form: FormData) {
   }
   // the country alone (pre-filled on new customers) is not worth a row
   const anyDetail = Object.entries(det.d).some(([k, v]) => v && k !== "addr_country");
+  if ("price_level_id" in det.d && det.d.price_level_id) {
+    const { data: lvOk } = await db().from("price_levels").select("id").eq("id", det.d.price_level_id).maybeSingle();
+    if (!lvOk) return back("bad_level");
+  }
   if (cid && (anyDetail || id)) {
     const { error } = await db().from("customer_details").upsert({ customer_id: cid, ...det.d, updated_at: new Date().toISOString() });
     if (error) return back(error.message);
