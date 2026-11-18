@@ -2,7 +2,7 @@ import type { Dict, Locale } from "@/i18n";
 
 export type Group = { id: string; parent_id: string | null; name_en: string; name_ar: string };
 export const UNITS = ["piece", "pair", "set", "box", "kg", "m"] as const;
-const UNIT_AR: Record<string, string> = { piece: "قطعة", pair: "زوج", set: "طقم", box: "كرتونة", kg: "كجم", m: "متر" };
+export const UNIT_AR: Record<string, string> = { piece: "قطعة", pair: "زوج", set: "طقم", box: "كرتونة", kg: "كجم", m: "متر" };
 
 /** Shared product fields (names, group, sub-group, unit, service). */
 export function ProductFields({ t, locale, groups, value, nameLocked }: {
@@ -62,5 +62,7 @@ export function productError(t: Dict, err?: string) {
   if (err === "money") return t.products.badMoney;
   if (err === "sale") return t.products.badSale;
   if (err === "duplicate") return t.products.duplicateCode;
+  if (err === "name") return t.products.newForm.nameRequired;
+  if (err === "type_needs_group") return t.products.newForm.typeNeedsGroup;
   return err;
 }

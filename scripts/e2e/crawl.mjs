@@ -220,7 +220,7 @@ await page.fill('input[name="name_ar"]', "حبل قفز تجريبي");
 await page.fill('input[name="sku"]', "E2E-ROPE-1");
 await page.fill('input[name="price"]', "35");
 await page.fill('input[name="cost"]', "12");
-await Promise.all([page.waitForURL(/\/products\/[0-9a-f-]{36}\?ok=1/), page.click('button:text-is("Add")')]);
+await Promise.all([page.waitForURL(/\/products\/[0-9a-f-]{36}\?ok=1/), page.click('button:text-is("Save item")')]);
 ok("create a new product");
 const ropeUrl = page.url().split("?")[0];
 
@@ -266,6 +266,35 @@ await gForm.locator('input[name="name_ar"]').fill("حبال القفز");
 await Promise.all([page.waitForURL(/ok=1|err=/, { waitUntil: "commit", timeout: 30000 }), gForm.locator('button:text-is("Add")').click()]);
 if (page.url().includes("err=")) fail("groups", decodeURIComponent(page.url().split("err=")[1]));
 else ok("add a product group");
+// new item with colours × sizes, a new type typed by hand, wholesale + offer price
+where = "new item with colours and sizes";
+await page.goto(BASE + "/products/new");
+const np = page.locator("[data-testid=new-product]");
+await np.locator("#np-sku").fill("E2E-SHIRT");
+await np.locator("#np-group").selectOption({ label: "Jump Ropes" });
+await np.locator("#np-type").fill("Speed ropes");
+await np.locator("#np-ar").fill("حبل سرعة تجريبي");
+await np.locator("#np-en").fill("Test Speed Rope");
+await np.locator("#np-price").fill("50");
+await np.locator("#np-wh").fill("40");
+await np.locator("#np-reorder").fill("2");
+await np.locator("#np-offer").fill("45");
+await np.locator("#np-from").fill("2026-01-01");
+await np.locator("#np-to").fill("2099-12-31");
+await np.locator("#np-colours").fill("Red، Blue");
+await np.locator("#np-sizes").fill("S, M");
+await Promise.all([page.waitForURL(/\/products\/[0-9a-f-]{36}\?ok=1|err=/), page.click('button:text-is("Save item")')]);
+if (page.url().includes("err=")) fail("new item", decodeURIComponent(page.url().split("err=")[1]));
+else {
+  const skus = await page.locator('input[name^="sku:"]').evaluateAll((els) => els.map((e) => e.value));
+  if (skus.join(",") !== "E2E-SHIRT-01,E2E-SHIRT-02,E2E-SHIRT-03,E2E-SHIRT-04") fail("new item", `colours × sizes: ${skus.join(",")}`);
+  else ok("new item: 2 colours × 2 sizes → 4 items with barcodes -01 … -04");
+  const wh = await page.locator('input[name^="wholesale:"]').first().inputValue();
+  const offer = await page.locator('input[name^="sale:"]').first().inputValue();
+  if (Number(wh) !== 40 || Number(offer) !== 45) fail("new item", `wholesale ${wh}, offer ${offer}`); else ok("new item: wholesale price and offer price saved");
+  await page.goto(BASE + "/products/groups");
+  if (!/Speed ropes/.test(await page.locator("main").innerText())) fail("new item", "the new type was not added to the list"); else ok("a type typed by hand is added to the groups list");
+}
 
 // upload file
 where = "upload";

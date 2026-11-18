@@ -134,6 +134,16 @@ export async function saveProductAction(form: FormData) {
   back();
 }
 
+/** "Red، Blue , Black" → ["Red", "Blue", "Black"] (commas, Arabic commas or new lines). */
+function splitList(v: FormDataEntryValue | null): string[] {
+  return [...new Set(String(v ?? "").split(/[,،;\n]+/).map((x) => x.trim().slice(0, 40)).filter(Boolean))];
+}
+
+/**
+ * New item: details, prices (cost, sale, wholesale, reorder level, price levels), an offer price
+ * for a period, and colours × sizes — each becomes its own item (barcode-01, -02 …).
+ * A new type (sub-group) typed by the person is added to the list under the chosen group.
+ */
 export async function createProductAction(form: FormData) {
   const staff = await requireStaff();
   if (!staff.perms.has("products.add") && !staff.perms.has("products.edit")) redirect("/forbidden");
@@ -142,25 +152,69 @@ export async function createProductAction(form: FormData) {
   if (!p.name_en && !p.name_ar) return back("name");
   const sku = String(form.get("sku") ?? "").trim() || null;
   if (sku && !CODE.test(sku)) return back("sku");
-  let price: string | null, cost: string | null;
+  let price: string | null, cost: string | null, wholesale: string | null, salePrice: string | null;
+  const levelPrices: { level_id: string; price: string }[] = [];
   try {
     price = money(form.get("price"));
     cost = staff.perms.has("products.view_cost") ? money(form.get("cost")) : null;
+    wholesale = money(form.get("wholesale"));
+    salePrice = staff.perms.has("products.sale_prices") ? money(form.get("sale")) : null;
+    const { data: lv } = await db().from("price_levels").select("id").neq("code", "wholesale");
+    for (const l of lv ?? []) { const m = money(form.get(`level:${l.id}`)); if (m !== null) levelPrices.push({ level_id: l.id, price: m }); }
   } catch {
     return back("money");
   }
+  const reorder = String(form.get("reorder") ?? "").trim();
+  if (reorder && !/^\d{1,9}(\.\d{1,3})?$/.test(reorder)) return back("money");
+  const sale = salePrice ? saleWindow(salePrice, String(form.get("sale_from") ?? ""), String(form.get("sale_to") ?? "")) : null;
+  if (salePrice && !sale) return back("sale");
+
+  // colours × sizes → one item each
+  const colours = splitList(form.get("colours")), sizes = splitList(form.get("sizes"));
+  const combos: { o1: string | null; o2: string | null }[] =
+    colours.length && sizes.length ? colours.flatMap((c) => sizes.map((z) => ({ o1: c, o2: z })))
+      : colours.length ? colours.map((c) => ({ o1: c, o2: null }))
+        : sizes.length ? sizes.map((z) => ({ o1: z, o2: null }))
+          : [{ o1: null, o2: null }];
+  if (combos.length > 100) return back("too_many");
+  const options = colours.length && sizes.length ? ["Color", "Size"] : colours.length ? ["Color"] : sizes.length ? ["Size"] : [];
+
+  // a type typed by hand: use the existing one with that name, or add it under the chosen group
+  const typeName = String(form.get("subgroup_name") ?? "").trim().slice(0, 60);
+  let subgroupId = p.subgroup_id;
+  if (typeName) {
+    const { data: found } = await db().from("product_groups").select("id").not("parent_id", "is", null).or(`name_en.ilike.${typeName.replace(/[%_\\,()*]/g, "")},name_ar.eq.${typeName.replace(/[,()]/g, "")}`).limit(1);
+    if (found?.length) subgroupId = found[0].id;
+    else if (p.group_id) {
+      const { data: g, error: ge } = await db().from("product_groups").insert({ parent_id: p.group_id, name_en: typeName, name_ar: /[\u0600-\u06FF]/.test(typeName) ? typeName : "" }).select("id").single();
+      if (ge || !g) return back(ge?.message ?? "error");
+      subgroupId = g.id;
+      await audit(staff.id, "product_group.create", "product_group", g.id, { name: typeName, from: "new item" });
+    } else return back("type_needs_group");
+  }
+
   const { data: created, error } = await db()
     .from("products")
-    .insert({ ...p, name_en: p.name_en || p.name_ar })
+    .insert({ ...p, subgroup_id: subgroupId, name_en: p.name_en || p.name_ar, options, active: form.get("active") === "on" })
     .select("id")
     .single();
   if (error || !created) return back(error?.message ?? "error");
-  const { error: e2 } = await db().from("product_variants").insert({ product_id: created.id, sku, price: price ?? "0.00", cost });
-  if (e2) {
+  const rows = combos.map((c, i) => ({
+    product_id: created.id, position: i + 1, option1: c.o1, option2: c.o2,
+    sku: sku ? (combos.length > 1 ? `${sku}-${String(i + 1).padStart(2, "0")}` : sku) : null,
+    price: price ?? "0.00", cost, wholesale_price: wholesale, reorder_level: reorder || null, ...(sale ?? {}),
+  }));
+  if (rows.some((r) => r.sku && !CODE.test(r.sku))) { await db().from("products").delete().eq("id", created.id); return back("sku"); }
+  const { data: vs, error: e2 } = await db().from("product_variants").insert(rows).select("id");
+  if (e2 || !vs) {
     await db().from("products").delete().eq("id", created.id);
-    return back(friendly(e2.message));
+    return back(friendly(e2?.message ?? "error"));
   }
-  await audit(staff.id, "product.create", "product", created.id, { sku });
+  if (levelPrices.length) {
+    const { error: e3 } = await db().from("variant_level_prices").upsert(vs.flatMap((v) => levelPrices.map((l) => ({ variant_id: v.id, ...l }))));
+    if (e3) return back(e3.message);
+  }
+  await audit(staff.id, "product.create", "product", created.id, { sku, items: vs.length });
   revalidatePath("/products");
   redirect(`/products/${created.id}?ok=1`);
 }

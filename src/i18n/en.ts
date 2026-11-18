@@ -135,6 +135,18 @@ const en: Dict = {
     marketing: "Marketing",
   },
   products: {
+    newForm: {
+      nameRequired: "Type the item's name (Arabic or English).",
+      typeNeedsGroup: "Choose a group first, then type the new type under it.",
+      barcode: "Barcode (SKU)", group: "Group", type: "Type / sub-group", typeHint: "Choose a type, or type a new one and it is added to the list.",
+      nameAr: "Item name (Arabic)", nameEn: "Item name (English)", unit: "Main unit", active: "Active (sold)", service: "Service (no stock)",
+      prices: "Prices", cost: "Purchase price", price: "Sale price", wholesale: "Wholesale price", reorder: "Reorder level",
+      offer: "Offer price for a period", offerHint: "From the first day to the last (both included) the cashier sells at this price, then it goes back to the normal price.",
+      offerPrice: "Offer price", from: "From", to: "To",
+      variants: "Colours and sizes", variantsHint: "Optional. Each colour/size becomes its own item with its own barcode (barcode-01, -02 …) and its own stock. Separate them with commas.",
+      colours: "Colours", coloursPh: "e.g. Red, Blue, Black", sizes: "Sizes", sizesPh: "e.g. S, M, L, XL", tooMany: "Too many colours × sizes (at most 100 items).",
+      save: "Save item", colourName: "Color", sizeName: "Size",
+    },
     extras: {
       title: "Prices & stock levels",
       hint: "Wholesale price, reorder level and a sale price for a period. The cashier uses the sale price only between its dates (Riyadh time).",
