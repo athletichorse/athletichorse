@@ -293,7 +293,7 @@ else {
   const offer = await page.locator('input[name^="sale:"]').first().inputValue();
   if (Number(wh) !== 40 || Number(offer) !== 45) fail("new item", `wholesale ${wh}, offer ${offer}`); else ok("new item: wholesale price and offer price saved");
   await page.goto(BASE + "/products/groups");
-  if (!/Speed ropes/.test(await page.locator("main").innerText())) fail("new item", "the new type was not added to the list"); else ok("a type typed by hand is added to the groups list");
+  if (!(await page.locator('input[name="name_en"][value="Speed ropes"]').count())) fail("new item", "the new type was not added to the list"); else ok("a type typed by hand is added to the groups list");
 }
 
 // upload file
