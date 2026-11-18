@@ -26,6 +26,7 @@ const PATHS = {
   drawer: "M3 6h18v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6Zm0 0 2-3h14l2 3M10 11h4",
   card: "M3 6h18v12H3V6Zm0 4h18M7 15h4",
   back: "M15 18l-6-6 6-6",
+  expense: "M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2V3Zm4 5h6M9 12h6m-3 4h3",
 } as const;
 export type IconName = keyof typeof PATHS;
 

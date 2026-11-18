@@ -15,7 +15,7 @@ import { searchVariantsAction, type VariantHit } from "@/app/actions/stock";
 import {
   cashMovementAction, closeShiftAction, findInvoiceForReturnAction, posLevelPricesAction, loadQuotationAction, openShiftAction,
   postReturnAction, postSaleAction, quickAddCustomerAction, quoteNoForTempAction, saveQuotationAction, searchCustomersAction, updateQuotationAction,
-  cancelQuotationAction, type DrawerKind, type InvoiceForReturn, type PosCustomer,
+  cancelQuotationAction, shiftExpensesAction, type ShiftExpense, type DrawerKind, type InvoiceForReturn, type PosCustomer,
 } from "@/app/actions/pos";
 
 /** base = the normal price; listPrice = the price for this customer (their price level), price = what is charged */
@@ -84,17 +84,17 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
   const s = shift!;
   const locName = p.locations.find((l) => l.id === s.locationId)?.name ?? "";
   // the cashier's start screen is a set of big tiles; a tile opens that screen ("home" = the tiles)
-  const [view, setView] = useState<"home" | "sale" | "cash" | "close">("home");
+  const [view, setView] = useState<"home" | "sale" | "cash" | "close" | "expenses">("home");
   const panel = view === "cash" || view === "close" ? view : "";
   const setPanel = (v: "" | "cash" | "close") => setView(v || "sale");
-  const open = (k: "sell" | "desk" | "collect" | "returns" | "cash" | "close") => {
+  const open = (k: "sell" | "desk" | "collect" | "returns" | "cash" | "close" | "expenses") => {
     p.setMsg(null);
-    if (k === "cash" || k === "close") return setView(k);
+    if (k === "cash" || k === "close" || k === "expenses") return setView(k);
     p.setTab(k); setView("sale");
   };
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
-  const [cashKind, setCashKind] = useState<DrawerKind>("cash_out");
+  const [cashKind, setCashKind] = useState<DrawerKind>(p.can.cashOut ? "cash_out" : "customer_payment");
   const [expenseType, setExpenseType] = useState("");
   const [payCustomer, setPayCustomer] = useState<PosCustomer | null>(null);
   const [payMethod, setPayMethod] = useState(p.methods.find((m) => m.kind === "cash")?.code ?? "cash");
@@ -119,11 +119,12 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
   };
 
   const T = t.pos.tiles, O = p.otherTiles;
-  const tiles: { key: "sell" | "desk" | "collect" | "returns" | "cash" | "close"; icon: IconName; label: string; other: string; chip: string }[] = [
+  const tiles: { key: "sell" | "desk" | "collect" | "returns" | "cash" | "close" | "expenses"; icon: IconName; label: string; other: string; chip: string }[] = [
     ...p.tabs.map((k) => ({
       key: k, icon: (k === "sell" ? "receipt" : k === "desk" ? "quote" : k === "collect" ? "cash" : "undo") as IconName,
       label: T[k], other: O[k], chip: k === "sell" ? t.pos.sell : k === "desk" ? t.pos.desk : k === "collect" ? t.pos.collect : t.pos.returns,
     })),
+    ...(p.can.collect || p.can.shift ? [{ key: "expenses" as const, icon: "expense" as IconName, label: T.expenses, other: O.expenses, chip: t.pos.expenses.tile }] : []),
     ...(p.can.cashOut || p.can.collect || p.can.shift ? [{ key: "cash" as const, icon: "drawer" as IconName, label: T.cash, other: O.cash, chip: t.pos.extra.drawer }] : []),
     ...(p.can.shift ? [{ key: "close" as const, icon: "card" as IconName, label: T.close, other: O.close, chip: t.pos.closeShift }] : []),
   ];
@@ -146,7 +147,6 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
           <select className="input" value={cashKind} onChange={(e) => setCashKind(e.target.value as DrawerKind)}>
             {p.can.cashOut && <option value="cash_out">{t.pos.cashOut}</option>}
             {p.can.cashOut && <option value="cash_in">{t.pos.cashIn}</option>}
-            <option value="expense">{t.pos.extra.expense}</option>
             <option value="customer_payment">{t.pos.extra.customerPayment}</option>
           </select>
           <input className="input" dir="ltr" inputMode="decimal" placeholder={t.pos.amount} value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -237,6 +237,7 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
         </div>
       )}
 
+      {view === "expenses" && <ExpensesView {...p} off={off} />}
       {view === "sale" && (p.tab === "sell" || p.tab === "desk") && <SaleView key={p.tab} {...p} mode={p.tab} off={off} />}
       {view === "sale" && p.tab === "collect" && <SaleView key="collect" {...p} mode="collect" off={off} />}
       {view === "sale" && p.tab === "returns" && <ReturnView {...p} off={off} />}
@@ -824,5 +825,92 @@ function ReturnView(p: Props & { off: OfflineTill; setMsg: (m: { ok: boolean; te
       </div>
       <button className="btn-primary w-full" disabled={busy || (noReceipt ? !items.length : !inv)} onClick={submit}>{busy ? t.pos.paying : t.pos.refund}</button>
     </section>
+  );
+}
+
+/** Expenses paid from the drawer: record one (type, amount, note) and see this shift's list with its total. */
+function ExpensesView(p: Props & { off: OfflineTill; setMsg: (m: { ok: boolean; text: string; href?: string } | null) => void; err: (c: string) => string }) {
+  const { t, locale, err, off } = p;
+  const E = t.pos.expenses;
+  const s = p.shift!;
+  const [type, setType] = useState(p.expenseTypes[0]?.id ?? "");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [mgr, setMgr] = useState({ u: "", p: "" });
+  const [busy, setBusy] = useState(false);
+  const [list, setList] = useState<{ items: ShiftExpense[]; total: string } | null>(null);
+  const clientId = useRef(uuid());
+
+  const load = useRef(async () => {
+    try { const r = await shiftExpensesAction(s.id, locale); if (r.ok) setList({ items: r.items, total: r.total }); } catch { /* offline: keep what is shown */ }
+  });
+  useEffect(() => { void load.current(); }, []);
+  // waiting on this device (no internet)
+  const waiting = off.ops.filter((o) => o.kind === "drawer" && o.shiftId === s.id && o.payload.kind === "expense");
+
+  async function save() {
+    if (!/^\d{1,9}(\.\d{1,2})?$/.test(amount.trim()) || Number(amount) <= 0) return p.setMsg({ ok: false, text: err("bad_amount") });
+    if (!type) return p.setMsg({ ok: false, text: err("expense_type_required") });
+    const keepOffline = () => {
+      if (!off.enabled) return p.setMsg({ ok: false, text: t.pos.offline.notEnabled });
+      if (p.approval.discount) return p.setMsg({ ok: false, text: t.pos.offline.noApprovalOffline });
+      off.saveDrawer({ clientId: clientId.current, label: `${p.expenseTypes.find((x) => x.id === type)?.name ?? ""} ${amount.trim()}`, payload: { kind: "expense", amount: amount.trim(), reason: note, expenseTypeId: type } });
+      clientId.current = uuid(); setAmount(""); setNote("");
+      p.setMsg({ ok: true, text: t.pos.offline.savedOfflineDrawer });
+    };
+    if (!off.online) return keepOffline();
+    setBusy(true);
+    try {
+      const r = await cashMovementAction({ clientId: clientId.current, shiftId: s.id, kind: "expense", amount: amount.trim(), reason: note, expenseTypeId: type, approverUsername: mgr.u, approverPin: mgr.p });
+      if (r.ok) { clientId.current = uuid(); setAmount(""); setNote(""); setMgr({ u: "", p: "" }); p.setMsg({ ok: true, text: E.saved }); void load.current(); }
+      else p.setMsg({ ok: false, text: err(r.error) });
+    } catch (e) { if (looksOffline(e)) keepOffline(); else p.setMsg({ ok: false, text: String(e) }); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_1fr]" data-testid="expenses">
+      <section className="card space-y-3">
+        <h2 className="card-title">{E.title}</h2>
+        <div><label className="label">{E.type}</label>
+          <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
+            {p.expenseTypes.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+          </select></div>
+        <div><label className="label">{E.amount}</label><input className="input" dir="ltr" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
+        <div><label className="label">{E.note}</label><input className="input" value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} /></div>
+        {p.approval.discount && <Approval t={t} mgr={mgr} setMgr={setMgr} />}
+        <button className="btn-primary w-full" disabled={busy} onClick={() => void save()}>{busy ? t.pos.paying : E.save}</button>
+      </section>
+      <section className="card overflow-hidden p-0">
+        <div className="flex flex-wrap items-center gap-2 px-5 pt-5">
+          <h2 className="card-title mb-0 flex-1">{E.thisShift}</h2>
+          {list && <span className="font-semibold" data-testid="expenses-total">{E.total}: <span dir="ltr">{list.total}</span></span>}
+        </div>
+        {waiting.length > 0 && (
+          <ul className="mx-5 mt-3 space-y-1 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+            {waiting.map((o) => <li key={o.clientId}>{E.waiting}: {o.label}</li>)}
+          </ul>
+        )}
+        {list && list.items.length === 0 && !waiting.length && <p className="px-5 py-6 text-sm text-gray-500">{E.none}</p>}
+        {list && list.items.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="table mt-3">
+              <thead><tr><th>{E.type}</th><th>{E.amount}</th><th>{E.note}</th><th>{E.time}</th><th>{E.by}</th></tr></thead>
+              <tbody>
+                {list.items.map((x) => (
+                  <tr key={x.id}>
+                    <td className="cell-title">{x.type}</td>
+                    <td data-label={E.amount} dir="ltr" className="font-medium">{x.amount}</td>
+                    <td data-label={E.note}>{x.reason || "—"}</td>
+                    <td data-label={E.time} className="text-xs">{formatDateTime(new Date(x.at), locale)}</td>
+                    <td data-label={E.by} className="text-xs">{x.by}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

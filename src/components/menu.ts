@@ -25,6 +25,7 @@ export function buildSections(t: Dict, perms: Perms, role?: Role): Section[] {
         { label: t.menu.pos, href: "/pos" },
         ...(perms.has("pos.past_shifts") ? [{ label: t.pos.extra.pastShifts, href: "/pos/shifts" }] : []),
         ...(any(perms, "pos.past_shifts", "pos.shift") ? [{ label: t.pos.extra.endOfDay, href: "/pos/day" }] : []),
+        ...(perms.has("settings.edit") ? [{ label: t.pos.expenses.manageTypes, href: "/pos/expense-types" }] : []),
       ],
     },
     {

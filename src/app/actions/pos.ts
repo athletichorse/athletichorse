@@ -604,3 +604,29 @@ export async function expenseTypesAction(locale: "ar" | "en"): Promise<{ id: str
   const { data } = await db().from("expense_types").select("id, name_en, name_ar").eq("active", true).order("sort");
   return (data ?? []).map((e) => ({ id: e.id, name: (locale === "ar" && e.name_ar) || e.name_en }));
 }
+
+// ---------------------------------------------------------------- expenses screen
+export type ShiftExpense = { id: string; at: string; type: string; amount: string; reason: string; by: string };
+/** Expenses paid from this shift's drawer, newest first, with their total. */
+export async function shiftExpensesAction(shiftId: string, locale: "ar" | "en"): Promise<PosResult<{ items: ShiftExpense[]; total: string }>> {
+  const s = await requireStaff();
+  if (!has(s, "pos.collect", "pos.shift")) return { ok: false, error: "forbidden" };
+  if (!isId(shiftId)) return { ok: false, error: "bad_request" };
+  const { data: shift } = await db().from("pos_shifts").select("location_id").eq("id", shiftId).maybeSingle();
+  if (!shift || !canUseLocation(s, shift.location_id)) return { ok: false, error: "location_not_allowed" };
+  const { data: rows } = await db().from("drawer_entries").select("id, created_at, amount, reason, expense_type_id, created_by")
+    .eq("shift_id", shiftId).eq("kind", "expense").order("created_at", { ascending: false }).limit(200);
+  const typeIds = [...new Set((rows ?? []).map((r) => r.expense_type_id).filter(Boolean))] as string[];
+  const userIds = [...new Set((rows ?? []).map((r) => r.created_by))];
+  const [{ data: types }, { data: people }] = await Promise.all([
+    typeIds.length ? db().from("expense_types").select("id, name_en, name_ar").in("id", typeIds) : Promise.resolve({ data: [] as { id: string; name_en: string; name_ar: string }[] }),
+    userIds.length ? db().from("profiles").select("id, full_name").in("id", userIds) : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
+  ]);
+  let total = 0n;
+  const items = (rows ?? []).map((r) => {
+    total += toHalalas(String(r.amount));
+    const ty = types?.find((x) => x.id === r.expense_type_id);
+    return { id: r.id, at: r.created_at, type: ty ? (locale === "ar" && ty.name_ar) || ty.name_en : "", amount: fmt(r.amount), reason: r.reason ?? "", by: people?.find((x) => x.id === r.created_by)?.full_name ?? "" };
+  });
+  return { ok: true, items, total: formatDecimal(total) };
+}
