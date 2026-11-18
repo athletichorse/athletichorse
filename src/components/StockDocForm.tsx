@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import type { Dict, Locale } from "@/i18n";
 import { postStockDocAction, searchVariantsAction, type StockKind, type VariantHit } from "@/app/actions/stock";
 import { looksOffline } from "@/lib/offline";
+import { docNumber } from "@/lib/doc-number";
 import { StockQueueList, useStockOffline } from "./useStockOffline";
 
 export type StockLine = { variantId: string; name: string; options: string; sku: string | null; qty: string; price?: string };
@@ -87,7 +88,7 @@ export function StockDocForm({ t, locale, kind, locations, destinations, default
     }
     setBusy(false);
     if (r.ok) {
-      setMsg({ ok: true, text: (r.duplicate ? t.stock.duplicate : t.stock.posted) + r.docNo });
+      setMsg({ ok: true, text: (r.duplicate ? t.stock.duplicate : t.stock.posted) + docNumber(kind, r.docNo) });
       setLines([]);
       setNote("");
       setReason("");

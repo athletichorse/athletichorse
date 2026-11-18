@@ -273,6 +273,11 @@ const en: Dict = {
     brandNote: "Brand on imported items: Alhisan Alriyadi.",
   },
   stock: {
+    moves: {
+      subtitle: "Transfers between places, goods received, issues and counts. Stock changes as soon as a document is saved.",
+      newTransfer: "New transfer", newRequest: "New transfer request", newReceipt: "New goods received", newIssue: "New issue", count: "Count",
+      all: "All", incoming: "Incoming to me", inTransit: "On the way: waiting to be received", number: "No.", date: "Date", from: "From", to: "To", items: "Items", by: "By", branch: "Branch / store", allBranches: "All branches and stores",
+    },
     offline: {
       saved: "No internet — saved on this device. It is posted automatically when the internet is back.",
       waiting: "Saved on this device, waiting for internet",
@@ -285,7 +290,7 @@ const en: Dict = {
       fromCopy: "No internet: searching the item list saved on this device.",
     },
     flow: {
-      tabs: { stock: "Stock", docs: "Documents", requests: "Restock requests", shortages: "Shortages" },
+      tabs: { stock: "Stock by store", docs: "Stock movements", requests: "Transfer requests", shortages: "Branch shortages", warehouses: "Branch stores" },
       countSheet: "Count sheet",
       send: "Send transfer",
       status: { done: "Done", in_transit: "In transit", received: "Received" },
@@ -346,9 +351,9 @@ const en: Dict = {
     search: "Search name, SKU or scan a barcode…",
     scanOrSearch: "Scan or type SKU / name, then Enter",
     noStock: "No stock recorded here yet. Use Receive or Count to start.",
-    receipt: "Receive",
+    receipt: "Goods received",
     transfer: "Transfer",
-    write_off: "Write-off",
+    write_off: "Issue",
     count: "Count",
     adjust: "Adjust",
     newDoc: "New",
@@ -358,8 +363,8 @@ const en: Dict = {
     remove: "Remove",
     post: "Post",
     posting: "Posting…",
-    posted: "Posted — document #",
-    duplicate: "Already posted (same request) — document #",
+    posted: "Posted — document ",
+    duplicate: "Already posted (same request) — document ",
     noLines: "Add at least one item.",
     notFound: "Nothing found",
     service: "Service — no stock",

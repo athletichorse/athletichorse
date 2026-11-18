@@ -334,9 +334,18 @@ if (!/Posted/.test(m1)) fail("stock", `receipt: ${m1}`); else ok("stock receipt 
 const m2 = await stockDoc(page, "transfer", "E2E-ROPE-1", 4, { to: "Jeddah Branch" });
 if (!/Posted/.test(m2)) fail("stock", `transfer: ${m2}`); else ok("stock transfer to Jeddah sent (in transit)");
 // Jeddah receives it: all 4 arrived
-const trNo = (m2.match(/#(\d+)/) ?? [])[1];
-await page.goto(BASE + "/stock/docs?status=in_transit", { waitUntil: "networkidle" });
-await page.locator(`a:has-text("#${trNo}")`).first().click();
+const trNo = (m2.match(/TR-\d{5}/) ?? [])[0];
+if (!trNo) fail("stock", `transfer number should look like TR-00012: ${m2}`);
+// stock movements page: new-document buttons, filters, the transfer with its prefix and "on the way"
+await page.goto(BASE + "/stock/docs", { waitUntil: "networkidle" });
+const mvBtns = await page.locator("[data-testid=moves-actions]").innerText();
+for (const w of ["New transfer", "New transfer request", "New goods received", "New issue", "Count"]) if (!mvBtns.includes(w)) fail("stock", `stock movements: button "${w}" missing`);
+await page.click('[data-testid=moves-filters] a:text-is("Incoming to me")');
+await page.waitForURL(/incoming=1/);
+const inc = await page.locator("main table").innerText();
+if (!inc.includes(trNo) || !/On the way: waiting to be received/.test(inc)) fail("stock", `incoming to me: ${inc.slice(0, 200)}`);
+else ok(`stock movements: buttons, filters; incoming transfer ${trNo} shows "on the way"`);
+await page.locator(`a:has-text("${trNo}")`).first().click();
 await page.waitForSelector("[data-testid=receive]", { timeout: 15000 });
 await page.click('button:text-is("Receive transfer")');
 await page.waitForFunction(() => document.body.innerText.includes("Received"), null, { timeout: 20000 });
