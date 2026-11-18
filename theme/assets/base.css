@@ -2064,3 +2064,5 @@ html[dir="rtl"] .ah-1111__badge-ring { font-size: 12.5px; letter-spacing: 0; }
 .ah-article__back { display: inline-flex; margin-bottom: var(--section-gap); }
 
 .ah-1111__rail { scroll-margin-top: calc(var(--header-h, 120px) + 8px); }
+.ah-1111__badge-ring { letter-spacing: 1px; font-size: 11px; }
+html[dir="rtl"] .ah-1111__badge-ring { font-size: 12px; letter-spacing: 0; }
