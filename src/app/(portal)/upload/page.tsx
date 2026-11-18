@@ -21,7 +21,7 @@ export default async function UploadPage() {
     <>
       <PageHeader title={t.upload.title} subtitle={t.upload.subtitle} t={t} />
       <ProductUpload t={t} />
-      {me.perms.has("products.edit") && <div className="mt-6"><PriceFile t={t} levels={levels} stores={stores} /></div>}
+      {me.perms.has("products.edit") && <div className="mt-6"><PriceFile t={t} levels={levels} stores={stores} canAdd={me.perms.has("products.add") || me.perms.has("products.edit")} /></div>}
     </>
   );
 }

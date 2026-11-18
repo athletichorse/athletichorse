@@ -52,7 +52,7 @@ const GROUP_EN: Record<string, string> = {
   "ألعاب": "Toys & Games",
   "الحديد": "Weights",
 };
-const UNIT_MAP: Record<string, string> = { "قطعة": "piece", "زوج": "pair", "طقم": "set", "كرتونة": "box", "كجم": "kg", "متر": "m" };
+export const UNIT_MAP: Record<string, string> = { "قطعة": "piece", "زوج": "pair", "طقم": "set", "كرتونة": "box", "كجم": "kg", "متر": "m" };
 
 const norm = (h: unknown) => String(h ?? "").trim().toLowerCase();
 const str = (v: unknown) => (v === null || v === undefined ? "" : String(v).trim());

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { assertPermission, canUseLocation, requireStaff } from "@/lib/auth";
 import { postStockDocAction } from "./stock";
+import { UNIT_MAP } from "@/lib/product-import";
 import { db } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
 import { formatDecimal, toHalalas } from "@/lib/money";
@@ -326,16 +327,58 @@ export async function previewPricesAction(rows: PriceRow[]): Promise<{ ok: true;
 }
 
 /** Saves a names & prices file (only changed fields; website prices are kept). */
-export async function applyPricesAction(rows: PriceRow[], countIds: Record<string, string> = {}): Promise<{ ok: true; updated: number; notFound: number; websiteKept: number; counts: { location: string; docNo: number }[] } | { ok: false; error: string }> {
+export async function applyPricesAction(rows: PriceRow[], countIds: Record<string, string> = {}, opts: { addMissing?: boolean } = {}): Promise<{ ok: true; updated: number; notFound: number; websiteKept: number; added: number; activated: number; counts: { location: string; docNo: number }[] } | { ok: false; error: string }> {
   const s = await requireStaff();
   if (!s.perms.has("products.edit")) return { ok: false, error: "forbidden" };
   const list = (Array.isArray(rows) ? rows : []).slice(0, 20_000);
-  let updated = 0, notFound = 0, websiteKept = 0;
+  let updated = 0, notFound = 0, websiteKept = 0, added = 0, activated = 0;
   const counts: { location: string; docNo: number }[] = [];
+
+  // which codes are already in the system (as an item's code or an extra code)
+  const known = new Set<string>();
+  for (let i = 0; i < list.length; i += 500) {
+    const skus = list.slice(i, i + 500).map((r) => r.sku);
+    const [{ data: vs }, { data: pcs }] = await Promise.all([
+      db().from("product_variants").select("sku").in("sku", skus),
+      db().from("product_codes").select("code").in("code", skus),
+    ]);
+    for (const v of vs ?? []) if (v.sku) known.add(v.sku);
+    for (const c of pcs ?? []) known.add(c.code);
+  }
+
+  // 1. items that are not in the system yet: added from the same sheet (sellable once they have a price)
+  if (opts.addMissing && (s.perms.has("products.add") || s.perms.has("products.edit"))) {
+    const fresh = list.filter((r) => !known.has(r.sku) && /^[A-Za-z0-9._/#*+-]{1,40}$/.test(r.sku) && (r.name_ar || r.name_en));
+    for (let i = 0; i < fresh.length; i += 500) {
+      const chunk = fresh.slice(i, i + 500).map((r) => ({
+        ref: r.sku, sku: r.sku, name_ar: r.name_ar ?? "", name_en: r.name_en ?? "", group_ar: r.group ?? "",
+        unit: UNIT_MAP[r.unit ?? ""] ?? "", price: r.price && Number(r.price) > 0 ? r.price : null, active: !!(r.price && Number(r.price) > 0),
+      }));
+      const { error } = await db().rpc("import_products", { p_rows: chunk });
+      if (error) return { ok: false, error: error.message };
+      added += chunk.length;
+    }
+    if (fresh.length) await audit(s.id, "products.add_from_prices_file", "product", null, { added: fresh.length });
+  }
+
+  // 2. items still at price 0 and not for sale (added without a price) are put on sale once they get a price
+  const priced = list.filter((r) => r.price && Number(r.price) > 0).map((r) => r.sku);
+  const toActivate: { id: string; product_id: string }[] = [];
+  for (let i = 0; i < priced.length; i += 500) {
+    const { data } = await db().from("product_variants").select("id, product_id").in("sku", priced.slice(i, i + 500)).eq("active", false).eq("price", 0);
+    toActivate.push(...(data ?? []));
+  }
+
   for (let i = 0; i < list.length; i += 500) {
     const { data, error } = await db().rpc("update_names_prices", { p_rows: list.slice(i, i + 500), p_user: s.id, p_can_cost: s.perms.has("products.view_cost") });
     if (error) return { ok: false, error: error.message };
     updated += Number(data?.updated ?? 0); notFound += Number(data?.not_found ?? 0); websiteKept += Number(data?.website_price_kept ?? 0);
+  }
+  for (let i = 0; i < toActivate.length; i += 500) {
+    const chunk = toActivate.slice(i, i + 500);
+    await db().from("product_variants").update({ active: true }).in("id", chunk.map((v) => v.id)).gt("price", 0);
+    await db().from("products").update({ active: true }).in("id", [...new Set(chunk.map((v) => v.product_id))]);
+    activated += chunk.length;
   }
   // one column per price level: upsert those prices (website items too: levels are portal-only)
   const { data: lvs } = await db().from("price_levels").select("id").neq("code", "wholesale");
@@ -396,5 +439,5 @@ export async function applyPricesAction(rows: PriceRow[], countIds: Record<strin
     }
   }
   revalidatePath("/products");
-  return { ok: true, updated, notFound, websiteKept, counts };
+  return { ok: true, updated, notFound, websiteKept, added, activated, counts };
 }

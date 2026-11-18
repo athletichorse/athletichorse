@@ -259,6 +259,29 @@ else ok("item price for the VIP level saved on the product page (32.00 instead o
   else ok("prices file: a column per level (\"سعر VIP\") — preview 32.00 → 30.00, saved");
   if (!/Counts posted: Jeddah Branch CT-\d{5}/.test(res) || !/Quantity in Jeddah Branch/.test(prev)) fail("prices file", `store column: ${res} | ${prev.replace(/\s+/g, " ").slice(0, 160)}`);
   else ok("prices file: a column per store (\"رصيد Jeddah Branch\" = 5) — previewed, saved as a count");
+  // the owner's old-system sheet as it is: adds missing items; an item without a price is not for sale until re-uploaded with one
+  const egy = `${OUT}/egypt-sheet.csv`;
+  const upload = async (rowsCsv) => {
+    fs.writeFileSync(egy, "كود الصنف,الباركود / الرقم البديل,الصنف,وحدة اساسية,المجموعة,سعر الشراء,اخر س شراء,سعر البيع,الرصيد,حالة الضريبه\n" + rowsCsv);
+    await page.goto(BASE + "/upload", { waitUntil: "networkidle" });
+    await page.locator("#prices input[type=file]").setInputFiles(egy);
+    await page.locator("#prices [data-testid=qty-store] select, #prices table").first().waitFor({ timeout: 20000 }).catch(() => {});
+  };
+  await upload("9001,E2E-NEW-1,صنف تجريبي بدون سعر,قطعة,أدوات,10,0,,0,غير خاضع للضريبه\n9002,E2E-NEW-2,صنف تجريبي بسعر,قطعة,أدوات,15,0,25,4,غير خاضع للضريبه\n");
+  if (!(await page.locator("#prices [data-testid=add-missing] input").isChecked().catch(() => false))) fail("prices file", "add missing items option not shown");
+  await page.locator("#prices [data-testid=qty-store] select").selectOption({ label: "Jeddah Branch" });
+  await page.waitForTimeout(800);
+  await page.locator("#prices button.btn-primary").click();
+  await page.locator("#prices .alert-ok, #prices .alert-err").first().waitFor({ timeout: 30000 }).catch(() => {});
+  const r1 = await page.locator("#prices .alert-ok, #prices .alert-err").first().innerText().catch(() => "");
+  if (!/Items added: 2/.test(r1) || !/Jeddah Branch CT-\d{5}/.test(r1)) fail("prices file", `old-system sheet, first upload: ${r1}`);
+  else ok("old-system sheet as it is: 2 missing items added (barcode column used), quantity column put in the chosen store");
+  await upload("9001,E2E-NEW-1,صنف تجريبي بدون سعر,قطعة,أدوات,10,0,12,0,غير خاضع للضريبه\n");
+  await page.locator("#prices button.btn-primary").click();
+  await page.locator("#prices .alert-ok, #prices .alert-err").first().waitFor({ timeout: 30000 }).catch(() => {});
+  const r2 = await page.locator("#prices .alert-ok, #prices .alert-err").first().innerText().catch(() => "");
+  if (!/Put on sale \(got a price\): 1/.test(r2)) fail("prices file", `re-upload with a price: ${r2}`);
+  else ok("same sheet re-uploaded with a price: the item is put on sale");
 }
 where = "groups";
 await page.goto(BASE + "/products/groups");
