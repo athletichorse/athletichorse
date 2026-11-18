@@ -1,3 +1,4 @@
+import { TableColumnFilter } from "@/components/TableColumnFilter";
 import Link from "next/link";
 import { canUseLocation, requirePermission } from "@/lib/auth";
 import { getDict } from "@/lib/locale";
@@ -27,6 +28,7 @@ export default async function RequestsPage() {
         <Link href="/stock/requests/quick" className="btn-ghost no-print">{F.quick}</Link>
       </PageHeader>
       <RequestForm t={t} locale={locale} mine={mine.map((l) => ({ id: l.id, name: name(l.id) }))} all={(locs ?? []).map((l) => ({ id: l.id, name: name(l.id) }))} />
+      <TableColumnFilter t={t}>
       <div className="card mt-6 overflow-hidden p-0"><div className="overflow-x-auto">
         <table className="table" data-export>
           <thead><tr><th>#</th><th>{F.forStore}</th><th>{F.fromStore}</th><th>{t.stock.lines}</th><th>{F.date}</th><th></th><th></th></tr></thead>
@@ -56,6 +58,7 @@ export default async function RequestsPage() {
           </tbody>
         </table>
       </div></div>
+      </TableColumnFilter>
     </>
   );
 }

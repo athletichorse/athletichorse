@@ -6,6 +6,7 @@ import { postStockDocAction, searchVariantsAction, type StockKind, type VariantH
 import { looksOffline } from "@/lib/offline";
 import { docNumber } from "@/lib/doc-number";
 import { StockQueueList, useStockOffline } from "./useStockOffline";
+import { ItemFinderButton } from "./ItemFinderButton";
 
 export type StockLine = { variantId: string; name: string; options: string; sku: string | null; qty: string; price?: string };
 type Line = StockLine;
@@ -32,13 +33,15 @@ export function StockDocForm({ t, locale, kind, locations, destinations, default
   const off = useStockOffline(locale);
   const errText = (code: string) => (t.stock.errors as Record<string, string>)[code] ?? code;
 
-  function add(h: VariantHit) {
+  /** Adds an item (scan = 1; the item finder may give a quantity). */
+  function add(h: VariantHit, qty?: string) {
     if (h.isService) return setMsg({ ok: false, text: t.stock.service });
+    const n = qty && Number(qty) > 0 ? qty : null;
     setLines((ls) => {
       const i = ls.findIndex((l) => l.variantId === h.variantId);
-      if (i >= 0 && kind !== "count") return ls.map((l, j) => (j === i ? { ...l, qty: String(Number(l.qty || 0) + 1) } : l));
-      if (i >= 0) return ls;
-      return [...ls, { variantId: h.variantId, name: h.name, options: h.options, sku: h.sku, qty: kind === "count" ? "" : "1", price: h.price }];
+      if (i >= 0 && kind !== "count") return ls.map((l, j) => (j === i ? { ...l, qty: String(Number(l.qty || 0) + Number(n ?? 1)) } : l));
+      if (i >= 0) return n ? ls.map((l, j) => (j === i ? { ...l, qty: n } : l)) : ls;
+      return [...ls, { variantId: h.variantId, name: h.name, options: h.options, sku: h.sku, qty: n ?? (kind === "count" ? "" : "1"), price: h.price }];
     });
     setTerm("");
     setHits(null);
@@ -136,10 +139,10 @@ export function StockDocForm({ t, locale, kind, locations, destinations, default
 
       <section className="card">
         <h2 className="card-title">{t.stock.lines} ({lines.length})</h2>
-        <div className="relative">
+        <div className="relative flex flex-wrap gap-2">
           <input
             ref={searchRef}
-            className="input"
+            className="input min-w-0 flex-1"
             placeholder={t.stock.scanOrSearch}
             value={term}
             autoFocus
@@ -151,8 +154,9 @@ export function StockDocForm({ t, locale, kind, locations, destinations, default
               }
             }}
           />
+          <ItemFinderButton t={t} locale={locale} locationId={loc || null} onPick={(h, q) => add(h, q)} />
           {hits && (
-            <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-[var(--line)] bg-white shadow-lg">
+            <div className="absolute top-full z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-[var(--line)] bg-white shadow-lg">
               {hits.length === 0 && <div className="px-4 py-3 text-sm text-gray-500">{t.stock.notFound}</div>}
               {hits.map((h) => (
                 <button key={h.variantId} type="button" onClick={() => add(h)} className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-start text-sm hover:bg-gray-50">

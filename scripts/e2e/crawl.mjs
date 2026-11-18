@@ -350,6 +350,24 @@ await page.waitForSelector("[data-testid=receive]", { timeout: 15000 });
 await page.click('button:text-is("Receive transfer")');
 await page.waitForFunction(() => document.body.innerText.includes("Received"), null, { timeout: 20000 });
 ok("transfer received at Jeddah");
+// search by columns on the Stores lists: stock movements, number starts with "TR-"
+await page.goto(BASE + "/stock/docs", { waitUntil: "networkidle" });
+await page.click("[data-testid=column-filter-open]");
+const cf = page.locator("[data-testid=column-filter]");
+await cf.locator('select[aria-label="No. · Match"]').selectOption("starts");
+await cf.locator('input[aria-label="No."]').fill("TR-");
+await page.waitForSelector("[data-testid=column-filter-count]", { timeout: 10000 }).catch(() => {});
+const visibleNos = await page.locator("main table tbody tr:visible td:first-child").evaluateAll((tds) => tds.map((td) => td.innerText.trim().slice(0, 8)));
+if (!visibleNos.length || visibleNos.some((x) => !x.startsWith("TR-"))) fail("stock", `column filter on movements: ${visibleNos.join(" | ")}`);
+else ok(`search by columns on stock movements: only TR- rows (${visibleNos.length})`);
+// stock by store: the item finder in look-up mode (no "Add")
+await page.goto(BASE + "/stock", { waitUntil: "networkidle" });
+await page.click("[data-testid=column-search-open]");
+const sf = page.locator("[data-testid=column-search]");
+await sf.locator('input[aria-label="Code"]').fill("E2E-ROPE");
+await page.waitForFunction(() => /E2E-ROPE-1/.test(document.querySelector("[data-testid=column-search] tbody")?.textContent ?? ""), null, { timeout: 15000 }).catch(() => {});
+if (!/E2E-ROPE-1/.test(await sf.innerText()) || (await sf.locator('button:text-is("Add")').count())) fail("stock", "stock by store: item finder (look-up) did not work");
+else ok("stock by store: search by columns finds the item with its stock here (look-up only)");
 const m3 = await stockDoc(page, "write_off", "E2E-ROPE-1", 1);
 if (!/Posted/.test(m3)) fail("stock", `write-off: ${m3}`); else ok("write-off posts");
 const m4 = await stockDoc(page, "count", "E2E-ROPE-1", 7);

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Dict, Locale } from "@/i18n";
 import { createRequestAction, searchVariantsAction, type VariantHit } from "@/app/actions/stock";
+import { ItemFinderButton } from "./ItemFinderButton";
 
 type Loc = { id: string; name: string };
 type Line = { variantId: string; name: string; options: string; sku: string | null; qty: string };
@@ -21,9 +22,10 @@ export function RequestForm({ t, locale, mine, all }: { t: Dict; locale: Locale;
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const clientId = useRef(crypto.randomUUID());
-  const add = (h: VariantHit) => {
+  const add = (h: VariantHit, qty?: string) => {
     if (h.isService) return;
-    setLines((ls) => ls.some((l) => l.variantId === h.variantId) ? ls.map((l) => (l.variantId === h.variantId ? { ...l, qty: String(Number(l.qty) + 1) } : l)) : [...ls, { variantId: h.variantId, name: h.name, options: h.options, sku: h.sku, qty: "1" }]);
+    const n = qty && Number(qty) > 0 ? Number(qty) : 1;
+    setLines((ls) => ls.some((l) => l.variantId === h.variantId) ? ls.map((l) => (l.variantId === h.variantId ? { ...l, qty: String(Number(l.qty) + n) } : l)) : [...ls, { variantId: h.variantId, name: h.name, options: h.options, sku: h.sku, qty: String(n) }]);
     setTerm(""); setHits(null);
   };
   return (
@@ -34,14 +36,16 @@ export function RequestForm({ t, locale, mine, all }: { t: Dict; locale: Locale;
         <div><label className="label">{F.fromStore}</label><select className="input" value={from} onChange={(e) => setFrom(e.target.value)}><option value="">{F.anyStore}</option>{all.filter((l) => l.id !== to).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></div>
         <div><label className="label">{t.stock.note}</label><input className="input" value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} /></div>
       </div>
-      <div className="relative">
-        <input className="input" placeholder={t.stock.scanOrSearch} value={term} onChange={(e) => setTerm(e.target.value)} onKeyDown={async (e) => {
+      <div className="relative flex flex-wrap gap-2">
+        <input className="input min-w-0 flex-1" placeholder={t.stock.scanOrSearch} value={term} onChange={(e) => setTerm(e.target.value)} onKeyDown={async (e) => {
           if (e.key !== "Enter") return; e.preventDefault();
           const r = await searchVariantsAction(term, locale);
           if (r.length === 1 || r[0]?.exact) add(r[0]); else setHits(r);
         }} />
+        {/* stock shown for the store the items come from (or the store asking) */}
+        <ItemFinderButton t={t} locale={locale} locationId={from || to || null} onPick={(h, q) => add(h, q)} />
         {hits && (
-          <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-[var(--line)] bg-white shadow-lg">
+          <div className="absolute top-full z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-[var(--line)] bg-white shadow-lg">
             {hits.length === 0 && <div className="px-4 py-3 text-sm text-gray-500">{t.stock.notFound}</div>}
             {hits.map((h) => <button key={h.variantId} type="button" onClick={() => add(h)} className="flex w-full justify-between gap-3 px-4 py-2.5 text-start text-sm hover:bg-gray-50"><span>{h.name}{h.options && <span className="text-gray-500"> · {h.options}</span>}</span><span className="font-mono text-xs text-gray-500" dir="ltr">{h.sku ?? ""}</span></button>)}
           </div>

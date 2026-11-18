@@ -1,3 +1,4 @@
+import { TableColumnFilter } from "@/components/TableColumnFilter";
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth";
 import { getDict } from "@/lib/locale";
@@ -45,6 +46,7 @@ export default async function StockLogPage({ searchParams }: { searchParams: Pro
         {kind && <input type="hidden" name="kind" value={kind} />}
         <input name="q" defaultValue={sp.q ?? ""} placeholder={t.stock.search} className="input" />
       </form>
+      <TableColumnFilter t={t} note={t.pos.colSearch.thisPage}>
       <div className="card overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="table" data-export>
@@ -70,6 +72,7 @@ export default async function StockLogPage({ searchParams }: { searchParams: Pro
           </table>
         </div>
       </div>
+      </TableColumnFilter>
       <div className="no-print mt-4 flex items-center justify-end gap-2 text-sm text-gray-600">
         {page > 1 && <Link href={href({ page: page - 1 })} className="btn-ghost">{t.products.prev}</Link>}
         <span>{page} {t.products.of} {pages}</span>

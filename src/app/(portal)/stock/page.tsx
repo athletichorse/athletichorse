@@ -1,3 +1,4 @@
+import { ItemFinderButton } from "@/components/ItemFinderButton";
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth";
 import { getDict } from "@/lib/locale";
@@ -69,10 +70,14 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
         {seeAll && tab("all", t.stock.allLocations)}
         {mine.map((l) => tab(l.id, locale === "ar" ? l.name_ar : l.name_en || l.name_ar))}
       </div>
-      <form className="no-print mb-4" action="/stock">
-        <input type="hidden" name="loc" value={loc} />
-        <input name="q" defaultValue={sp.q ?? ""} placeholder={t.stock.search} className="input" />
-      </form>
+      <div className="no-print mb-4 flex flex-wrap gap-2">
+        <form className="min-w-0 flex-1" action="/stock">
+          <input type="hidden" name="loc" value={loc} />
+          <input name="q" defaultValue={sp.q ?? ""} placeholder={t.stock.search} className="input" />
+        </form>
+        {/* search every item by columns, with its stock at this store */}
+        <ItemFinderButton t={t} locale={locale} locationId={loc ?? null} browse />
+      </div>
 
       <div className="card overflow-hidden p-0">
         <div className="overflow-x-auto">

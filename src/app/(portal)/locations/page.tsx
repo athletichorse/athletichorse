@@ -1,3 +1,4 @@
+import { TableColumnFilter } from "@/components/TableColumnFilter";
 import { requirePermission } from "@/lib/auth";
 import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
@@ -65,6 +66,7 @@ export default async function LocationsPage({ searchParams }: { searchParams: Pr
       {sp.err && <p className="alert-err">{sp.err}</p>}
       {sp.ok && <p className="alert-ok">{t.saved}</p>}
 
+      <TableColumnFilter t={t}>
       <div className="card mb-6 overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="table" data-export>
@@ -85,6 +87,7 @@ export default async function LocationsPage({ searchParams }: { searchParams: Pr
           </table>
         </div>
       </div>
+      </TableColumnFilter>
 
       <div className="no-print grid gap-6 lg:grid-cols-2">
         <form action={saveLocationAction} className="card">
