@@ -19,10 +19,24 @@ export function saleWindow(price: string | null, from: string, to: string):
 }
 
 /** levels: price level id → price (one column per level in the file) */
-export type PriceRow = { sku: string; name_en?: string; name_ar?: string; price?: string; wholesale?: string; cost?: string; levels?: Record<string, string> };
+/** stock: store (location) id → quantity there (one column per store; saved as a count) */
+export type PriceRow = { sku: string; name_en?: string; name_ar?: string; price?: string; wholesale?: string; cost?: string; levels?: Record<string, string>; stock?: Record<string, string> };
 /** A price level the file may have a column for: its column may be called by any of these names. */
 export type LevelColumn = { id: string; names: string[] };
 const norm = (x: string) => x.trim().toLowerCase().replace(/\s+/g, " ");
+/** "مخزن الهضبة", "رصيد مخزن الهضبة", "كمية فرع أكتوبر", "Qty Riyadh Branch" → that store. */
+export function storeForHeader(h: string, stores: LevelColumn[]): string | null {
+  const a = (x: string) => norm(x).replace(/[إأآ]/g, "ا");
+  const x = a(h).replace(/^(رصيد|كمية|الكمية|الرصيد|qty|quantity|stock)\s*[:\-/]?\s*/, "").replace(/\s*[:\-/]?\s*(رصيد|كمية|qty|quantity|stock)$/, "");
+  for (const s of stores) if (s.names.some((n) => n.trim() && a(n) === x)) return s.id;
+  return null;
+}
+/** Quantity in a cell: 0 or more, up to 3 decimals (Arabic digits accepted); empty = not given. */
+export function cleanQty(v: unknown): string | undefined {
+  const s = String(v ?? "").trim().replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/[٫]/g, ".").replace(/[,،\s]/g, "");
+  if (!s || !/^\d{1,9}(\.\d{1,3})?$/.test(s)) return undefined;
+  return String(Number(s));
+}
 /** "VIP", "VIP price", "Price VIP", "سعر VIP", "سعر كبار العملاء" → that level. */
 export function levelForHeader(h: string, levels: LevelColumn[]): string | null {
   const x = norm(h).replace(/^(سعر|price)\s+/, "").replace(/\s+(price|سعر)$/, "");
@@ -31,14 +45,18 @@ export function levelForHeader(h: string, levels: LevelColumn[]): string | null 
 }
 
 const HEAD: Record<keyof PriceRow, RegExp> = {
-  sku: /^(sku|barcode|code|باركود|الباركود|كود|الكود|رقم الصنف)$/i,
+  // a code column: any header that mentions barcode / code / SKU (e.g. "الباركود / الرقم", "Item code")
+  sku: /(sku|barcode|bar code|\bcode\b|item no\.?|item number|باركود|كود|رمز الصنف|رقم الصنف)/i,
   levels: /^$/, // not a header: one column per price level (see levelForHeader)
-  name_en: /^(name|name.?en|english name|title|الاسم بالإنجليزي|الاسم انجليزي)$/i,
-  name_ar: /^(name.?ar|arabic name|الاسم|الاسم بالعربي|اسم الصنف|الاسم عربي)$/i,
-  price: /^(price|sale price|selling price|السعر|سعر البيع)$/i,
-  wholesale: /^(wholesale|wholesale price|سعر الجملة|الجملة)$/i,
-  cost: /^(cost|cost price|التكلفة|سعر التكلفة)$/i,
+  stock: /^$/, // not a header: one column per store (see storeForHeader)
+  name_en: /^(name|name.?en|english name|item name|title|الاسم بالإنجليزي|الاسم انجليزي|اسم الصنف \(en\)|اسم الصنف انجليزي)$/i,
+  name_ar: /^(name.?ar|arabic name|الاسم|الاسم بالعربي|اسم الصنف|الاسم عربي|اسم الصنف \(ع\)|اسم الصنف عربي|البيان|الصنف)$/i,
+  price: /^(price|sale price|selling price|retail price|السعر|سعر البيع|سعر القطاعي|سعر التجزئة|سعر المستهلك)$/i,
+  wholesale: /^(wholesale|wholesale price|سعر الجملة|الجملة|جملة|سعر بيع الجملة)$/i,
+  cost: /^(cost|cost price|purchase price|التكلفة|سعر التكلفة|سعر الشراء|تكلفة)$/i,
 };
+/** Header as people write it: no extra spaces, no trailing ":", no hidden characters, one kind of alef. */
+export const normHeader = (h: unknown) => String(h ?? "").replace(/[\u200e\u200f\u00a0\ufeff]/g, " ").replace(/\s+/g, " ").trim().replace(/[:：]$/, "").trim().replace(/[إأآ]/g, "ا");
 
 const cleanMoney = (v: unknown): string | undefined => {
   const s = String(v ?? "").trim().replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(/[,،\s]|SAR|ر\.س/gi, "");
@@ -50,28 +68,42 @@ const cleanMoney = (v: unknown): string | undefined => {
  * Sheet rows (first row = headers) → price rows. Unknown columns are ignored; rows without
  * a SKU are skipped; a repeated SKU keeps its last row. Returns the columns it understood.
  */
-export function mapPriceSheet(rows: unknown[][], levels: LevelColumn[] = []): { rows: PriceRow[]; columns: (keyof PriceRow)[]; levelColumns: string[]; skipped: number } {
-  if (!rows.length) return { rows: [], columns: [], levelColumns: [], skipped: 0 };
-  const head = rows[0].map((h) => String(h ?? "").trim());
+export function mapPriceSheet(rowsIn: unknown[][], levels: LevelColumn[] = [], stores: LevelColumn[] = []): { rows: PriceRow[]; columns: (keyof PriceRow)[]; levelColumns: string[]; storeColumns: string[]; skipped: number } {
+  let rows = rowsIn.filter((r) => Array.isArray(r));
+  if (!rows.length) return { rows: [], columns: [], levelColumns: [], storeColumns: [], skipped: 0 };
+  // the header row may be below a title or a blank row: the first of the first 20 rows with a code column
+  const norm = (h: unknown) => normHeader(h);
+  const skuRe = new RegExp(HEAD.sku.source.replace(/[إأآ]/g, "ا"), "i");
+  const hr = Math.max(0, rows.slice(0, 20).findIndex((r) => (r ?? []).some((h) => skuRe.test(norm(h)))));
+  rows = rows.slice(hr);
+  const head = rows[0].map((h) => norm(h));
   const idx: Partial<Record<keyof PriceRow, number>> = {};
   const levelIdx = new Map<string, number>();
+  const storeIdx = new Map<string, number>();
   head.forEach((h, i) => {
-    for (const k of Object.keys(HEAD) as (keyof PriceRow)[]) if (k !== "levels" && idx[k] === undefined && HEAD[k].test(h)) return void (idx[k] = i);
+    for (const k of Object.keys(HEAD) as (keyof PriceRow)[]) {
+      if (k === "levels" || k === "stock" || idx[k] !== undefined) continue;
+      if (new RegExp(HEAD[k].source.replace(/[إأآ]/g, "ا"), "i").test(h)) return void (idx[k] = i);
+    }
     const lv = levelForHeader(h, levels);
-    if (lv && !levelIdx.has(lv)) levelIdx.set(lv, i);
+    if (lv && !levelIdx.has(lv)) return void levelIdx.set(lv, i);
+    const st = storeForHeader(h, stores);
+    if (st && !storeIdx.has(st)) storeIdx.set(st, i);
   });
-  if (idx.sku === undefined) return { rows: [], columns: [], levelColumns: [], skipped: rows.length - 1 };
+  if (idx.sku === undefined) return { rows: [], columns: [], levelColumns: [], storeColumns: [], skipped: rows.length - 1 };
   const out = new Map<string, PriceRow>();
   let skipped = 0;
   for (const r of rows.slice(1)) {
-    const sku = String(r[idx.sku] ?? "").trim();
+    const raw = r[idx.sku];
+    const sku = (typeof raw === "number" && Number.isInteger(raw) ? String(raw) : String(raw ?? "")).trim().replace(/\.0+$/, "");
     if (!sku) { skipped++; continue; }
     const row: PriceRow = { sku };
     const text = (k: "name_en" | "name_ar") => { const i = idx[k]; const v = i === undefined ? "" : String(r[i] ?? "").trim(); if (v) row[k] = v.slice(0, 200); };
     const num = (k: "price" | "wholesale" | "cost") => { const i = idx[k]; const v = i === undefined ? undefined : cleanMoney(r[i]); if (v !== undefined) row[k] = v; };
     text("name_en"); text("name_ar"); num("price"); num("wholesale"); num("cost");
     for (const [lv, i] of levelIdx) { const v = cleanMoney(r[i]); if (v !== undefined) (row.levels ??= {})[lv] = v; }
+    for (const [st, i] of storeIdx) { const v = cleanQty(r[i]); if (v !== undefined) (row.stock ??= {})[st] = v; }
     out.set(sku, row);
   }
-  return { rows: [...out.values()], columns: (Object.keys(idx) as (keyof PriceRow)[]), levelColumns: [...levelIdx.keys()], skipped };
+  return { rows: [...out.values()], columns: (Object.keys(idx) as (keyof PriceRow)[]), levelColumns: [...levelIdx.keys()], storeColumns: [...storeIdx.keys()], skipped };
 }
