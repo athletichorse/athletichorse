@@ -13,7 +13,8 @@ const asNumber = (s: string) => { const x = LATIN(s).replace(/[,\s]|SAR|ر\.س/g
 const cellText = (td: Element | undefined) => {
   if (!td) return "";
   const inp = td.querySelector("input, select") as HTMLInputElement | HTMLSelectElement | null;
-  return (inp ? inp.value : (td as HTMLElement).innerText).replace(/\s+/g, " ").trim();
+  // textContent: the real text, not how it is drawn (headers and badges may be shown in capitals)
+  return (inp ? inp.value : td.textContent ?? "").replace(/\s+/g, " ").trim();
 };
 function match(cell: string, op: Op, v: string): boolean {
   const n = asNumber(cell), x = asNumber(v);
@@ -49,7 +50,7 @@ export function TableColumnFilter({ t, children, note }: { t: Dict; children: Re
     const rs = rows();
     const next = ths.map((th, i) => {
       const vals = rs.map((r) => cellText(r.querySelectorAll("td")[i])).filter((x) => x && x !== "—");
-      return { i, label: (th as HTMLElement).innerText.replace(/[▲▼]/g, "").trim(), numeric: vals.length > 0 && vals.every((x) => asNumber(x) !== null) };
+      return { i, label: (th.textContent ?? "").replace(/[▲▼]/g, "").replace(/\s+/g, " ").trim(), numeric: vals.length > 0 && vals.every((x) => asNumber(x) !== null) };
     }).filter((c) => c.label);
     queueMicrotask(() => setCols(next)); // read from the page after it is drawn
   }, [open, rows]);
