@@ -33,6 +33,15 @@
   endfor
   assign shop_url = coll.url
   assign cheap_url = coll.url | append: '?sort_by=price-ascending'
+  comment
+    With the rails on this page, the banner buttons jump to them instead of leaving the page.
+  endcomment
+  assign jump_discount = shop_url
+  assign jump_cheapest = cheap_url
+  if section.settings.show_rails
+    assign jump_discount = '#ah-1111-discounts-' | append: section.id
+    assign jump_cheapest = '#ah-1111-cheapest-' | append: section.id
+  endif
 -%}
 <section class="ah-1111" data-ah-mega data-end="{{ end_ts }}">
   {%- if section.settings.show_hero -%}
@@ -81,8 +90,8 @@
         <p class="ah-1111__until">{%- render 'icon', name: 'clock' -%}<span>{{ 'sections.mega_sale.until' | t }}</span></p>
         <p class="ah-1111__sub">{{ 'sections.mega_sale.subtitle_html' | t: percent: max_off }}</p>
         <div class="ah-1111__ctas">
-          <a href="{{ shop_url }}" class="ah-btn ah-1111__btn">{{ 'sections.mega_sale.cta_discount' | t }}</a>
-          <a href="{{ cheap_url }}" class="ah-btn ah-1111__btn ah-1111__btn--ghost">{{ 'sections.mega_sale.cta_cheapest' | t }}</a>
+          <a href="{{ jump_discount }}" class="ah-btn ah-1111__btn"{% if section.settings.show_rails %} data-ah-jump{% endif %}>{{ 'sections.mega_sale.cta_discount' | t }}</a>
+          <a href="{{ jump_cheapest }}" class="ah-btn ah-1111__btn ah-1111__btn--ghost"{% if section.settings.show_rails %} data-ah-jump{% endif %}>{{ 'sections.mega_sale.cta_cheapest' | t }}</a>
         </div>
         <ul class="ah-1111__perks" role="list">
           <li>{%- render 'icon', name: 'cash' -%}{{ 'sections.mega_sale.perk_cod' | t }}</li>
@@ -123,7 +132,7 @@
   {%- endif -%}
 
   {%- if section.settings.show_rails -%}
-    <div class="ah-section ah-1111__rail">
+    <div class="ah-section ah-1111__rail" id="ah-1111-discounts-{{ section.id }}">
       <div class="container" data-rail>
         <div class="ah-section__head">
           <div>
@@ -163,7 +172,7 @@
       </div>
     </div>
 
-    <div class="ah-section ah-section--surface ah-1111__rail">
+    <div class="ah-section ah-section--surface ah-1111__rail" id="ah-1111-cheapest-{{ section.id }}">
       <div class="container" data-rail>
         <div class="ah-section__head">
           <div>
@@ -197,6 +206,18 @@
     var el = document.currentScript.previousElementSibling;
     if (!el || !el.hasAttribute('data-ah-mega')) return;
     var end = parseInt(el.getAttribute('data-end'), 10) * 1000;
+    el.querySelectorAll('[data-ah-jump]').forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        var target = document.querySelector(a.getAttribute('href'));
+        if (!target) return;
+        e.preventDefault();
+        var header = document.getElementById('shopify-section-header');
+        var offset = header ? header.getBoundingClientRect().height : 0;
+        var top = target.getBoundingClientRect().top + window.scrollY - offset - 8;
+        var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.scrollTo({ top: top, behavior: calm ? 'auto' : 'smooth' });
+      });
+    });
     var units = {};
     el.querySelectorAll('[data-u]').forEach(function (b) { units[b.getAttribute('data-u')] = b; });
     function pad(n) { return (n < 10 ? '0' : '') + n; }
