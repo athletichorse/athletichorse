@@ -31,13 +31,14 @@ export function buildSections(t: Dict, perms: Perms, role?: Role): Section[] {
     {
       key: "stock", label: t.menu.stock, href: "/stock", icon: "stock", match: ["/stock", "/stock-log", "/locations"],
       show: perms.has("stock.view"),
+      // same order as the owner's old system: movements first
       tabs: [
-        { label: t.stock.flow.tabs.stock, href: "/stock" },
         { label: t.stock.flow.tabs.docs, href: "/stock/docs" },
         ...(perms.has("stock.requests") ? [{ label: t.stock.flow.tabs.requests, href: "/stock/requests" }] : []),
+        { label: t.stock.flow.tabs.stock, href: "/stock" },
         { label: t.stock.flow.tabs.shortages, href: "/stock/shortages" },
         ...(perms.has("stock.log") ? [{ label: t.menu.stockLog, href: "/stock-log" }] : []),
-        ...(!till && perms.has("locations.edit") ? [{ label: t.nav.locations, href: "/locations" }] : []),
+        ...(!till && perms.has("locations.edit") ? [{ label: t.stock.flow.tabs.warehouses, href: "/locations" }] : []),
       ],
     },
     {

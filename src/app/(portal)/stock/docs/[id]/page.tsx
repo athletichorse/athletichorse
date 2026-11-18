@@ -5,6 +5,7 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { formatDateTime } from "@/lib/time";
 import { PageHeader } from "@/components/PageHeader";
+import { docNumber } from "@/lib/doc-number";
 import { ReceiveTransfer } from "@/components/ReceiveTransfer";
 import { viewableLocations } from "@/components/StockTabs";
 
@@ -32,7 +33,7 @@ export default async function StockDocPage({ params }: { params: Promise<{ id: s
   const rows = (lines ?? []).map((l) => ({ ...l, ...item(l.variant_id) }));
   return (
     <>
-      <PageHeader title={`${kindName} #${d.doc_no}`} subtitle={`${lname(d.location_id)}${d.to_location_id ? ` → ${lname(d.to_location_id)}` : ""} · ${formatDateTime(new Date(d.created_at), locale)}${d.created_by_name ? ` · ${d.created_by_name}` : ""}`} t={t} filename={`stock-${d.doc_no}`}>
+      <PageHeader title={`${kindName} ${docNumber(d.kind, d.doc_no)}`} subtitle={`${lname(d.location_id)}${d.to_location_id ? ` → ${lname(d.to_location_id)}` : ""} · ${formatDateTime(new Date(d.created_at), locale)}${d.created_by_name ? ` · ${d.created_by_name}` : ""}`} t={t} filename={`stock-${docNumber(d.kind, d.doc_no)}`}>
         <Link href="/stock/docs" className="btn-ghost no-print">← {F.tabs.docs}</Link>
       </PageHeader>
       <div className="mb-4 flex flex-wrap gap-2 text-sm">

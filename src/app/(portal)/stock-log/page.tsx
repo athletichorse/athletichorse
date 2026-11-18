@@ -4,6 +4,7 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { formatDateTime } from "@/lib/time";
 import { PageHeader } from "@/components/PageHeader";
+import { docNumber } from "@/lib/doc-number";
 
 const PER_PAGE = 50;
 const KINDS = ["receipt", "transfer_out", "transfer_in", "write_off", "count", "adjust", "opening", "sale", "return"] as const;
@@ -61,7 +62,7 @@ export default async function StockLogPage({ searchParams }: { searchParams: Pro
                   <td data-label={t.stockLog.type}><span className="badge-gray">{t.stock.kinds[r.kind]}</span></td>
                   <td data-label={t.stock.change} className={`font-semibold ${Number(r.qty_change) < 0 ? "text-red-600" : "text-emerald-700"}`} dir="ltr">{Number(r.qty_change) > 0 ? "+" : ""}{Number(r.qty_change)}</td>
                   <td data-label={t.stockLog.after}>{Number(r.qty_after)}</td>
-                  <td data-label={t.stockLog.doc}>{r.doc_no ?? "—"}</td>
+                  <td data-label={t.stockLog.doc} dir="ltr">{docNumber(r.kind === "transfer_out" || r.kind === "transfer_in" ? "transfer" : r.kind, r.doc_no)}</td>
                   <td data-label={t.stockLog.by} className="text-sm">{r.user_name ?? "—"}</td>
                 </tr>
               ))}

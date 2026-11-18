@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Dict, Locale } from "@/i18n";
 import { postStockDocAction } from "@/app/actions/stock";
 import { looksOffline } from "@/lib/offline";
+import { docNumber } from "@/lib/doc-number";
 import { StockQueueList, useStockOffline } from "./useStockOffline";
 
 type Row = { variantId: string; sku: string | null; name: string; options: string; price: string; system: number };
@@ -77,7 +78,7 @@ export function CountSheet({ t, locale, locationId, locationName, rows }: { t: D
             return;
           }
           setBusy(false);
-          if (r.ok) { setMsg({ ok: true, text: t.stock.posted + r.docNo }); setActual({}); clientId.current = crypto.randomUUID(); router.refresh(); }
+          if (r.ok) { setMsg({ ok: true, text: t.stock.posted + docNumber("count", r.docNo) }); setActual({}); clientId.current = crypto.randomUUID(); router.refresh(); }
           else setMsg({ ok: false, text: (t.stock.errors as Record<string, string>)[r.error] ?? r.error });
         }}>{F.saveCount} ({typed.length})</button>
       </div>
