@@ -40,6 +40,7 @@ SKU=$(psql -tA "$DATABASE_URL" -c "select sku from variant_search where sku is n
 echo "till tests use item $SKU"
 run offline env BASE=$BASE node scripts/e2e/offline.mjs "$SKU"
 run offline2 env BASE=$BASE SKU="$SKU" CUSTOMER="Test Customer" node scripts/e2e/offline2.mjs
+run offline3 env BASE=$BASE SKU="$SKU" node scripts/e2e/offline3.mjs
 # the 4 views side by side (one view alone takes ~25 min)
 step "audit (4 views side by side)"
 PIDS=""

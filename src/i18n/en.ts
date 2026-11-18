@@ -261,6 +261,17 @@ const en: Dict = {
     brandNote: "Brand on imported items: Alhisan Alriyadi.",
   },
   stock: {
+    offline: {
+      saved: "No internet — saved on this device. It is posted automatically when the internet is back.",
+      waiting: "Saved on this device, waiting for internet",
+      sentNow: "Sent",
+      refused: "Not accepted",
+      drop: "Remove",
+      sendNow: "Send now",
+      noApproval: "This document needs a manager's approval, which can't be checked without internet.",
+      noCopy: "No internet, and this device has no item list yet. Open this page once with internet.",
+      fromCopy: "No internet: searching the item list saved on this device.",
+    },
     flow: {
       tabs: { stock: "Stock", docs: "Documents", requests: "Restock requests", shortages: "Shortages" },
       countSheet: "Count sheet",

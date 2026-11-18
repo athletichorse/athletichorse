@@ -2,14 +2,16 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Dict } from "@/i18n";
+import type { Dict, Locale } from "@/i18n";
 import { postStockDocAction } from "@/app/actions/stock";
+import { looksOffline } from "@/lib/offline";
+import { StockQueueList, useStockOffline } from "./useStockOffline";
 
 type Row = { variantId: string; sku: string | null; name: string; options: string; price: string; system: number };
 type Key = "sku" | "name" | "price" | "system" | "actual" | "diff";
 
 /** Every item on one page; type the actual stock; sort any column; only typed rows are saved. */
-export function CountSheet({ t, locationId, rows }: { t: Dict; locationId: string; rows: Row[] }) {
+export function CountSheet({ t, locale, locationId, locationName, rows }: { t: Dict; locale: Locale; locationId: string; locationName: string; rows: Row[] }) {
   const F = t.stock.flow;
   const router = useRouter();
   const [actual, setActual] = useState<Record<string, string>>({});
@@ -18,6 +20,8 @@ export function CountSheet({ t, locationId, rows }: { t: Dict; locationId: strin
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const clientId = useRef(crypto.randomUUID());
+  const off = useStockOffline(locale);
+  const errText = (code: string) => (t.stock.errors as Record<string, string>)[code] ?? code;
   const diff = (r: Row) => (actual[r.variantId] === undefined || actual[r.variantId] === "" ? null : Number(actual[r.variantId]) - r.system);
   const shown = useMemo(() => {
     const f = filter.trim().toLowerCase();
@@ -56,10 +60,22 @@ export function CountSheet({ t, locationId, rows }: { t: Dict; locationId: strin
         </table>
       </div>
       {msg && <p className={`mx-5 ${msg.ok ? "alert-ok" : "alert-err"}`}>{msg.text}</p>}
+      <div className="mx-5"><StockQueueList t={t} off={off} err={errText} /></div>
       <div className="flex justify-end px-5 pb-5">
         <button className="btn-primary" disabled={busy || !typed.length} onClick={async () => {
           setBusy(true); setMsg(null);
-          const r = await postStockDocAction({ clientId: clientId.current, kind: "count", locationId, lines: typed.map((x) => ({ variantId: x.variantId, qty: actual[x.variantId].trim() })) });
+          const input = { clientId: clientId.current, kind: "count" as const, locationId, lines: typed.map((x) => ({ variantId: x.variantId, qty: actual[x.variantId].trim() })) };
+          let r: Awaited<ReturnType<typeof postStockDocAction>>;
+          try { r = await postStockDocAction(input); }
+          catch (e) {
+            setBusy(false);
+            if (!looksOffline(e)) return setMsg({ ok: false, text: String(e) });
+            if (input.lines.some((l) => !/^\d{1,9}(\.\d{1,3})?$/.test(l.qty))) return setMsg({ ok: false, text: errText("bad_qty") });
+            // no internet: the count is kept on this device and posted when the internet is back
+            off.save({ clientId: clientId.current, label: `${t.stock.count} · ${input.lines.length} · ${locationName}`, input });
+            setMsg({ ok: true, text: t.stock.offline.saved }); setActual({}); clientId.current = crypto.randomUUID();
+            return;
+          }
           setBusy(false);
           if (r.ok) { setMsg({ ok: true, text: t.stock.posted + r.docNo }); setActual({}); clientId.current = crypto.randomUUID(); router.refresh(); }
           else setMsg({ ok: false, text: (t.stock.errors as Record<string, string>)[r.error] ?? r.error });

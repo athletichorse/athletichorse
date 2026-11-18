@@ -513,7 +513,8 @@ export async function quickAddCustomerAction(phoneRaw: string, name: string): Pr
 /** The device's copy of the price list: every active item with its barcode, extra codes and VAT-inclusive price. */
 export async function posCatalogAction(locale: "ar" | "en" = "en"): Promise<PosResult<{ items: { v: string; n: string; o: string; s: string | null; c: string[]; p: string; x: boolean }[] }>> {
   const s = await requireStaff();
-  if (!has(s, "pos.collect", "pos.quick_sale", "pos.desk")) return { ok: false, error: "forbidden" };
+  // stock staff keep the same copy for receiving / counting without internet
+  if (!has(s, "pos.collect", "pos.quick_sale", "pos.desk", "stock.view")) return { ok: false, error: "forbidden" };
   const PAGE = 1000;
   const rows: Record<string, unknown>[] = [];
   for (let from = 0; from < 50_000; from += PAGE) {

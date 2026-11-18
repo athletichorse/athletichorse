@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import type { Dict, Locale } from "@/i18n";
 import { postStockDocAction, searchVariantsAction, type StockKind, type VariantHit } from "@/app/actions/stock";
+import { looksOffline } from "@/lib/offline";
+import { StockQueueList, useStockOffline } from "./useStockOffline";
 
 export type StockLine = { variantId: string; name: string; options: string; sku: string | null; qty: string; price?: string };
 type Line = StockLine;
@@ -26,6 +28,8 @@ export function StockDocForm({ t, locale, kind, locations, destinations, default
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const clientId = useRef(newId()); // same id on retries → posted at most once
   const searchRef = useRef<HTMLInputElement>(null);
+  const off = useStockOffline(locale);
+  const errText = (code: string) => (t.stock.errors as Record<string, string>)[code] ?? code;
 
   function add(h: VariantHit) {
     if (h.isService) return setMsg({ ok: false, text: t.stock.service });
@@ -44,7 +48,14 @@ export function StockDocForm({ t, locale, kind, locations, destinations, default
   async function search(enter: boolean) {
     const q = term.trim();
     if (!q) return;
-    const r = await searchVariantsAction(q, locale);
+    let r: VariantHit[];
+    try { r = await searchVariantsAction(q, locale); }
+    catch (e) {
+      if (!looksOffline(e)) throw e;
+      if (!off.hasCopy()) return setMsg({ ok: false, text: t.stock.offline.noCopy });
+      r = off.searchLocal(q);
+      setMsg({ ok: true, text: t.stock.offline.fromCopy });
+    }
     if (enter && r.length === 1) return add(r[0]);
     if (enter && r[0]?.exact) return add(r[0]);
     setHits(r);
@@ -54,10 +65,26 @@ export function StockDocForm({ t, locale, kind, locations, destinations, default
     if (!lines.length) return setMsg({ ok: false, text: t.stock.noLines });
     setBusy(true);
     setMsg(null);
-    const r = await postStockDocAction({
+    const input = {
       clientId: clientId.current, kind, locationId: loc, toLocationId: kind === "transfer" ? to : null, note, reason, requestId,
-      lines: lines.map((l) => ({ variantId: l.variantId, qty: l.qty.trim() })), approverUsername: mgr.u, approverPin: mgr.p,
-    });
+      lines: lines.map((l) => ({ variantId: l.variantId, qty: l.qty.trim() })),
+    };
+    let r: Awaited<ReturnType<typeof postStockDocAction>>;
+    try { r = await postStockDocAction({ ...input, approverUsername: mgr.u, approverPin: mgr.p }); }
+    catch (e) {
+      setBusy(false);
+      if (!looksOffline(e)) return setMsg({ ok: false, text: String(e) });
+      // no internet: keep it on this device (same client id → posted once when sent)
+      if (approval) return setMsg({ ok: false, text: t.stock.offline.noApproval });
+      const bad = lines.find((l) => !/^\d{1,9}(\.\d{1,3})?$/.test(l.qty.trim()) || (kind !== "count" && Number(l.qty) <= 0));
+      if (bad) return setMsg({ ok: false, text: errText("bad_qty") });
+      if (kind === "write_off" && !reason) return setMsg({ ok: false, text: errText("reason_required") });
+      off.save({ clientId: clientId.current, label: `${t.stock[kind]} · ${lines.length} · ${locations.find((l) => l.id === loc)?.name ?? ""}`, input });
+      setMsg({ ok: true, text: t.stock.offline.saved });
+      setLines([]); setNote(""); setReason(""); setMgr({ u: "", p: "" });
+      clientId.current = newId();
+      return;
+    }
     setBusy(false);
     if (r.ok) {
       setMsg({ ok: true, text: (r.duplicate ? t.stock.duplicate : t.stock.posted) + r.docNo });
@@ -75,6 +102,7 @@ export function StockDocForm({ t, locale, kind, locations, destinations, default
   return (
     <div className="space-y-6">
       {msg && <p className={msg.ok ? "alert-ok" : "alert-err"}>{msg.text}</p>}
+      <StockQueueList t={t} off={off} err={errText} />
       <section className="card grid gap-4 sm:grid-cols-2">
         <div>
           <label className="label">{kind === "transfer" ? `${t.stock.location} (${t.stock.transfer})` : t.stock.location}</label>
