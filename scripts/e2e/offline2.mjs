@@ -71,15 +71,14 @@ const saleNo = (await p.locator('.alert-ok').first().innerText()).match(/OFF-[A-
 ok(!!saleNo, `slip sold offline: ${saleNo}`);
 const r = await rp; if (r) await r.close();
 
-// drawer expense offline
-await p.getByRole('button', { name: 'Drawer' }).click();
-const drawer = p.locator('section', { has: p.locator('option[value=expense]') });
-await drawer.locator('select').first().selectOption('expense');
-await drawer.locator('input[inputmode=decimal]').fill('3');
-await drawer.locator('select').nth(1).selectOption({ index: 1 });
-await drawer.getByRole('button', { name: 'Save' }).click();
+// expense offline (Expenses screen)
+await p.getByRole('button', { name: 'Expenses', exact: true }).click();
+const ex = p.locator('[data-testid=expenses]');
+await ex.locator('select').first().selectOption({ index: 1 });
+await ex.locator('input[inputmode=decimal]').fill('3');
+await ex.getByRole('button', { name: 'Save expense' }).click();
 await p.waitForSelector('text=/Saved on this device/');
-ok(true, 'drawer expense saved offline');
+ok(/waiting for internet/.test(await ex.innerText()), 'expense saved offline and listed as waiting');
 ok(/Waiting to send: 3/.test(await p.locator('[data-testid=offline-bar]').innerText()), 'three things waiting (quotation, sale, expense)');
 
 // back online → everything is sent

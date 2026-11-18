@@ -29,7 +29,7 @@ const fail = (where, what) => {
 };
 
 const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/products/labels", "/staff", "/staff/employees", "/staff/attendance",
-  "/staff/payroll", "/staff/commission", "/staff/advances", "/staff/slips", "/locations", "/company", "/permissions", "/upload", "/pos", "/pos/shifts", "/pos/day",
+  "/staff/payroll", "/staff/commission", "/staff/advances", "/staff/slips", "/locations", "/company", "/permissions", "/upload", "/pos", "/pos/shifts", "/pos/day", "/pos/expense-types",
   "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/stock/new?kind=write_off", "/stock/docs", "/stock/count",
   "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/sales", "/sales?tab=returns", "/sales?tab=website", "/sales/reports", "/customers",
   "/stock-log", "/audit", "/audit/hours", "/audit/devices"];

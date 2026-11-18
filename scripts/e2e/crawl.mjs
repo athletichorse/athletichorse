@@ -45,7 +45,7 @@ async function checkPage(page, path, label) {
 }
 
 const browser = await chromium.launch();
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
 
 // ---------------------------------------------------------------- 1. setup + flows (desktop, English)
 console.log("\n== Setup and main flows (desktop, English)");
@@ -537,6 +537,18 @@ await page.waitForSelector(".alert-ok, .alert-err", { timeout: 20000 });
 const rMsg = await page.locator(".alert-ok, .alert-err").first().innerText();
 if (!/credit note BR01-CN-\d{6}/.test(rMsg) || !/35\.00/.test(rMsg)) fail("pos", `return: ${rMsg}`); else ok("return with receipt → credit note, refund 35.00");
 
+// expenses screen: record one, see it in this shift's list
+await page.click('button:text-is("Expenses")');
+const exv = page.locator("[data-testid=expenses]");
+await exv.locator("select").first().selectOption({ label: "Transport" });
+await exv.locator("input[inputmode=decimal]").fill("5");
+await exv.locator("input:not([inputmode])").first().fill("taxi e2e");
+await exv.locator('button:text-is("Save expense")').click();
+await page.waitForFunction(() => /taxi e2e/.test(document.querySelector("[data-testid=expenses]")?.textContent ?? ""), null, { timeout: 15000 }).catch(() => {});
+const exTxt = await exv.innerText();
+if (!/taxi e2e/.test(exTxt) || !/Total:\s*5\.00/.test(exTxt)) fail("pos", `expenses: ${exTxt.replace(/\s+/g, " ").slice(0, 200)}`);
+else ok("expense recorded from the Expenses screen; listed with this shift's total 5.00");
+
 // cash out, close shift
 await page.click('button:text-is("Drawer")'); // drawer panel: Cash out is the first choice
 await page.locator('input[placeholder="Amount"]').fill("10");
@@ -545,12 +557,12 @@ await page.click('section >> button:text-is("Save")');
 await page.waitForSelector(".alert-ok, .alert-err", { timeout: 15000 });
 ok("cash out recorded");
 await page.click('button:text-is("Close shift")');
-// expected: 100 + 70 + 90 (VIP) + 35 (quotation, paid cash) − 35 (refund) − 10 (cash out) = 250
-await page.locator('input[placeholder*="Counted cash"]').fill("250");
+// expected: 100 + 70 + 90 (VIP) + 35 (quotation, paid cash) − 35 (refund) − 5 (expense) − 10 (cash out) = 245
+await page.locator('input[placeholder*="Counted cash"]').fill("245");
 await page.locator('section >> button:text-is("Close shift")').click();
 await page.waitForSelector("text=Shift closed", { timeout: 15000 });
 const closeTxt = await page.locator(".alert-ok").first().innerText();
-if (!/Expected cash 250\.00/.test(closeTxt) || !/Difference 0\.00/.test(closeTxt)) fail("pos", `close: ${closeTxt}`); else ok("close shift: expected 250.00 = counted, difference 0.00");
+if (!/Expected cash 245\.00/.test(closeTxt) || !/Difference 0\.00/.test(closeTxt)) fail("pos", `close: ${closeTxt}`); else ok("close shift: expected 245.00 (after the expense) = counted, difference 0.00");
 
 // sales list
 await page.goto(BASE + "/sales", { waitUntil: "networkidle" });
