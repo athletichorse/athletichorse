@@ -3,7 +3,8 @@
 import { saleWindow, type PriceRow } from "@/lib/product-prices";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { assertPermission, requireStaff } from "@/lib/auth";
+import { assertPermission, canUseLocation, requireStaff } from "@/lib/auth";
+import { postStockDocAction } from "./stock";
 import { db } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
 import { formatDecimal, toHalalas } from "@/lib/money";
@@ -288,6 +289,16 @@ export async function previewPricesAction(rows: PriceRow[]): Promise<{ ok: true;
     const { data: lp } = vs?.length ? await db().from("variant_level_prices").select("variant_id, level_id, price").in("variant_id", vs.map((v) => v.id)) : { data: [] };
     for (const x of lp ?? []) cur.set(`${vidOf.get(x.variant_id)}|${x.level_id}`, String(x.price));
   }
+  // current quantity in each store (for the store columns), only for people who may count stock
+  const canCount = s.perms.has("stock.count");
+  const qtyNow = new Map<string, string>(); // `${sku}|${location}` → qty
+  const withStock = canCount ? list.filter((r) => r.stock && Object.keys(r.stock).length) : [];
+  for (let i = 0; i < withStock.length; i += 500) {
+    const { data: vs } = await db().from("product_variants").select("id, sku").in("sku", withStock.slice(i, i + 500).map((r) => r.sku));
+    const skuOf = new Map((vs ?? []).map((v) => [v.id, v.sku]));
+    const { data: sl } = vs?.length ? await db().from("stock_levels").select("variant_id, location_id, qty").in("variant_id", vs.map((v) => v.id)) : { data: [] };
+    for (const x of sl ?? []) qtyNow.set(`${skuOf.get(x.variant_id)}|${x.location_id}`, String(Number(x.qty)));
+  }
   const str = (v: unknown) => (v === null || v === undefined ? "" : String(v));
   const money2 = (v: unknown) => { try { return v === null || v === undefined || v === "" ? "" : formatDecimal(toHalalas(String(v))); } catch { return str(v); } };
   const items: PricePreview[] = list.map((r) => {
@@ -304,17 +315,23 @@ export async function previewPricesAction(rows: PriceRow[]): Promise<{ ok: true;
       const old = money2(cur.get(`${r.sku}|${lv}`));
       if (price !== old) changes.push({ field: `level:${lv}`, old, new: price });
     }
+    if (canCount) for (const [loc, q] of Object.entries(r.stock ?? {})) {
+      if (!canUseLocation(s, loc)) continue;
+      const old = qtyNow.get(`${r.sku}|${loc}`) ?? "0";
+      if (Number(q) !== Number(old)) changes.push({ field: `stock:${loc}`, old, new: q });
+    }
     return { sku: r.sku, found: true, onWebsite: web, name: str(d.name_ar) || str(d.name_en), changes };
   });
   return { ok: true, items };
 }
 
 /** Saves a names & prices file (only changed fields; website prices are kept). */
-export async function applyPricesAction(rows: PriceRow[]): Promise<{ ok: true; updated: number; notFound: number; websiteKept: number } | { ok: false; error: string }> {
+export async function applyPricesAction(rows: PriceRow[], countIds: Record<string, string> = {}): Promise<{ ok: true; updated: number; notFound: number; websiteKept: number; counts: { location: string; docNo: number }[] } | { ok: false; error: string }> {
   const s = await requireStaff();
   if (!s.perms.has("products.edit")) return { ok: false, error: "forbidden" };
   const list = (Array.isArray(rows) ? rows : []).slice(0, 20_000);
   let updated = 0, notFound = 0, websiteKept = 0;
+  const counts: { location: string; docNo: number }[] = [];
   for (let i = 0; i < list.length; i += 500) {
     const { data, error } = await db().rpc("update_names_prices", { p_rows: list.slice(i, i + 500), p_user: s.id, p_can_cost: s.perms.has("products.view_cost") });
     if (error) return { ok: false, error: error.message };
@@ -355,6 +372,29 @@ export async function applyPricesAction(rows: PriceRow[]): Promise<{ ok: true; u
     updated += changed.length;
     if (changed.length) after(() => pushPrices(changed));
   }
+  // quantities per store: one count per store (sets each item's quantity there; same id → posted once)
+  const stockRows = list.filter((r) => r.stock && Object.keys(r.stock).length);
+  if (stockRows.length && s.perms.has("stock.count")) {
+    const variantOf = new Map<string, string>();
+    for (let i = 0; i < stockRows.length; i += 500) {
+      const { data: vs } = await db().from("product_variants").select("id, sku").in("sku", stockRows.slice(i, i + 500).map((r) => r.sku));
+      for (const v of vs ?? []) if (v.sku) variantOf.set(v.sku, v.id);
+    }
+    const byStore = new Map<string, { variantId: string; qty: string }[]>();
+    for (const r of stockRows) {
+      const vid = variantOf.get(r.sku);
+      if (!vid) continue;
+      for (const [loc, q] of Object.entries(r.stock ?? {})) (byStore.get(loc) ?? byStore.set(loc, []).get(loc)!).push({ variantId: vid, qty: q });
+    }
+    for (const [loc, lines] of byStore) {
+      const clientId = /^[0-9a-f-]{36}$/i.test(countIds[loc] ?? "") ? countIds[loc] : crypto.randomUUID();
+      for (let i = 0; i < lines.length; i += 10_000) {
+        const r = await postStockDocAction({ clientId: i ? crypto.randomUUID() : clientId, kind: "count", locationId: loc, note: "prices & stock file", lines: lines.slice(i, i + 10_000) });
+        if (!r.ok) return { ok: false, error: r.error };
+        counts.push({ location: loc, docNo: r.docNo });
+      }
+    }
+  }
   revalidatePath("/products");
-  return { ok: true, updated, notFound, websiteKept };
+  return { ok: true, updated, notFound, websiteKept, counts };
 }

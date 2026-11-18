@@ -86,3 +86,28 @@ describe("prices file: the owner's export", () => {
     expect(m.rows[1]).toMatchObject({ sku: "312513", price: "195.00", cost: "125.00" });
   });
 });
+
+import { cleanQty, storeForHeader } from "@/lib/product-prices";
+describe("prices file: quantity per store", () => {
+  const stores = [{ id: "hadaba", names: ["Hadaba Store", "مخزن الهضبة", "WH01"] }, { id: "oct", names: ["October Branch", "فرع أكتوبر"] }];
+  it("finds a store by its name, 'رصيد <store>', 'كمية <store>' or 'Qty <store>'", () => {
+    expect(storeForHeader("مخزن الهضبة", stores)).toBe("hadaba");
+    expect(storeForHeader("رصيد مخزن الهضبة", stores)).toBe("hadaba");
+    expect(storeForHeader("كمية فرع اكتوبر", stores)).toBe("oct");
+    expect(storeForHeader("Qty October Branch", stores)).toBe("oct");
+    expect(storeForHeader("wh01", stores)).toBe("hadaba");
+    expect(storeForHeader("سعر البيع", stores)).toBeNull();
+  });
+  it("quantities: 0 or more, Arabic digits, empty = not given", () => {
+    expect(cleanQty("٥")).toBe("5");
+    expect(cleanQty("0")).toBe("0");
+    expect(cleanQty("2.500")).toBe("2.5");
+    expect(cleanQty("")).toBeUndefined();
+    expect(cleanQty("-3")).toBeUndefined();
+  });
+  it("reads one column per store next to prices", () => {
+    const m = mapSheet2([["الباركود / الرقم", "سعر البيع", "مخزن الهضبة", "رصيد فرع أكتوبر"], [461559, "900", 12, ""]], [], stores);
+    expect(m.storeColumns).toEqual(["hadaba", "oct"]);
+    expect(m.rows[0]).toEqual({ sku: "461559", price: "900.00", stock: { hadaba: "12" } });
+  });
+});

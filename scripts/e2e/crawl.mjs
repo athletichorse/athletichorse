@@ -244,7 +244,7 @@ else ok("item price for the VIP level saved on the product page (32.00 instead o
 // prices file with a column for the level: "سعر VIP" 32 → 30
 {
   const csv = `${OUT}/prices-levels.csv`;
-  fs.writeFileSync(csv, "Barcode,سعر VIP\nE2E-ROPE-1,30\n");
+  fs.writeFileSync(csv, "Barcode,سعر VIP,رصيد Jeddah Branch\nE2E-ROPE-1,30,5\n");
   await page.goto(BASE + "/upload", { waitUntil: "networkidle" });
   if (!/VIP/.test(await page.locator("[data-testid=level-columns]").innerText().catch(() => ""))) fail("price levels", "prices file does not mention the VIP column");
   await page.locator("#prices input[type=file]").setInputFiles(csv);
@@ -257,6 +257,8 @@ else ok("item price for the VIP level saved on the product page (32.00 instead o
   await page.goto(ropeUrl);
   if ((await page.locator("[data-testid=level-prices] input").first().inputValue()) !== "30.00") fail("price levels", `prices file did not set the VIP price (${res})`);
   else ok("prices file: a column per level (\"سعر VIP\") — preview 32.00 → 30.00, saved");
+  if (!/Counts posted: Jeddah Branch CT-\d{5}/.test(res) || !/Quantity in Jeddah Branch/.test(prev)) fail("prices file", `store column: ${res} | ${prev.replace(/\s+/g, " ").slice(0, 160)}`);
+  else ok("prices file: a column per store (\"رصيد Jeddah Branch\" = 5) — previewed, saved as a count");
 }
 where = "groups";
 await page.goto(BASE + "/products/groups");

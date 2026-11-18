@@ -5,6 +5,7 @@ import { readSheet } from "read-excel-file/browser";
 import type { Dict } from "@/i18n";
 import { mapPriceSheet, type LevelColumn, type PriceRow } from "@/lib/product-prices";
 import { applyPricesAction, previewPricesAction, type PricePreview } from "@/app/actions/products";
+import { docNumber } from "@/lib/doc-number";
 
 /** CSV → rows (handles quotes and a UTF-8 BOM). */
 function parseCsv(text: string): string[][] {
@@ -23,7 +24,7 @@ function parseCsv(text: string): string[][] {
 }
 
 /** Names & prices file: preview old → new, then save. */
-export function PriceFile({ t, levels = [] }: { t: Dict; levels?: (LevelColumn & { label: string })[] }) {
+export function PriceFile({ t, levels = [], stores = [] }: { t: Dict; levels?: (LevelColumn & { label: string })[]; stores?: (LevelColumn & { label: string })[] }) {
   const p = t.products.pricesFile;
   const [rows, setRows] = useState<PriceRow[]>([]);
   const [cols, setCols] = useState<string[]>([]);
@@ -33,7 +34,10 @@ export function PriceFile({ t, levels = [] }: { t: Dict; levels?: (LevelColumn &
   const label: Record<string, string> = {
     name_en: t.locations.nameEn, name_ar: t.locations.nameAr, price: t.products.price, wholesale: t.products.extras.wholesale, cost: t.products.cost,
     ...Object.fromEntries(levels.map((l) => [`level:${l.id}`, `${t.levels.level}: ${l.label}`])),
+    ...Object.fromEntries(stores.map((x) => [`stock:${x.id}`, `${p.qtyIn} ${x.label}`])),
   };
+  // one count per store per file (same ids if "save" is pressed twice → posted once)
+  const [countIds, setCountIds] = useState<Record<string, string>>({});
 
   async function pick(file: File) {
     setMsg(null); setItems(null); setBusy(true);
@@ -42,14 +46,15 @@ export function PriceFile({ t, levels = [] }: { t: Dict; levels?: (LevelColumn &
       // old Excel (.xls) and OpenDocument (.ods) need a reader that is not installed yet
       if (/\.(xls|ods|numbers)$/.test(name)) { setBusy(false); return setMsg({ ok: false, text: p.oldFormat }); }
       const data: unknown[][] = /\.(csv|txt|tsv)$/.test(name) ? parseCsv(await file.text()) : (await readSheet(file)) as unknown[][];
-      const m = mapPriceSheet(data, levels);
+      const m = mapPriceSheet(data, levels, stores);
+      setCountIds(Object.fromEntries(m.storeColumns.map((id) => [id, crypto.randomUUID()])));
       if (!m.columns.includes("sku")) {
         // say which columns the file has, so the person can rename the code column
         const seen = (data.find((r) => Array.isArray(r) && r.some((c) => String(c ?? "").trim())) ?? []).map((c) => String(c ?? "").trim()).filter(Boolean).slice(0, 12);
         setBusy(false);
         return setMsg({ ok: false, text: `${p.noSku} ${seen.length ? `${p.columnsSeen}: ${seen.join(" · ")}. ` : ""}${p.skuNames}` });
       }
-      setRows(m.rows); setCols([...m.columns.map((c) => label[c] ?? c), ...m.levelColumns.map((id) => label[`level:${id}`] ?? id)]);
+      setRows(m.rows); setCols([...m.columns.map((c) => label[c] ?? c), ...m.levelColumns.map((id) => label[`level:${id}`] ?? id), ...m.storeColumns.map((id) => label[`stock:${id}`] ?? id)]);
       const r = await previewPricesAction(m.rows);
       if (r.ok) setItems(r.items); else setMsg({ ok: false, text: r.error });
     } catch (e) { setMsg({ ok: false, text: String(e) }); }
@@ -62,6 +67,7 @@ export function PriceFile({ t, levels = [] }: { t: Dict; levels?: (LevelColumn &
     <section className="card space-y-4" id="prices">
       <h2 className="card-title">{p.title}</h2>
       <p className="hint -mt-2">{p.hint}</p>
+      {stores.length > 0 && <p className="hint -mt-2" data-testid="store-columns">{p.storesHint} {stores.map((x) => `"${x.label}"`).join(" · ")}</p>}
       {levels.length > 0 && <p className="hint -mt-2" data-testid="level-columns">{t.levels.fileHint} {levels.map((l) => `"${l.label}"`).join(" · ")}</p>}
       <label className="btn-ghost cursor-pointer">
         {p.choose}
@@ -94,9 +100,13 @@ export function PriceFile({ t, levels = [] }: { t: Dict; levels?: (LevelColumn &
           {changed.length > 0 && (
             <button className="btn-primary" disabled={busy} onClick={async () => {
               setBusy(true);
-              const r = await applyPricesAction(rows.filter((x) => changed.some((c) => c.sku === x.sku)));
+              const r = await applyPricesAction(rows.filter((x) => changed.some((c) => c.sku === x.sku)), countIds);
               setBusy(false);
-              if (r.ok) { setItems(null); setMsg({ ok: true, text: `${p.applied}: ${r.updated}${r.websiteKept ? ` · ${p.websiteKept}: ${r.websiteKept}` : ""}` }); }
+              if (r.ok) {
+                setItems(null);
+                const cs = r.counts.map((c) => `${stores.find((x) => x.id === c.location)?.label ?? ""} ${docNumber("count", c.docNo)}`).join(" · ");
+                setMsg({ ok: true, text: `${p.applied}: ${r.updated}${r.websiteKept ? ` · ${p.websiteKept}: ${r.websiteKept}` : ""}${cs ? ` · ${p.countsPosted}: ${cs}` : ""}` });
+              }
               else setMsg({ ok: false, text: r.error });
             }}>{p.apply} ({changed.length})</button>
           )}
