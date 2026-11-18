@@ -20,7 +20,14 @@ export function saleWindow(price: string | null, from: string, to: string):
 
 /** levels: price level id → price (one column per level in the file) */
 /** stock: store (location) id → quantity there (one column per store; saved as a count) */
-export type PriceRow = { sku: string; name_en?: string; name_ar?: string; price?: string; wholesale?: string; cost?: string; levels?: Record<string, string>; stock?: Record<string, string> };
+export type PriceRow = {
+  sku: string; name_en?: string; name_ar?: string; price?: string; wholesale?: string; cost?: string;
+  levels?: Record<string, string>; stock?: Record<string, string>;
+  /** for adding items that are not in the system yet */
+  group?: string; unit?: string;
+  /** a quantity column without a store name ("الرصيد"): the person picks the store on upload */
+  qty?: string;
+};
 /** A price level the file may have a column for: its column may be called by any of these names. */
 export type LevelColumn = { id: string; names: string[] };
 const norm = (x: string) => x.trim().toLowerCase().replace(/\s+/g, " ");
@@ -49,6 +56,9 @@ const HEAD: Record<keyof PriceRow, RegExp> = {
   sku: /(sku|barcode|bar code|\bcode\b|item no\.?|item number|باركود|كود|رمز الصنف|رقم الصنف)/i,
   levels: /^$/, // not a header: one column per price level (see levelForHeader)
   stock: /^$/, // not a header: one column per store (see storeForHeader)
+  group: /^(المجموعة|مجموعة|المجموعه|group|category|الفئة)$/i,
+  unit: /^(وحدة اساسية|وحدة اساسيه|الوحدة|الوحدة الرئيسية|الوحدة الاساسية|وحدة|unit|main unit)$/i,
+  qty: /^(الرصيد|رصيد|الكمية|كمية|الرصيد الحالي|qty|quantity|stock|on hand)$/i,
   name_en: /^(name|name.?en|english name|item name|title|الاسم بالإنجليزي|الاسم انجليزي|اسم الصنف \(en\)|اسم الصنف انجليزي)$/i,
   name_ar: /^(name.?ar|arabic name|الاسم|الاسم بالعربي|اسم الصنف|الاسم عربي|اسم الصنف \(ع\)|اسم الصنف عربي|البيان|الصنف)$/i,
   price: /^(price|sale price|selling price|retail price|السعر|سعر البيع|سعر القطاعي|سعر التجزئة|سعر المستهلك)$/i,
@@ -80,8 +90,14 @@ export function mapPriceSheet(rowsIn: unknown[][], levels: LevelColumn[] = [], s
   const idx: Partial<Record<keyof PriceRow, number>> = {};
   const levelIdx = new Map<string, number>();
   const storeIdx = new Map<string, number>();
+  const strong = /(باركود|barcode|bar code|sku)/i;
+  const skuCols = head.map((h, i) => (skuRe.test(h) ? i : -1)).filter((i) => i >= 0);
+  const skuCol = skuCols.find((i) => strong.test(head[i])) ?? skuCols[0];
   head.forEach((h, i) => {
+    if (i === skuCol) return void (idx.sku = i);
+    if (skuCols.includes(i)) return; // another code column (e.g. the old system's own number): not used
     for (const k of Object.keys(HEAD) as (keyof PriceRow)[]) {
+      if (k === "sku") continue;
       if (k === "levels" || k === "stock" || idx[k] !== undefined) continue;
       if (new RegExp(HEAD[k].source.replace(/[إأآ]/g, "ا"), "i").test(h)) return void (idx[k] = i);
     }
@@ -101,6 +117,9 @@ export function mapPriceSheet(rowsIn: unknown[][], levels: LevelColumn[] = [], s
     const text = (k: "name_en" | "name_ar") => { const i = idx[k]; const v = i === undefined ? "" : String(r[i] ?? "").trim(); if (v) row[k] = v.slice(0, 200); };
     const num = (k: "price" | "wholesale" | "cost") => { const i = idx[k]; const v = i === undefined ? undefined : cleanMoney(r[i]); if (v !== undefined) row[k] = v; };
     text("name_en"); text("name_ar"); num("price"); num("wholesale"); num("cost");
+    const plain = (k: "group" | "unit") => { const i = idx[k]; const v = i === undefined ? "" : String(r[i] ?? "").trim(); if (v && v.toUpperCase() !== "NONE") row[k] = v.slice(0, 60); };
+    plain("group"); plain("unit");
+    if (idx.qty !== undefined) { const q = cleanQty(r[idx.qty]); if (q !== undefined) row.qty = q; }
     for (const [lv, i] of levelIdx) { const v = cleanMoney(r[i]); if (v !== undefined) (row.levels ??= {})[lv] = v; }
     for (const [st, i] of storeIdx) { const v = cleanQty(r[i]); if (v !== undefined) (row.stock ??= {})[st] = v; }
     out.set(sku, row);

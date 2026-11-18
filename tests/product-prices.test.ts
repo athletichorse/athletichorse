@@ -75,14 +75,14 @@ describe("prices file: header row and column names as people write them", () => 
 });
 
 describe("prices file: the owner's export", () => {
-  it("reads 'الباركود / الرقم', 'الصنف', 'سعر الشراء', 'سعر البيع' and skips the other columns", () => {
+  it("reads 'الباركود / الرقم', 'الصنف', 'سعر الشراء', 'سعر البيع', unit and group", () => {
     const m = mapSheet2([
       ["الباركود / الرقم", "الصنف", "وحدة اساسية", "المجموعة", "النوع /مجموعة", "سعر الشراء", "سعر البيع"],
       [461559, "ستارز شراب اديداس شبابي منقط", "قطعة", "أحذية", "حذاء كرة", 500, "900.00"],
       [312513, "شنطه هانديانج تراك فوسفوري صغيره 37", "قطعة", "أدوات", "شنطة", 125, "195.00"],
     ]);
     expect(m.columns).toEqual(expect.arrayContaining(["sku", "name_ar", "price", "cost"]));
-    expect(m.rows[0]).toEqual({ sku: "461559", name_ar: "ستارز شراب اديداس شبابي منقط", price: "900.00", cost: "500.00" });
+    expect(m.rows[0]).toEqual({ sku: "461559", name_ar: "ستارز شراب اديداس شبابي منقط", unit: "قطعة", group: "أحذية", price: "900.00", cost: "500.00" });
     expect(m.rows[1]).toMatchObject({ sku: "312513", price: "195.00", cost: "125.00" });
   });
 });
@@ -109,5 +109,15 @@ describe("prices file: quantity per store", () => {
     const m = mapSheet2([["الباركود / الرقم", "سعر البيع", "مخزن الهضبة", "رصيد فرع أكتوبر"], [461559, "900", 12, ""]], [], stores);
     expect(m.storeColumns).toEqual(["hadaba", "oct"]);
     expect(m.rows[0]).toEqual({ sku: "461559", price: "900.00", stock: { hadaba: "12" } });
+  });
+});
+
+describe("prices file: the Egypt sheet as it is (re-uploaded with Saudi prices)", () => {
+  const head = ["كود الصنف", "الباركود / الرقم البديل", "الصنف", "وحدة اساسية", "المجموعة", "النوع /مجموعه فرعيه", "سعر الشراء", "اخر س شراء", "سعر البيع", "الرصيد", "حالة الضريبه"];
+  it("uses the barcode column (not the old system's own number), reads group, unit and the unnamed quantity", () => {
+    const m = mapSheet2([head, [914299, 461559, "ستارز شراب اديداس شبابي منقط", "قطعة", "أحذية", "حذاء كرة", 300, 0, 450, 3, "غير خاضع للضريبه"], ["914297", "312513", "شنطه هاندباج", "قطعة", "NONE", "شنطة", "", 0, "", 0, ""]]);
+    expect(m.rows[0]).toEqual({ sku: "461559", name_ar: "ستارز شراب اديداس شبابي منقط", unit: "قطعة", group: "أحذية", cost: "300.00", price: "450.00", qty: "3" });
+    expect(m.rows[1]).toEqual({ sku: "312513", name_ar: "شنطه هاندباج", unit: "قطعة", qty: "0" });
+    expect(m.columns).toEqual(expect.arrayContaining(["sku", "name_ar", "unit", "group", "cost", "price", "qty"]));
   });
 });
