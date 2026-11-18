@@ -38,9 +38,17 @@ export function PriceFile({ t, levels = [] }: { t: Dict; levels?: (LevelColumn &
   async function pick(file: File) {
     setMsg(null); setItems(null); setBusy(true);
     try {
-      const data: unknown[][] = file.name.toLowerCase().endsWith(".csv") ? parseCsv(await file.text()) : (await readSheet(file)) as unknown[][];
+      const name = file.name.toLowerCase();
+      // old Excel (.xls) and OpenDocument (.ods) need a reader that is not installed yet
+      if (/\.(xls|ods|numbers)$/.test(name)) { setBusy(false); return setMsg({ ok: false, text: p.oldFormat }); }
+      const data: unknown[][] = /\.(csv|txt|tsv)$/.test(name) ? parseCsv(await file.text()) : (await readSheet(file)) as unknown[][];
       const m = mapPriceSheet(data, levels);
-      if (!m.columns.includes("sku")) { setBusy(false); return setMsg({ ok: false, text: p.noSku }); }
+      if (!m.columns.includes("sku")) {
+        // say which columns the file has, so the person can rename the code column
+        const seen = (data.find((r) => Array.isArray(r) && r.some((c) => String(c ?? "").trim())) ?? []).map((c) => String(c ?? "").trim()).filter(Boolean).slice(0, 12);
+        setBusy(false);
+        return setMsg({ ok: false, text: `${p.noSku} ${seen.length ? `${p.columnsSeen}: ${seen.join(" · ")}. ` : ""}${p.skuNames}` });
+      }
       setRows(m.rows); setCols([...m.columns.map((c) => label[c] ?? c), ...m.levelColumns.map((id) => label[`level:${id}`] ?? id)]);
       const r = await previewPricesAction(m.rows);
       if (r.ok) setItems(r.items); else setMsg({ ok: false, text: r.error });
@@ -57,7 +65,7 @@ export function PriceFile({ t, levels = [] }: { t: Dict; levels?: (LevelColumn &
       {levels.length > 0 && <p className="hint -mt-2" data-testid="level-columns">{t.levels.fileHint} {levels.map((l) => `"${l.label}"`).join(" · ")}</p>}
       <label className="btn-ghost cursor-pointer">
         {p.choose}
-        <input type="file" accept=".xlsx,.csv" className="hidden" onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])} />
+        <input type="file" accept=".xlsx,.xlsm,.xls,.ods,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" className="hidden" onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])} />
       </label>
       {busy && <p className="text-sm text-gray-500">…</p>}
       {msg && <p className={msg.ok ? "alert-ok" : "alert-err"}>{msg.text}</p>}

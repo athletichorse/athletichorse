@@ -185,7 +185,7 @@ const en: Dict = {
     pricesFile: {
       title: "Names & prices file (by SKU)",
       hint: "Columns: SKU or Barcode, and any of: Name (English), الاسم (Arabic), Price, Wholesale, Cost. Check the old → new values before saving. Website items keep the website's price and English name.",
-      choose: "Choose file (.xlsx or .csv)",
+      choose: "Choose Excel or CSV file",
       understood: "Columns found",
       rows: "rows",
       old: "Now",
@@ -195,6 +195,9 @@ const en: Dict = {
       notFound: "SKUs not found",
       websiteKept: "Website prices kept",
       noChanges: "Nothing to change.",
+      columnsSeen: "Columns in the file",
+      skuNames: "Name the code column one of: Barcode, SKU, Code, Item code, الباركود, الكود, كود الصنف, رقم الصنف.",
+      oldFormat: "This is an old Excel format (.xls / .ods). Open it in Excel and choose File → Save As → Excel Workbook (.xlsx), then choose it here.",
       noSku: "No SKU / Barcode column found.",
     },
     title: "Products",

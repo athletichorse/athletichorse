@@ -54,3 +54,22 @@ describe("prices file: one column per price level", () => {
     expect(m.rows[1]).toEqual({ sku: "B2", levels: { vip: "12.50", dist: "10.00" } });
   });
 });
+
+describe("prices file: header row and column names as people write them", () => {
+  it("finds the header row below a title and blank rows; Arabic names with alef variants and colons", () => {
+    const m = mapSheet2([
+      ["قائمة الأسعار - فرع جدة"],
+      [],
+      ["كود الصنف:", "اسم الصنف", "سعر البيع", "سعر الشراء"],
+      [100100, "حبل", "35", "12"],
+      ["100200.0", "كرة", "٢٠", ""],
+    ]);
+    expect(m.columns).toEqual(expect.arrayContaining(["sku", "name_ar", "price", "cost"]));
+    expect(m.rows[0]).toEqual({ sku: "100100", name_ar: "حبل", price: "35.00", cost: "12.00" });
+    expect(m.rows[1]).toMatchObject({ sku: "100200", price: "20.00" });
+  });
+  it("accepts Item code / الباركود (SKU)", () => {
+    expect(mapSheet2([["Item code", "Price"], ["A1", "5"]]).rows).toEqual([{ sku: "A1", price: "5.00" }]);
+    expect(mapSheet2([["الباركود (SKU)", "السعر"], ["B2", "7"]]).rows).toEqual([{ sku: "B2", price: "7.00" }]);
+  });
+});
