@@ -31,7 +31,8 @@ export function levelForHeader(h: string, levels: LevelColumn[]): string | null 
 }
 
 const HEAD: Record<keyof PriceRow, RegExp> = {
-  sku: /^(sku|barcode|bar code|code|item code|item no\.?|item number|product code|كود|الكود|كود الصنف|رمز الصنف|رقم الصنف|باركود|الباركود|رقم الباركود|الباركود \(sku\)|كود المنتج)$/i,
+  // a code column: any header that mentions barcode / code / SKU (e.g. "الباركود / الرقم", "Item code")
+  sku: /(sku|barcode|bar code|\bcode\b|item no\.?|item number|باركود|كود|رمز الصنف|رقم الصنف)/i,
   levels: /^$/, // not a header: one column per price level (see levelForHeader)
   name_en: /^(name|name.?en|english name|item name|title|الاسم بالإنجليزي|الاسم انجليزي|اسم الصنف \(en\)|اسم الصنف انجليزي)$/i,
   name_ar: /^(name.?ar|arabic name|الاسم|الاسم بالعربي|اسم الصنف|الاسم عربي|اسم الصنف \(ع\)|اسم الصنف عربي|البيان|الصنف)$/i,

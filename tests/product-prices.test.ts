@@ -73,3 +73,16 @@ describe("prices file: header row and column names as people write them", () => 
     expect(mapSheet2([["الباركود (SKU)", "السعر"], ["B2", "7"]]).rows).toEqual([{ sku: "B2", price: "7.00" }]);
   });
 });
+
+describe("prices file: the owner's export", () => {
+  it("reads 'الباركود / الرقم', 'الصنف', 'سعر الشراء', 'سعر البيع' and skips the other columns", () => {
+    const m = mapSheet2([
+      ["الباركود / الرقم", "الصنف", "وحدة اساسية", "المجموعة", "النوع /مجموعة", "سعر الشراء", "سعر البيع"],
+      [461559, "ستارز شراب اديداس شبابي منقط", "قطعة", "أحذية", "حذاء كرة", 500, "900.00"],
+      [312513, "شنطه هانديانج تراك فوسفوري صغيره 37", "قطعة", "أدوات", "شنطة", 125, "195.00"],
+    ]);
+    expect(m.columns).toEqual(expect.arrayContaining(["sku", "name_ar", "price", "cost"]));
+    expect(m.rows[0]).toEqual({ sku: "461559", name_ar: "ستارز شراب اديداس شبابي منقط", price: "900.00", cost: "500.00" });
+    expect(m.rows[1]).toMatchObject({ sku: "312513", price: "195.00", cost: "125.00" });
+  });
+});
