@@ -1,3 +1,4 @@
+import { TableColumnFilter } from "@/components/TableColumnFilter";
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth";
 import { getDict } from "@/lib/locale";
@@ -77,6 +78,7 @@ export default async function StockDocsPage({ searchParams }: { searchParams: Pr
         )}
       </div>
 
+      <TableColumnFilter t={t}>
       <div className="card overflow-hidden p-0"><div className="overflow-x-auto">
         <table className="table" data-export>
           <thead><tr><th>{M.number}</th><th>{M.date}</th><th>{M.from}</th><th>{M.to}</th><th>{M.items}</th><th>{M.by}</th></tr></thead>
@@ -101,6 +103,7 @@ export default async function StockDocsPage({ searchParams }: { searchParams: Pr
           </tbody>
         </table>
       </div></div>
+      </TableColumnFilter>
     </>
   );
 }

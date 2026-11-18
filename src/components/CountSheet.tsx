@@ -7,6 +7,7 @@ import { postStockDocAction } from "@/app/actions/stock";
 import { looksOffline } from "@/lib/offline";
 import { docNumber } from "@/lib/doc-number";
 import { StockQueueList, useStockOffline } from "./useStockOffline";
+import { TableColumnFilter } from "./TableColumnFilter";
 
 type Row = { variantId: string; sku: string | null; name: string; options: string; price: string; system: number };
 type Key = "sku" | "name" | "price" | "system" | "actual" | "diff";
@@ -40,6 +41,7 @@ export function CountSheet({ t, locale, locationId, locationName, rows }: { t: D
         <p className="hint">{F.countHint}</p>
         <input className="input no-print" placeholder={F.filter} value={filter} onChange={(e) => setFilter(e.target.value)} />
       </div>
+      <div className="px-5"><TableColumnFilter t={t}>
       <div className="max-h-[70vh] overflow-auto">
         <table className="table" data-export>
           <thead className="sticky top-0 z-10"><tr>{th("sku", "SKU")}{th("name", t.stock.item)}{th("price", F.price)}{th("system", F.systemQty)}{th("actual", F.actualQty)}{th("diff", F.difference)}</tr></thead>
@@ -60,6 +62,7 @@ export function CountSheet({ t, locale, locationId, locationName, rows }: { t: D
           </tbody>
         </table>
       </div>
+      </TableColumnFilter></div>
       {msg && <p className={`mx-5 ${msg.ok ? "alert-ok" : "alert-err"}`}>{msg.text}</p>}
       <div className="mx-5"><StockQueueList t={t} off={off} err={errText} /></div>
       <div className="flex justify-end px-5 pb-5">

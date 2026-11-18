@@ -1,3 +1,4 @@
+import { TableColumnFilter } from "@/components/TableColumnFilter";
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth";
 import { getDict } from "@/lib/locale";
@@ -56,6 +57,7 @@ export default async function ShortagesPage({ searchParams }: { searchParams: Pr
         <div className="min-w-48 flex-1"><label className="label">{F.filter}</label><input name="q" defaultValue={sp.q ?? ""} className="input" /></div>
         <button className="btn-primary">{F.show}</button>
       </form>
+      <TableColumnFilter t={t}>
       <div className="card overflow-hidden p-0"><div className="overflow-x-auto">
         <table className="table" data-export>
           <thead><tr>{th("name", t.stock.item)}{th("sku", "SKU")}{th("price", F.price)}{th("qty", t.stock.onHand)}{th("reorder", t.products.extras.reorder)}</tr></thead>
@@ -73,6 +75,7 @@ export default async function ShortagesPage({ searchParams }: { searchParams: Pr
           </tbody>
         </table>
       </div></div>
+      </TableColumnFilter>
       <p className="mt-2 text-xs text-gray-500">{hits.length} / {rows.length}</p>
     </>
   );

@@ -31,13 +31,15 @@ function compare(n: number, op: FinderOp, v: string): boolean {
  * contains / equals; numbers: = > ≥ < ≤). Shows the first 100 and how many match. Tap a row to add;
  * with "ask the quantity" on, a quantity box comes first.
  */
-export function ColumnSearch({ t, locale, locationId, onPick, onClose, off }: {
-  t: Dict; locale: Locale; locationId: string | null; onPick: (h: VariantHit, qty?: string) => void; onClose: () => void; off?: OfflineTill;
+export function ColumnSearch({ t, locale, locationId, onPick, onClose, off, browse = false }: {
+  t: Dict; locale: Locale; locationId: string | null; onPick?: (h: VariantHit, qty?: string) => void; onClose: () => void; off?: OfflineTill;
+  /** look-up only (stock by store): no "add", no quantity box, items with no stock shown too */
+  browse?: boolean;
 }) {
   const C = t.pos.colSearch;
   const [vals, setVals] = useState<Partial<Record<FinderCol, string>>>({});
   const [ops, setOps] = useState<Record<FinderCol, FinderOp>>(DEFAULT_OP);
-  const [showNoStock, setShowNoStock] = useState(false);
+  const [showNoStock, setShowNoStock] = useState(browse);
   const [askQty, setAskQty] = useState(false);
   const [res, setRes] = useState<{ total: number; rows: ColumnHit[]; canCost: boolean } | null>(null);
   const [offline, setOffline] = useState(false);
@@ -69,7 +71,7 @@ export function ColumnSearch({ t, locale, locationId, onPick, onClose, off }: {
     return () => window.clearTimeout(id);
   }, [vals, ops, showNoStock, locationId, locale, off]);
 
-  const choose = (h: ColumnHit) => (askQty ? setPending({ hit: h, qty: "1" }) : onPick(h));
+  const choose = (h: ColumnHit) => { if (browse || !onPick) return; if (askQty) setPending({ hit: h, qty: "1" }); else onPick(h); };
   const cols: FinderCol[] = ["code", "name", "options", "group", "price", ...(res?.canCost ? (["cost"] as const) : []), ...(locationId ? (["stock"] as const) : [])];
   const label = (k: FinderCol) => C[k];
 
@@ -78,7 +80,7 @@ export function ColumnSearch({ t, locale, locationId, onPick, onClose, off }: {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <h3 className="font-semibold text-gray-900">{C.title}</h3>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-[var(--brand)]" checked={showNoStock} disabled={!locationId} onChange={(e) => setShowNoStock(e.target.checked)} />{C.showNoStock}</label>
-        <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-[var(--brand)]" checked={askQty} onChange={(e) => setAskQty(e.target.checked)} />{C.askQty}</label>
+        {!browse && <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-[var(--brand)]" checked={askQty} onChange={(e) => setAskQty(e.target.checked)} />{C.askQty}</label>}
         <div className="flex-1" />
         <button type="button" className="font-medium text-[var(--brand)] underline" onClick={onClose}>{C.close}</button>
       </div>
@@ -116,8 +118,8 @@ export function ColumnSearch({ t, locale, locationId, onPick, onClose, off }: {
           <div className="flex-1" />
           <label className="text-sm">{C.qty}</label>
           <input autoFocus className="input w-24" dir="ltr" inputMode="decimal" value={pending.qty} onChange={(e) => setPending({ ...pending, qty: e.target.value })}
-            onKeyDown={(e) => { if (e.key === "Enter" && Number(pending.qty) > 0) { onPick(pending.hit, pending.qty); setPending(null); } if (e.key === "Escape") setPending(null); }} />
-          <button type="button" className="btn-primary" disabled={!(Number(pending.qty) > 0)} onClick={() => { onPick(pending.hit, pending.qty); setPending(null); }}>{C.add}</button>
+            onKeyDown={(e) => { if (e.key === "Enter" && Number(pending.qty) > 0) { onPick?.(pending.hit, pending.qty); setPending(null); } if (e.key === "Escape") setPending(null); }} />
+          <button type="button" className="btn-primary" disabled={!(Number(pending.qty) > 0)} onClick={() => { onPick?.(pending.hit, pending.qty); setPending(null); }}>{C.add}</button>
         </div>
       )}
 
@@ -125,10 +127,10 @@ export function ColumnSearch({ t, locale, locationId, onPick, onClose, off }: {
       {res && res.rows.length > 0 && (
         <div className="max-h-[28rem] overflow-y-auto">
           <table className="table">
-            <thead><tr>{cols.map((k) => <th key={k}>{label(k)}</th>)}<th></th></tr></thead>
+            <thead><tr>{cols.map((k) => <th key={k}>{label(k)}</th>)}{!browse && <th></th>}</tr></thead>
             <tbody>
               {res.rows.map((h) => (
-                <tr key={h.variantId} className="cursor-pointer hover:bg-gray-50" onClick={() => choose(h)}>
+                <tr key={h.variantId} className={browse ? "" : "cursor-pointer hover:bg-gray-50"} onClick={() => choose(h)}>
                   <td data-label={C.code} dir="ltr" className="font-mono text-xs">{h.sku ?? "—"}</td>
                   <td data-label={C.name} className="cell-title font-medium">{h.name}</td>
                   <td data-label={C.options}>{h.options || "—"}</td>
@@ -136,7 +138,7 @@ export function ColumnSearch({ t, locale, locationId, onPick, onClose, off }: {
                   <td data-label={C.price} dir="ltr">{h.price}</td>
                   {res.canCost && <td data-label={C.cost} dir="ltr">{h.cost ?? "—"}</td>}
                   {locationId && <td data-label={C.stock} dir="ltr" className={h.stock !== null && Number(h.stock) <= 0 ? "text-red-600" : ""}>{h.stock ?? "—"}</td>}
-                  <td><button type="button" className="btn-ghost py-1 text-sm" onClick={(e) => { e.stopPropagation(); choose(h); }}>{C.add}</button></td>
+                  {!browse && <td><button type="button" className="btn-ghost py-1 text-sm" onClick={(e) => { e.stopPropagation(); choose(h); }}>{C.add}</button></td>}
                 </tr>
               ))}
             </tbody>
