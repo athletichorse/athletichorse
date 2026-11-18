@@ -32,7 +32,7 @@ export default async function CountPage({ searchParams }: { searchParams: Promis
         <select name="loc" defaultValue={loc} className="input w-auto">{mine.map((l) => <option key={l.id} value={l.id}>{locale === "ar" ? l.name_ar : l.name_en || l.name_ar}</option>)}</select>
         <button className="btn-ghost">{t.stock.flow.show}</button>
       </form>
-      {loc && <CountSheet key={loc} t={t} locationId={loc} rows={rows} />}
+      {loc && <CountSheet key={loc} t={t} locale={locale} locationId={loc} locationName={(() => { const l = mine.find((x) => x.id === loc); return l ? (locale === "ar" ? l.name_ar : l.name_en || l.name_ar) : ""; })()} rows={rows} />}
     </>
   );
 }

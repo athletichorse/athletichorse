@@ -1,14 +1,15 @@
 /*
  * Service worker for the staff portal.
- * Purpose: the Cashier page (/pos) opens even without internet, so the till can
- * keep selling (offline sales are queued by the page itself and sent later).
+ * Purpose: the Cashier page (/pos) and the stock screens (receive, transfer, count,
+ * write-off, count sheet) open even without internet; the pages queue their own work
+ * and send it later.
  *  - /_next/static, /icons and /brand (logo): cache-first (file names change on every update).
- *  - /pos page: network-first; the last good copy is kept for offline use.
+ *  - /pos and the stock screens: network-first; the last good copy is kept for offline use.
  *  - other pages offline: the saved Cashier page, or a short "no internet" page.
  *  - opening /login (logged out) forgets the saved pages.
  * Nothing else is cached: data always comes from the server.
  */
-const VERSION = "v2";
+const VERSION = "v3";
 const STATIC = `static-${VERSION}`;
 const PAGES = `pages-${VERSION}`;
 
@@ -34,13 +35,24 @@ async function cacheFirst(req) {
   return res;
 }
 
-async function posPage(req) {
+/** Pages kept for offline use: the cashier and the stock screens (by path + kind). */
+function savedKey(url) {
+  if (url.pathname === "/pos") return "/pos";
+  if (url.pathname === "/stock/count") return "/stock/count";
+  if (url.pathname === "/stock/new") {
+    const kind = url.searchParams.get("kind") || "receipt";
+    return ["receipt", "transfer", "count", "write_off"].includes(kind) && !url.searchParams.get("request") ? `/stock/new?kind=${kind}` : null;
+  }
+  return null;
+}
+
+async function savedPage(req, key) {
   try {
     const res = await fetch(req);
-    if (res.ok && !res.redirected) (await caches.open(PAGES)).put("/pos", res.clone());
+    if (res.ok && !res.redirected) (await caches.open(PAGES)).put(key, res.clone());
     return res;
   } catch {
-    return (await caches.match("/pos")) || new Response(OFFLINE_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
+    return (await caches.match(key)) || (await caches.match("/pos")) || new Response(OFFLINE_HTML, { headers: { "content-type": "text/html; charset=utf-8" } });
   }
 }
 
@@ -66,5 +78,6 @@ self.addEventListener("fetch", (event) => {
     event.waitUntil(caches.delete(PAGES));
     return;
   }
-  event.respondWith(url.pathname === "/pos" ? posPage(req) : otherPage(req));
+  const key = savedKey(url);
+  event.respondWith(key ? savedPage(req, key) : otherPage(req));
 });

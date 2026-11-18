@@ -4,6 +4,7 @@ import { db } from "@/lib/supabase/admin";
 import { BRAND } from "@/lib/product-import";
 import { TopNav } from "@/components/TopNav";
 import { ShowMessage } from "@/components/ShowMessage";
+import { OfflineStockSender } from "@/components/OfflineStockSender";
 import { buildSections } from "@/components/menu";
 import { TILL_ROLES } from "@/lib/permissions";
 import { logoutAction } from "@/app/actions/auth";
@@ -44,6 +45,7 @@ export default async function PortalLayout({ children }: { children: React.React
           </header>
           {children}
           <ShowMessage />
+          <OfflineStockSender />
         </main>
       </div>
     </div>
