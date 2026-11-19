@@ -136,11 +136,12 @@ const links = new Set();
 for (const r of ROUTES) {
   where = `links ${r}`;
   await first.page.goto(BASE + r, { waitUntil: "networkidle" });
-  for (const h of await first.page.$$eval("a[href^='/']", (as) => as.map((a) => a.getAttribute("href")))) {
+  // links with "download" give a file, not a page: their answer is checked below, they are not opened as pages
+  for (const [h, isFile] of await first.page.$$eval("a[href^='/']", (as) => as.map((a) => [a.getAttribute("href"), a.hasAttribute("download")]))) {
     if (h.startsWith("/lang")) continue;
     links.add(h.split("#")[0]);
     const path = h.split("#")[0];
-    if (!pages.has(pattern(path)) && !/print=1|\.xlsx|\/api\//.test(path)) pages.set(pattern(path), path);
+    if (!isFile && !pages.has(pattern(path)) && !/print=1|\.xlsx|\/api\//.test(path)) pages.set(pattern(path), path);
   }
 }
 for (const h of links) {
