@@ -32,6 +32,8 @@ All must report 0 problems. Fix the cause, never loosen a check to get green.
 - Every new text in both `src/i18n/en.ts` and `src/i18n/ar.ts`.
 - New pages go into one of the 6 sections in `src/components/menu.ts` (as a tab) and into `ROUTES` in `scripts/e2e/audit.mjs` and `crawl.mjs`.
 - Never let a row of choices slide sideways on a phone: wrap it (tables may scroll).
+- A link that gives a file (Excel, PDF) gets the `download` attribute: the audit then checks its answer instead of opening it as a page.
+- Never commit links or generated files (node_modules, uploads, converted sheets); check `git status` before `git add -A`.
 
 ## 4. Report honestly
 Say what was checked and what was not (e.g. "not tested against the real Shopify").

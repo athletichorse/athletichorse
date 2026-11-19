@@ -80,6 +80,11 @@ export function PriceFile({ t, levels = [], stores = [], canAdd = false }: { t: 
       <p className="hint -mt-2">{p.hint}</p>
       {stores.length > 0 && <p className="hint -mt-2" data-testid="store-columns">{p.storesHint} {stores.map((x) => `"${x.label}"`).join(" · ")}</p>}
       {levels.length > 0 && <p className="hint -mt-2" data-testid="level-columns">{t.levels.fileHint} {levels.map((l) => `"${l.label}"`).join(" · ")}</p>}
+      {/* the form to fill in: download, fill, upload back */}
+      <div className="flex flex-wrap gap-2" data-testid="price-form-downloads">
+        <a href="/upload/template?with=items" download className="btn-ghost">⬇ {p.downloadWithItems}</a>
+        <a href="/upload/template" download className="btn-ghost">⬇ {p.downloadEmpty}</a>
+      </div>
       <label className="btn-ghost cursor-pointer">
         {p.choose}
         <input type="file" accept=".xlsx,.xlsm,.xls,.ods,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" className="hidden" onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])} />

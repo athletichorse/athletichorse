@@ -208,6 +208,8 @@ const en: Dict = {
       added: "Items added",
       activated: "Put on sale (got a price)",
       colNames: { group: "Group", unit: "Unit", qty: "Quantity" },
+      downloadWithItems: "Download the form with all items",
+      downloadEmpty: "Download an empty form",
       noSku: "No SKU / Barcode column found.",
     },
     title: "Products",
