@@ -172,11 +172,11 @@ export async function cancelRequestAction(form: FormData) {
 }
 
 // ---------------------------------------------------------------- item finder (search by columns)
-export type FinderCol = "code" | "name" | "options" | "group" | "price" | "cost" | "stock";
+export type FinderCol = "code" | "name" | "options" | "group" | "supplier" | "factory" | "price" | "cost" | "stock";
 export type FinderOp = "starts" | "ends" | "contains" | "eq" | "gt" | "gte" | "lt" | "lte";
 export type FinderFilter = { col: FinderCol; op: FinderOp; v: string };
-export type ColumnHit = VariantHit & { group: string; stock: string | null; cost: string | null };
-const FINDER_COLS: FinderCol[] = ["code", "name", "options", "group", "price", "cost", "stock"];
+export type ColumnHit = VariantHit & { group: string; stock: string | null; cost: string | null; supplier?: string; factory?: string };
+const FINDER_COLS: FinderCol[] = ["code", "name", "options", "group", "supplier", "factory", "price", "cost", "stock"];
 const FINDER_OPS: FinderOp[] = ["starts", "ends", "contains", "eq", "gt", "gte", "lt", "lte"];
 
 /**
@@ -195,13 +195,14 @@ export async function finderAction(filters: FinderFilter[], opts: { locationId: 
   const { data, error } = await db().rpc("pos_item_finder", { p: { location_id: loc, locale: opts.locale, show_no_stock: Boolean(opts.showNoStock) || !loc, filters: clean, limit: 100 } });
   if (error || !data) return { total: 0, rows: [], canCost };
   const ar = opts.locale === "ar";
-  type R = { variant_id: string; sku: string | null; name_en: string; name_ar: string; options: string; group_en: string | null; group_ar: string | null; price: number; cost: number | null; stock: number | null; is_service: boolean };
+  type R = { variant_id: string; sku: string | null; name_en: string; name_ar: string; options: string; group_en: string | null; group_ar: string | null; price: number; cost: number | null; stock: number | null; is_service: boolean; supplier: string | null; factory: string | null };
   return {
     total: Number(data.total ?? 0), canCost,
     rows: ((data.rows ?? []) as R[]).map((r) => ({
       variantId: r.variant_id, name: (ar && r.name_ar) || r.name_en || r.name_ar, options: r.options ?? "", sku: r.sku, price: Number(r.price).toFixed(2),
       image: null, isService: r.is_service, exact: false, group: String((ar && r.group_ar) || r.group_en || ""),
       stock: loc && !r.is_service ? String(Number(r.stock ?? 0)) : null, cost: canCost && r.cost !== null ? Number(r.cost).toFixed(2) : null,
+      supplier: r.supplier ?? "", factory: r.factory ?? "",
     })),
   };
 }

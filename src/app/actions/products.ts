@@ -39,6 +39,8 @@ function readProduct(form: FormData) {
     subgroup_id: String(form.get("subgroup_id") ?? "") || null,
     unit: (UNITS as readonly string[]).includes(unit) ? unit : "piece",
     is_service: form.get("is_service") === "on",
+    supplier_name: String(form.get("supplier_name") ?? "").trim().replace(/\s+/g, " ").slice(0, 120) || null,
+    factory_name: String(form.get("factory_name") ?? "").trim().replace(/\s+/g, " ").slice(0, 120) || null,
   };
 }
 
@@ -53,7 +55,8 @@ export async function saveProductAction(form: FormData) {
   const fromWebsite = product.shopify_product_id !== null;
 
   const p = readProduct(form);
-  const update: Record<string, unknown> = { name_ar: p.name_ar, group_id: p.group_id, subgroup_id: p.subgroup_id, unit: p.unit, is_service: p.is_service, active: form.get("active") === "on" };
+  const update: Record<string, unknown> = { name_ar: p.name_ar, group_id: p.group_id, subgroup_id: p.subgroup_id, unit: p.unit, is_service: p.is_service, active: form.get("active") === "on",
+    ...(form.has("supplier_name") ? { supplier_name: p.supplier_name } : {}), ...(form.has("factory_name") ? { factory_name: p.factory_name } : {}) };
   if (!fromWebsite) {
     if (!p.name_en) return back("name");
     update.name_en = p.name_en;
@@ -300,6 +303,14 @@ export async function previewPricesAction(rows: PriceRow[]): Promise<{ ok: true;
     const { data: sl } = vs?.length ? await db().from("stock_levels").select("variant_id, location_id, qty").in("variant_id", vs.map((v) => v.id)) : { data: [] };
     for (const x of sl ?? []) qtyNow.set(`${skuOf.get(x.variant_id)}|${x.location_id}`, String(Number(x.qty)));
   }
+  // supplier / factory of each item (on its product)
+  const maker = new Map<string, { supplier: string; factory: string }>();
+  const withMaker = list.filter((r) => r.supplier || r.factory);
+  for (let i = 0; i < withMaker.length; i += 500) {
+    const { data: vs } = await db().from("product_variants").select("sku, product_id").in("sku", withMaker.slice(i, i + 500).map((r) => r.sku));
+    const { data: ps } = vs?.length ? await db().from("products").select("id, supplier_name, factory_name").in("id", [...new Set(vs.map((v) => v.product_id))]) : { data: [] };
+    for (const v of vs ?? []) { const pr = ps?.find((x) => x.id === v.product_id); if (v.sku) maker.set(v.sku, { supplier: pr?.supplier_name ?? "", factory: pr?.factory_name ?? "" }); }
+  }
   const str = (v: unknown) => (v === null || v === undefined ? "" : String(v));
   const money2 = (v: unknown) => { try { return v === null || v === undefined || v === "" ? "" : formatDecimal(toHalalas(String(v))); } catch { return str(v); } };
   const items: PricePreview[] = list.map((r) => {
@@ -316,6 +327,9 @@ export async function previewPricesAction(rows: PriceRow[]): Promise<{ ok: true;
       const old = money2(cur.get(`${r.sku}|${lv}`));
       if (price !== old) changes.push({ field: `level:${lv}`, old, new: price });
     }
+    const mk = maker.get(r.sku);
+    if (r.supplier && mk && r.supplier !== mk.supplier) changes.push({ field: "supplier", old: mk.supplier, new: r.supplier });
+    if (r.factory && mk && r.factory !== mk.factory) changes.push({ field: "factory", old: mk.factory, new: r.factory });
     if (canCount) for (const [loc, q] of Object.entries(r.stock ?? {})) {
       if (!canUseLocation(s, loc)) continue;
       const old = qtyNow.get(`${r.sku}|${loc}`) ?? "0";
@@ -373,6 +387,18 @@ export async function applyPricesAction(rows: PriceRow[], countIds: Record<strin
     const { data, error } = await db().rpc("update_names_prices", { p_rows: list.slice(i, i + 500), p_user: s.id, p_can_cost: s.perms.has("products.view_cost") });
     if (error) return { ok: false, error: error.message };
     updated += Number(data?.updated ?? 0); notFound += Number(data?.not_found ?? 0); websiteKept += Number(data?.website_price_kept ?? 0);
+  }
+  // supplier / factory names (on the item's product)
+  const makerRows = list.filter((r) => r.supplier || r.factory);
+  for (let i = 0; i < makerRows.length; i += 500) {
+    const chunk = makerRows.slice(i, i + 500);
+    const { data: vs } = await db().from("product_variants").select("sku, product_id").in("sku", chunk.map((r) => r.sku));
+    for (const r of chunk) {
+      const pid = vs?.find((v) => v.sku === r.sku)?.product_id;
+      if (!pid) continue;
+      const { error } = await db().from("products").update({ ...(r.supplier ? { supplier_name: r.supplier } : {}), ...(r.factory ? { factory_name: r.factory } : {}) }).eq("id", pid);
+      if (error) return { ok: false, error: error.message };
+    }
   }
   for (let i = 0; i < toActivate.length; i += 500) {
     const chunk = toActivate.slice(i, i + 500);

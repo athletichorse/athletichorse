@@ -27,7 +27,7 @@ export async function GET(req: Request) {
   const levelName = (l: { name_en: string; name_ar: string }) => l.name_ar || l.name_en;
   const storeName = (l: { name_en: string; name_ar: string; code: string }) => l.name_ar || l.name_en || l.code;
 
-  const head = ["الباركود", "الصنف", "الاسم بالإنجليزي", "اللون / المقاس", "الوحدة", "المجموعة",
+  const head = ["الباركود", "الصنف", "الاسم بالإنجليزي", "اللون / المقاس", "الوحدة", "المجموعة", "اسم المورد", "اسم المصنع",
     ...(seeCost ? ["سعر الشراء"] : []), "سعر البيع", "سعر الجملة",
     ...(levels ?? []).map((l) => `سعر ${levelName(l)}`), ...stores.map((x) => `رصيد ${storeName(x)}`)];
   const data: SheetData = [head.map((h) => ({ value: h, fontWeight: "bold" as const }))];
@@ -42,10 +42,10 @@ export async function GET(req: Request) {
       if (!page || page.length < 1000) break;
     }
     const pids = [...new Set(items.map((v) => v.product_id))];
-    const prod = new Map<string, { unit: string; group_id: string | null }>();
+    const prod = new Map<string, { unit: string; group_id: string | null; supplier_name: string | null; factory_name: string | null }>();
     for (let i = 0; i < pids.length; i += 500) {
-      const { data: ps } = await db().from("products").select("id, unit, group_id").in("id", pids.slice(i, i + 500));
-      for (const p of ps ?? []) prod.set(p.id, { unit: p.unit, group_id: p.group_id });
+      const { data: ps } = await db().from("products").select("id, unit, group_id, supplier_name, factory_name").in("id", pids.slice(i, i + 500));
+      for (const p of ps ?? []) prod.set(p.id, { unit: p.unit, group_id: p.group_id, supplier_name: p.supplier_name, factory_name: p.factory_name });
     }
     const { data: groups } = await db().from("product_groups").select("id, name_en, name_ar");
     const vids = items.map((v) => v.variant_id);
@@ -69,6 +69,7 @@ export async function GET(req: Request) {
         [v.option1, v.option2, v.option3].filter(Boolean).join(" / ") || null,
         p ? UNIT_AR[p.unit] ?? p.unit : null,
         g ? g.name_ar || g.name_en : null,
+        p?.supplier_name || null, p?.factory_name || null,
         ...(seeCost ? [num(v.cost)] : []), num(v.price), num(v.wholesale_price),
         ...(levels ?? []).map((l) => num(lp.get(`${v.variant_id}|${l.id}`))),
         ...stores.map((x) => num(qty.get(`${v.variant_id}|${x.id}`) ?? 0)),

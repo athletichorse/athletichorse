@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { PageHeader } from "@/components/PageHeader";
-import { productError, UNITS, UNIT_AR, type Group } from "@/components/ProductFields";
+import { productError, SupplierFields, UNITS, UNIT_AR, type Group } from "@/components/ProductFields";
+import { supplierNames } from "@/lib/supplier-names";
 import { createProductAction } from "@/app/actions/products";
 
 /** New item: details, prices (incl. price levels), offer price for a period, colours and sizes. */
@@ -19,6 +20,7 @@ export default async function NewProductPage({ searchParams }: { searchParams: P
     db().from("price_levels").select("id, name_en, name_ar").eq("active", true).neq("code", "wholesale").order("sort"),
   ]);
   const gs = (groups ?? []) as Group[];
+  const names = await supplierNames();
   const label = (g: Group) => (locale === "ar" && g.name_ar ? g.name_ar : g.name_en);
   const top = gs.filter((g) => !g.parent_id);
   const subs = gs.filter((g) => g.parent_id);
@@ -49,6 +51,7 @@ export default async function NewProductPage({ searchParams }: { searchParams: P
             <select id="np-unit" name="unit" defaultValue="piece" className="input">
               {UNITS.map((u) => <option key={u} value={u}>{locale === "ar" ? UNIT_AR[u] : u}</option>)}
             </select></div>
+          <SupplierFields t={t} suppliers={names.suppliers} factories={names.factories} />
           <div className="flex flex-wrap gap-6 sm:col-span-3">
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="active" defaultChecked className="h-4 w-4 accent-[var(--brand)]" />{N.active}</label>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_service" className="h-4 w-4 accent-[var(--brand)]" />{N.service}</label>
