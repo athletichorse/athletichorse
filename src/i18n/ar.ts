@@ -206,6 +206,8 @@ const ar = {
       added: "أصناف أُضيفت",
       activated: "أصبحت للبيع (أخذت سعراً)",
       colNames: { group: "المجموعة", unit: "الوحدة", qty: "الكمية" },
+      downloadWithItems: "تحميل النموذج بكل الأصناف",
+      downloadEmpty: "تحميل نموذج فارغ",
       noSku: "لم يُعثر على عمود الكود / الباركود.",
     },
     title: "المنتجات",

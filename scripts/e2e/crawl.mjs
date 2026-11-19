@@ -282,6 +282,17 @@ else ok("item price for the VIP level saved on the product page (32.00 instead o
   const r2 = await page.locator("#prices .alert-ok, #prices .alert-err").first().innerText().catch(() => "");
   if (!/Put on sale \(got a price\): 1/.test(r2)) fail("prices file", `re-upload with a price: ${r2}`);
   else ok("same sheet re-uploaded with a price: the item is put on sale");
+  // the form to fill in: download it with every item, upload it straight back → understood, nothing to change
+  await page.goto(BASE + "/upload", { waitUntil: "networkidle" });
+  const [dl] = await Promise.all([page.waitForEvent("download", { timeout: 30000 }), page.locator('[data-testid=price-form-downloads] a').first().click()]);
+  const form = `${OUT}/prices-form.xlsx`;
+  await dl.saveAs(form);
+  if (!/^prices-and-stock-\d{4}-\d{2}-\d{2}\.xlsx$/.test(dl.suggestedFilename())) fail("prices file", `form name: ${dl.suggestedFilename()}`);
+  await page.locator("#prices input[type=file]").setInputFiles(form);
+  await page.waitForSelector("#prices >> text=/Nothing to change|SKUs not found|rows/", { timeout: 30000 }).catch(() => {});
+  const back = await page.locator("#prices").innerText();
+  if (!/Nothing to change/.test(back) || /SKUs not found/.test(back) || /No SKU/.test(back)) fail("prices file", `downloaded form uploaded back: ${back.replace(/\s+/g, " ").slice(0, 260)}`);
+  else ok("download the form with all items, upload it back: every column understood, nothing changes");
 }
 where = "groups";
 await page.goto(BASE + "/products/groups");
