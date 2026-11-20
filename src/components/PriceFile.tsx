@@ -33,6 +33,7 @@ export function PriceFile({ t, levels = [], stores = [], canAdd = false }: { t: 
   const [busy, setBusy] = useState(false);
   const label: Record<string, string> = {
     name_en: t.locations.nameEn, name_ar: t.locations.nameAr, price: t.products.price, wholesale: t.products.extras.wholesale, cost: t.products.cost,
+    supplier: t.products.newForm.supplier, factory: t.products.newForm.factory,
     ...Object.fromEntries(levels.map((l) => [`level:${l.id}`, `${t.levels.level}: ${l.label}`])),
     ...Object.fromEntries(stores.map((x) => [`stock:${x.id}`, `${p.qtyIn} ${x.label}`])),
   };

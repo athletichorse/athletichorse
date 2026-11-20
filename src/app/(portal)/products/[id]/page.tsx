@@ -7,6 +7,7 @@ import { db } from "@/lib/supabase/admin";
 import { thumb } from "@/lib/images";
 import { PageHeader } from "@/components/PageHeader";
 import { ProductFields, productError, type Group } from "@/components/ProductFields";
+import { supplierNames } from "@/lib/supplier-names";
 import { saveProductAction } from "@/app/actions/products";
 
 type Variant = { wholesale_price: string | null; reorder_level: string | null; sale_price: string | null; sale_from: string | null; sale_to: string | null; id: string; sku: string | null; option1: string | null; option2: string | null; option3: string | null; price: string; compare_at_price: string | null; cost: string | null; active: boolean; shopify_variant_id: number | null; shopify_sku: string | null; image_url: string | null };
@@ -41,6 +42,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   const { data: lpRows } = levels.length && ids.length ? await db().from("variant_level_prices").select("variant_id, level_id, price").in("variant_id", ids) : { data: [] };
   const levelPrice = (vid: string, lid: string) => lpRows?.find((x) => x.variant_id === vid && x.level_id === lid)?.price;
   const fromWebsite = p.shopify_product_id !== null;
+  const names = await supplierNames();
   const opts: string[] = Array.isArray(p.options) ? p.options : [];
   const optionLabel = (v: Variant) => [v.option1, v.option2, v.option3].filter(Boolean).join(" / ") || t.products.none;
   const err = productError(t, sp.err);
@@ -60,7 +62,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         <input type="hidden" name="id" value={p.id} />
         <fieldset disabled={!canEdit} className="space-y-6">
           <section className="card">
-            <ProductFields t={t} locale={locale} groups={(groups ?? []) as Group[]} value={p} nameLocked={fromWebsite} />
+            <ProductFields t={t} locale={locale} groups={(groups ?? []) as Group[]} value={p} nameLocked={fromWebsite} suppliers={names.suppliers} factories={names.factories} />
             <label className="mt-4 flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" name="active" defaultChecked={p.active} className="h-4 w-4 accent-[var(--brand)]" /> {t.active}
             </label>

@@ -25,6 +25,7 @@ export type PriceRow = {
   levels?: Record<string, string>; stock?: Record<string, string>;
   /** for adding items that are not in the system yet */
   group?: string; unit?: string;
+  supplier?: string; factory?: string;
   /** a quantity column without a store name ("الرصيد"): the person picks the store on upload */
   qty?: string;
 };
@@ -59,6 +60,8 @@ const HEAD: Record<keyof PriceRow, RegExp> = {
   group: /^(المجموعة|مجموعة|المجموعه|group|category|الفئة)$/i,
   unit: /^(وحدة اساسية|وحدة اساسيه|الوحدة|الوحدة الرئيسية|الوحدة الاساسية|وحدة|unit|main unit)$/i,
   qty: /^(الرصيد|رصيد|الكمية|كمية|الرصيد الحالي|qty|quantity|stock|on hand)$/i,
+  supplier: /^(اسم المورد|المورد|مورد|supplier|supplier name|vendor)$/i,
+  factory: /^(اسم المصنع|المصنع|مصنع|الشركة المصنعة|factory|factory name|manufacturer)$/i,
   name_en: /^(name|name.?en|english name|item name|title|الاسم بالإنجليزي|الاسم انجليزي|اسم الصنف \(en\)|اسم الصنف انجليزي)$/i,
   name_ar: /^(name.?ar|arabic name|الاسم|الاسم بالعربي|اسم الصنف|الاسم عربي|اسم الصنف \(ع\)|اسم الصنف عربي|البيان|الصنف)$/i,
   price: /^(price|sale price|selling price|retail price|السعر|سعر البيع|سعر القطاعي|سعر التجزئة|سعر المستهلك)$/i,
@@ -117,8 +120,8 @@ export function mapPriceSheet(rowsIn: unknown[][], levels: LevelColumn[] = [], s
     const text = (k: "name_en" | "name_ar") => { const i = idx[k]; const v = i === undefined ? "" : String(r[i] ?? "").trim(); if (v) row[k] = v.slice(0, 200); };
     const num = (k: "price" | "wholesale" | "cost") => { const i = idx[k]; const v = i === undefined ? undefined : cleanMoney(r[i]); if (v !== undefined) row[k] = v; };
     text("name_en"); text("name_ar"); num("price"); num("wholesale"); num("cost");
-    const plain = (k: "group" | "unit") => { const i = idx[k]; const v = i === undefined ? "" : String(r[i] ?? "").trim(); if (v && v.toUpperCase() !== "NONE") row[k] = v.slice(0, 60); };
-    plain("group"); plain("unit");
+    const plain = (k: "group" | "unit" | "supplier" | "factory") => { const i = idx[k]; const v = i === undefined ? "" : String(r[i] ?? "").trim(); if (v && v.toUpperCase() !== "NONE") row[k] = v.slice(0, k === "supplier" || k === "factory" ? 120 : 60); };
+    plain("group"); plain("unit"); plain("supplier"); plain("factory");
     if (idx.qty !== undefined) { const q = cleanQty(r[idx.qty]); if (q !== undefined) row.qty = q; }
     for (const [lv, i] of levelIdx) { const v = cleanMoney(r[i]); if (v !== undefined) (row.levels ??= {})[lv] = v; }
     for (const [st, i] of storeIdx) { const v = cleanQty(r[i]); if (v !== undefined) (row.stock ??= {})[st] = v; }

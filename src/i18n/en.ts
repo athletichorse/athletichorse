@@ -136,6 +136,7 @@ const en: Dict = {
   },
   products: {
     newForm: {
+      supplier: "Supplier name", factory: "Factory name", listHint: "Choose from the list or type a new name.",
       nameRequired: "Type the item's name (Arabic or English).",
       typeNeedsGroup: "Choose a group first, then type the new type under it.",
       barcode: "Barcode (SKU)", group: "Group", type: "Type / sub-group", typeHint: "Choose a type, or type a new one and it is added to the list.",
@@ -207,7 +208,7 @@ const en: Dict = {
       addMissingHint: "With their name, group, unit and price. Items without a price are added but not for sale until they get one.",
       added: "Items added",
       activated: "Put on sale (got a price)",
-      colNames: { group: "Group", unit: "Unit", qty: "Quantity" },
+      colNames: { group: "Group", unit: "Unit", qty: "Quantity", supplier: "Supplier", factory: "Factory" },
       downloadWithItems: "Download the form with all items",
       downloadEmpty: "Download an empty form",
       noSku: "No SKU / Barcode column found.",
@@ -480,7 +481,7 @@ const en: Dict = {
   },
   pos: {
     expenses: { tile: "Expenses", title: "Expenses", type: "Expense type", amount: "Amount (SAR)", note: "Note (what was bought, receipt no.)", save: "Save expense", saved: "Expense saved", thisShift: "This shift's expenses", total: "Total", none: "No expenses in this shift yet.", by: "By", time: "Time", waiting: "Saved on this device, waiting for internet", manageTypes: "Expense types", typesTitle: "Expense types", typesSubtitle: "The list the cashier chooses from when recording an expense.", addType: "Add an expense type", nameEn: "Name (English)", nameAr: "Name (Arabic)", sort: "Order", duplicate: "An expense type with this name already exists.", nameRequired: "Type a name." },
-    colSearch: { thisPage: "Filters the rows on this page; use the search box above for the whole log.", showing: "Showing {n} of {total} rows", open: "Search by columns", title: "Item finder", code: "Code", name: "Item name", options: "Colour / size", group: "Group", price: "Sale price", cost: "Cost", stock: "Stock here", showNoStock: "Show items with no stock", askQty: "Ask the quantity after each item", firstOf: "First {n} of {total} items", narrow: "add a filter to narrow them down", none: "No items match.", close: "Close the finder", offline: "No internet: searching the price list on this device (code, name, colour/size, price).", add: "Add", qty: "Quantity", match: "Match", ops: { starts: "Starts with (a*)", ends: "Ends with (*a)", contains: "Contains (*a*)", eq: "Equals (=)", gt: "Greater than (>)", gte: "Greater or equal (≥)", lt: "Less than (<)", lte: "Less or equal (≤)" } },
+    colSearch: { supplier: "Supplier", factory: "Factory", thisPage: "Filters the rows on this page; use the search box above for the whole log.", showing: "Showing {n} of {total} rows", open: "Search by columns", title: "Item finder", code: "Code", name: "Item name", options: "Colour / size", group: "Group", price: "Sale price", cost: "Cost", stock: "Stock here", showNoStock: "Show items with no stock", askQty: "Ask the quantity after each item", firstOf: "First {n} of {total} items", narrow: "add a filter to narrow them down", none: "No items match.", close: "Close the finder", offline: "No internet: searching the price list on this device (code, name, colour/size, price).", add: "Add", qty: "Quantity", match: "Match", ops: { starts: "Starts with (a*)", ends: "Ends with (*a)", contains: "Contains (*a*)", eq: "Equals (=)", gt: "Greater than (>)", gte: "Greater or equal (≥)", lt: "Less than (<)", lte: "Less or equal (≤)" } },
     tiles: { sell: "Point of sale", desk: "Quotation", collect: "Collect payment", returns: "Return", cash: "Drawer", close: "Close shift", expenses: "Expenses", back: "All", choose: "Choose" },
     extra: {
       slipIsQuote: "This slip is a saved quotation — collect it in Collect:",

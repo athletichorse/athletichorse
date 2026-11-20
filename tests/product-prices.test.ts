@@ -121,3 +121,11 @@ describe("prices file: the Egypt sheet as it is (re-uploaded with Saudi prices)"
     expect(m.columns).toEqual(expect.arrayContaining(["sku", "name_ar", "unit", "group", "cost", "price", "qty"]));
   });
 });
+
+describe("prices file: supplier and factory", () => {
+  it("reads 'اسم المورد' / 'المصنع' (and English names)", () => {
+    const m = mapSheet2([["الباركود", "اسم المورد", "المصنع"], ["A1", "مؤسسة النور", "مصنع الرياض"]]);
+    expect(m.rows[0]).toEqual({ sku: "A1", supplier: "مؤسسة النور", factory: "مصنع الرياض" });
+    expect(mapSheet2([["SKU", "Supplier", "Manufacturer"], ["B2", "Acme", "Acme Factory"]]).rows[0]).toEqual({ sku: "B2", supplier: "Acme", factory: "Acme Factory" });
+  });
+});

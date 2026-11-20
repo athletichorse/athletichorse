@@ -10,7 +10,7 @@ const NUM_OPS: FinderOp[] = ["eq", "gt", "gte", "lt", "lte"];
 const SYMBOL: Record<FinderOp, string> = { starts: "a*", ends: "*a", contains: "*a*", eq: "=", gt: ">", gte: "≥", lt: "<", lte: "≤" };
 const NUMERIC: FinderCol[] = ["price", "cost", "stock"];
 /** The match type each column starts with (like the old system: code starts with, name contains). */
-const DEFAULT_OP: Record<FinderCol, FinderOp> = { code: "starts", name: "contains", options: "contains", group: "contains", price: "eq", cost: "eq", stock: "gte" };
+const DEFAULT_OP: Record<FinderCol, FinderOp> = { code: "starts", name: "contains", options: "contains", group: "contains", supplier: "contains", factory: "contains", price: "eq", cost: "eq", stock: "gte" };
 
 /** Same rules as the server, for the price list kept on the device (no internet). */
 function matches(hay: string, op: FinderOp, v: string): boolean {
@@ -72,7 +72,7 @@ export function ColumnSearch({ t, locale, locationId, onPick, onClose, off, brow
   }, [vals, ops, showNoStock, locationId, locale, off]);
 
   const choose = (h: ColumnHit) => { if (browse || !onPick) return; if (askQty) setPending({ hit: h, qty: "1" }); else onPick(h); };
-  const cols: FinderCol[] = ["code", "name", "options", "group", "price", ...(res?.canCost ? (["cost"] as const) : []), ...(locationId ? (["stock"] as const) : [])];
+  const cols: FinderCol[] = ["code", "name", "options", "group", "supplier", "factory", "price", ...(res?.canCost ? (["cost"] as const) : []), ...(locationId ? (["stock"] as const) : [])];
   const label = (k: FinderCol) => C[k];
 
   return (
@@ -135,6 +135,8 @@ export function ColumnSearch({ t, locale, locationId, onPick, onClose, off, brow
                   <td data-label={C.name} className="cell-title font-medium">{h.name}</td>
                   <td data-label={C.options}>{h.options || "—"}</td>
                   <td data-label={C.group}>{h.group || "—"}</td>
+                  <td data-label={C.supplier}>{h.supplier || "—"}</td>
+                  <td data-label={C.factory}>{h.factory || "—"}</td>
                   <td data-label={C.price} dir="ltr">{h.price}</td>
                   {res.canCost && <td data-label={C.cost} dir="ltr">{h.cost ?? "—"}</td>}
                   {locationId && <td data-label={C.stock} dir="ltr" className={h.stock !== null && Number(h.stock) <= 0 ? "text-red-600" : ""}>{h.stock ?? "—"}</td>}
