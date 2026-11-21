@@ -46,7 +46,7 @@ export function buildSections(t: Dict, perms: Perms, role?: Role): Section[] {
       show: !till && perms.has("sales.view"),
       tabs: [
         { label: t.menu.sales, href: "/sales" },
-        ...(perms.has("sales.website_orders") ? [{ label: t.orders.title, href: "/sales/orders" }] : []),
+        ...(perms.has("sales.website_orders") ? [{ label: t.orders.title, href: "/sales/orders" }, { label: t.collections.title, href: "/sales/collections" }] : []),
         ...(perms.has("reports.view") ? [{ label: t.reports.title, href: "/sales/reports" }] : []),
       ],
     },

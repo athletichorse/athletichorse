@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { requirePermission } from "@/lib/auth";
 import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { PageHeader } from "@/components/PageHeader";
 import { OrdersFollowTable, type FollowRow } from "@/components/OrdersFollowTable";
 import { addOrderAction, fetchWebOrdersAction } from "@/app/actions/orders";
-import { FOLLOW_STATUSES, type FollowStatus } from "@/lib/order-follow";
+import { codAmount, FOLLOW_STATUSES, type FollowStatus } from "@/lib/order-follow";
 
 export const dynamic = "force-dynamic";
 const COMMON_COURIERS = ["Aramex", "SMSA", "J&T", "SPL", "Naqel", "DHL", "مندوب خاص"];
@@ -30,12 +31,11 @@ export default async function OrdersFollowUp({ searchParams }: { searchParams: P
     const f = fmap.get(o.id);
     const web = o.cancelled_at ? "cancelled" : ["unfulfilled", "fulfilled", "partially_fulfilled", "on_hold"].includes(o.fulfillment_status) ? o.fulfillment_status : "other";
     const paidOnline = o.financial_status === "paid";
-    const noMoney = paidOnline || ["voided", "refunded"].includes(o.financial_status);
     const status = (f?.status ?? (o.cancelled_at ? "cancelled" : "new")) as FollowStatus;
     const address = [o.province, o.city].filter(Boolean).join(" - ") + (o.address ? ` · ${o.address}` : "");
     return {
       id: o.id, name: o.name, address, date: day(o.created_at), created: day(o.created_at), web, paidOnline,
-      amount: noMoney ? "0.00" : Number(o.total).toFixed(2), status, courier: f?.courier ?? "", waybill: f?.waybill ?? "",
+      amount: codAmount(o).toFixed(2), status, courier: f?.courier ?? "", waybill: f?.waybill ?? "",
       size: (f?.size ?? "normal") as "normal" | "bulky", branchId: f?.branch_id ?? "", notes: f?.notes ?? "",
       search: [o.name, o.customer_name, o.phone, o.city, o.province, o.address, f?.waybill, f?.courier].filter(Boolean).join(" ").toLowerCase(),
     };
@@ -54,7 +54,10 @@ export default async function OrdersFollowUp({ searchParams }: { searchParams: P
   return (
     <>
       <PageHeader title={O.title} subtitle={O.subtitle} t={t} filename="order-follow-up">
-        <form action={fetchWebOrdersAction} className="no-print"><button className="btn-primary">{O.fetch}</button></form>
+        <div className="no-print flex flex-wrap gap-2">
+          <Link href="/sales/collections" className="btn-ghost">{t.collections.title}</Link>
+          <form action={fetchWebOrdersAction}><button className="btn-primary">{O.fetch}</button></form>
+        </div>
       </PageHeader>
       {err && <p className="alert-err">{err}</p>}
       {sp.fetched && <p className="alert-ok">{O.fetched}: {sp.fetched}</p>}
