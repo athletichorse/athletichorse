@@ -14,7 +14,9 @@ export async function buildBackup(): Promise<{ file: Buffer; tables: number; row
   if (error) throw new Error(error.message);
   const tables: Record<string, unknown[]> = {};
   let rows = 0;
-  for (const name of (names ?? []) as string[]) {
+  // PostgREST sends a list of names; some servers send rows like { backup_tables: "name" }
+  const list = ((names ?? []) as unknown[]).map((n) => (typeof n === "string" ? n : String(Object.values(n as Record<string, unknown>)[0] ?? ""))).filter(Boolean);
+  for (const name of list) {
     const { data, error: e } = await db().rpc("backup_table_rows", { p_table: name });
     if (e) throw new Error(`${name}: ${e.message}`);
     tables[name] = (data ?? []) as unknown[];
