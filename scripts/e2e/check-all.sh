@@ -26,6 +26,7 @@ for f in supabase/migrations/*.sql; do psql -q "$DATABASE_URL" -v ON_ERROR_STOP=
 psql -q "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "insert into web_orders (shopify_order_id, name, created_at, updated_at, financial_status, fulfillment_status, customer_name, phone, city, province, address, total) values
   (90001, '#E2E1', now() - interval '1 day', now(), 'pending', 'unfulfilled', 'Web Buyer', '+966500000001', 'Riyadh', 'Riyadh Region', 'King Fahd Rd 1', 230),
   (90002, '#E2E2', now() - interval '2 days', now(), 'paid', 'fulfilled', 'Web Buyer 2', '+966500000002', 'Jeddah', 'Makkah Region', '', 99) on conflict do nothing" >/dev/null
+psql -q "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "insert into web_order_lines (order_id, shopify_line_id, name, sku, qty, current_qty, unit_price, line_total) select id, 'gid-e2e-1', 'Web Test Item', 'WEB-SKU-1', 2, 2, 115, 230 from web_orders where name = '#E2E1' on conflict do nothing" >/dev/null
 
 step "build and start (website app looks connected, so its buttons are tested too)"
 pkill -f fake-supabase || true; pkill -f next-server || true; pkill -f "next start" || true

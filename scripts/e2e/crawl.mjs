@@ -526,6 +526,16 @@ await page.goto(BASE + "/sales/orders", { waitUntil: "networkidle" });
   await row.waitFor({ timeout: 15000 }).catch(() => {});
   const rowTxt = await row.innerText().catch(() => "");
   if (!/Riyadh Region - Riyadh/.test(rowTxt) || !/230\.00/.test(rowTxt)) fail("orders", `cash-on-delivery order row: ${rowTxt.replace(/\s+/g, " ").slice(0, 200)}`);
+  const fits = await page.evaluate(() => { const tb = document.querySelector("[data-testid=orders-table]"); return tb ? tb.scrollWidth <= tb.parentElement.clientWidth + 2 : false; });
+  if (!fits) fail("orders", "the follow-up table is wider than the screen (needs sideways scrolling)");
+  else ok("order follow-up table fits the screen: no sideways scrolling");
+  // order details inside the portal
+  await row.locator("[data-testid=order-link]").click();
+  await page.waitForURL(/\/sales\/orders\/[0-9a-f-]{36}/, { timeout: 15000 }).catch(() => {});
+  const det = await page.locator("main").innerText().catch(() => "");
+  if (!/Web Test Item/.test(det) || !/WEB-SKU-1/.test(det) || !/Web Buyer/.test(det) || !/King Fahd Rd 1/.test(det)) fail("orders", `order details: ${det.replace(/\s+/g, " ").slice(0, 200)}`);
+  else ok("order number opens the order's details in the portal: customer, address, items, totals");
+  await page.goto(BASE + "/sales/orders", { waitUntil: "networkidle" });
   const paid = await page.locator('[data-testid=orders-table] tr[data-order="#E2E2"]').innerText().catch(() => "");
   if (!/0\.00/.test(paid) || !/paid online/.test(paid)) fail("orders", `paid order should have nothing to collect: ${paid.replace(/\s+/g, " ").slice(0, 160)}`);
   const remainTxt = (await page.locator("[data-testid=orders-remaining]").innerText()).replace(/\s+/g, " ");

@@ -48,6 +48,13 @@ body {
   html[data-print="receipt80"] main { padding: 2mm !important; }
 }
 
+/* ---------- Compact tables (many small inputs per row): tighter cells on tablets and up ---------- */
+@media (min-width: 640px) {
+  .table.table-compact th { padding: 0.5rem 0.5rem; }
+  .table.table-compact td { padding: 0.375rem 0.5rem; vertical-align: top; }
+  .table.table-compact .input { padding: 0.3rem 0.5rem; font-size: 0.8125rem; }
+}
+
 /* ---------- Tables become cards on phones ----------
    Each <td> carries data-label (its column name); .cell-title is the row's heading. */
 @media (max-width: 639px) {

@@ -435,6 +435,7 @@ const en: Dict = {
     duplicate: "A price level with this name already exists.",
   },
   orders: {
+    detail: { title: "Order", openWebsite: "Open on the website", customer: "Customer", name: "Name", phone: "Mobile", email: "Email", street: "Street", followUp: "Follow-up", money: "Amounts", subtotal: "Items", shipping: "Shipping", discounts: "Discounts", tax: "VAT", total: "Total", collected: "Collected", notYet: "Not yet", items: "Items", item: "Item", qty: "Qty", unitPrice: "Unit price", lineTotal: "Line total" },
     title: "Order follow-up", subtitle: "Every website order: region, date, shipping company and waybill, amount to collect, status and branch in charge. Each cell saves on its own.",
     fetch: "Fetch website orders", add: "Add order", number: "Order no.", search: "Search: order no., waybill, address, customer",
     allStatuses: "All statuses", allWeb: "All website statuses", allBranches: "All branches", from: "From", to: "To", noWaybill: "Without waybill", show: "Show",
