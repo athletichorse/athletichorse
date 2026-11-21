@@ -434,6 +434,18 @@ const en: Dict = {
     pricesHint: "Empty = this level pays the normal price for this item.",
     duplicate: "A price level with this name already exists.",
   },
+  orders: {
+    title: "Order follow-up", subtitle: "Every website order: region, date, shipping company and waybill, amount to collect, status and branch in charge. Each cell saves on its own.",
+    fetch: "Fetch website orders", add: "Add order", number: "Order no.", search: "Search: order no., waybill, address, customer",
+    allStatuses: "All statuses", allWeb: "All website statuses", allBranches: "All branches", from: "From", to: "To", noWaybill: "Without waybill", show: "Show",
+    order: "Order", address: "Address", date: "Date", courier: "Shipping company", waybill: "Waybill no.", amount: "Amount to collect", web: "Website status",
+    status: "Order status", size: "Normal / Bulky", branch: "Branch in charge", notes: "Notes", paidOnline: "paid online",
+    statuses: { new: "New", confirmed: "Confirmed", shipped: "Shipped", delivered: "Delivered", collected: "Collected", returned: "Returned", cancelled: "Cancelled" },
+    webStatuses: { unfulfilled: "Not fulfilled", fulfilled: "Fulfilled", partially_fulfilled: "Partly fulfilled", on_hold: "On hold", cancelled: "Cancelled on website", other: "Other" },
+    sizes: { normal: "Normal", bulky: "Bulky" },
+    total: "Orders", remaining: "Left to collect", saved: "Saved", none: "No orders match.", fetched: "Website orders checked", added: "Order added",
+    errors: { not_connected: "The website is not connected.", order_not_found: "No website order with this number.", bad_number: "Type the order number, e.g. 1025." },
+  },
   customers: {
     countryDefault: "Saudi Arabia",
     cr: "Commercial registration no. (10 digits)",
