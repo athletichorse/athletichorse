@@ -45,7 +45,7 @@ async function checkPage(page, path, label) {
 }
 
 const browser = await chromium.launch();
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
 
 // ---------------------------------------------------------------- 1. setup + flows (desktop, English)
 console.log("\n== Setup and main flows (desktop, English)");
@@ -517,6 +517,26 @@ await page.goto(BASE + "/audit", { waitUntil: "networkidle" });
 const auditTxt = await page.locator("table").first().innerText();
 for (const a of ["stock.receipt", "customer.create", "staff.create", "company.update"]) if (!auditTxt.includes(a)) fail("audit", `missing ${a}`);
 ok("audit log records stock, customers, staff and company changes");
+
+// backups: monthly reminder on Home → download a full backup → the file has every table → reminder gone
+where = "backups";
+await page.goto(BASE + "/", { waitUntil: "networkidle" });
+if (!(await page.locator("[data-testid=backup-reminder]").count())) fail("backups", "monthly backup reminder not shown before the first download");
+await page.goto(BASE + "/company/backup", { waitUntil: "networkidle" });
+{
+  const [bk] = await Promise.all([page.waitForEvent("download", { timeout: 60000 }), page.locator('[data-testid=backup-download] a[download]').click()]);
+  const f = `${OUT}/backup.json.gz`;
+  await bk.saveAs(f);
+  const zlib = await import("node:zlib");
+  let parsed = null;
+  try { parsed = JSON.parse(zlib.gunzipSync(fs.readFileSync(f)).toString("utf8")); } catch (e) { fail("backups", `backup file unreadable: ${e.message}`); }
+  const tables = parsed ? Object.keys(parsed.tables ?? {}) : [];
+  if (parsed && (parsed.kind !== "portal-backup" || tables.length < 30 || !(parsed.tables.products?.length > 0) || !tables.includes("invoices"))) fail("backups", `backup content: ${parsed.kind} ${tables.length} tables`);
+  else if (parsed) ok(`full backup download: ${tables.length} tables, ${Object.values(parsed.tables).reduce((n, r) => n + r.length, 0)} rows`);
+  await page.goto(BASE + "/", { waitUntil: "networkidle" });
+  if (await page.locator("[data-testid=backup-reminder]").count()) fail("backups", "reminder still shown after this month's download");
+  else ok("monthly backup reminder on Home goes away after the download");
+}
 
 
 // ---------------------------------------------------------------- cashier

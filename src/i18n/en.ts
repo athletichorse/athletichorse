@@ -833,6 +833,15 @@ const en: Dict = {
     kinds: { branch: "Branch", warehouse: "Warehouse", sub_store: "Sub-store" },
   },
   company: {
+    backup: {
+      title: "Backups", subtitle: "A full copy of all the data: every night automatically, and once a month on your own computer.",
+      nightly: "Nightly backup", nightlyHint: "Saved automatically every night at 2:00 (Riyadh) in private storage. The last {n} nights are kept.",
+      last: "Last backup", tables: "tables", rows: "rows", noneYet: "No nightly backup yet — the first one is made tonight.",
+      monthly: "Monthly download", monthlyHint: "Download a full copy once a month and keep it on your computer or drive. It stays safe even if the online account is lost.",
+      downloadNow: "Download full backup now", lastDownload: "Last download", neverDownloaded: "Not downloaded yet.",
+      saved: "Saved nightly backups", file: "File", size: "Size", download: "Download",
+      reminder: "Download this month's full backup and keep it safe.", open: "Backups",
+    },
     title: "Company details",
     legalNameAr: "Legal name (Arabic)",
     legalNameEn: "Legal name (English)",
