@@ -684,11 +684,15 @@ await page.goto(BASE + "/sales/b2b/new", { waitUntil: "networkidle" });
   if (!/Before VAT: 270\.00/.test(tot) || !/VAT: 40\.50/.test(tot) || !/Total: 310\.50/.test(tot)) fail("b2b", `totals preview: ${tot}`);
   await Promise.all([page.waitForURL(/\/sales\/b2b\/[0-9a-f-]{36}\?ok=1/, { timeout: 20000 }), page.click("[data-testid=b2b-save]")]);
   ok("B2B order: customer by mobile, 3 × 115 with 10% off = 310.50 (270.00 + 40.50 VAT)");
+  // open it again without "?ok=1", so the next "saved" is this payment's
+  const b2bUrl = page.url().split("?")[0];
+  await page.goto(b2bUrl, { waitUntil: "networkidle" });
   await page.click("[data-testid=b2b-to-delivered]");
   await page.click("[data-testid=b2b-yes]");
   await page.waitForSelector("[data-testid=b2b-to-invoiced]", { timeout: 20000 }).catch(() => fail("b2b", "not delivered"));
   await page.locator("#bp-amount").fill("100");
-  await Promise.all([page.waitForURL(/ok=1|err=/, { timeout: 20000 }), page.locator('[data-testid=b2b-pay] button:text-is("Add payment")').click()]);
+  await Promise.all([page.waitForURL(/\?(ok=1|err=)/, { timeout: 20000 }), page.locator('[data-testid=b2b-pay] button:text-is("Add payment")').click()]);
+  await page.waitForLoadState("networkidle");
   const money = (await page.locator("[data-testid=b2b-money]").innerText()).replace(/\s+/g, " ");
   if (!/Paid 100\.00/.test(money) || !/Left to pay 210\.50/.test(money)) fail("b2b", `after a payment of 100: ${money}`);
   else ok("deliver (taken from stock, on the customer's account), pay 100: 210.50 left");
