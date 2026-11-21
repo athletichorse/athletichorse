@@ -81,7 +81,7 @@ export default async function OrdersFollowUp({ searchParams }: { searchParams: P
       <div className="mb-3 flex flex-wrap gap-2 text-sm" data-testid="orders-counts">
         <span className="badge-gray">{rows.length} {O.total}</span>
         {(["new", "confirmed", "shipped", "collected", "cancelled"] as FollowStatus[]).map((s) => <span key={s} className="badge-gray">{O.statuses[s]}: {count(s)}</span>)}
-        <span className="badge bg-[var(--brand-soft)] text-[var(--brand)]">{O.remaining}: <span dir="ltr">{remaining.toFixed(2)}</span> SAR</span>
+        <span className="badge whitespace-nowrap bg-[var(--brand-soft)] text-[var(--brand)]" data-testid="orders-remaining">{`${O.remaining}: ${remaining.toFixed(2)} SAR`}</span>
       </div>
 
       <OrdersFollowTable t={t} rows={rows.slice(0, 500)} branches={branches} couriers={couriers} />
