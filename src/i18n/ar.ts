@@ -432,6 +432,18 @@ const ar = {
     pricesHint: "فارغ = هذا المستوى يدفع السعر العادي لهذا الصنف.",
     duplicate: "يوجد مستوى تسعير بهذا الاسم.",
   },
+  orders: {
+    title: "متابعة الطلبات", subtitle: "كل طلبات الموقع: المنطقة، التاريخ، شركة الشحن ورقم البوليصة، مبلغ التحصيل، الحالة، والفرع المسؤول. كل خانة تُحفظ وحدها.",
+    fetch: "جلب طلبات الموقع", add: "إضافة أوردر", number: "رقم الأوردر", search: "بحث: رقم الأوردر، البوليصة، العنوان، العميل",
+    allStatuses: "كل الحالات", allWeb: "كل حالات الموقع", allBranches: "كل الفروع", from: "من", to: "إلى", noWaybill: "بدون بوليصة", show: "عرض",
+    order: "رقم الأوردر", address: "العنوان", date: "التاريخ", courier: "شركة الشحن", waybill: "رقم البوليصة", amount: "مبلغ التحصيل", web: "حالة الموقع",
+    status: "حالة الطلب", size: "عادي / كبير", branch: "الفرع المسؤول", notes: "ملاحظات", paidOnline: "مدفوع أونلاين",
+    statuses: { new: "جديد", confirmed: "تم التأكيد", shipped: "تم الشحن", delivered: "تم التسليم", collected: "تم التحصيل", returned: "مرتجع", cancelled: "ملغي" },
+    webStatuses: { unfulfilled: "لم يُنفَّذ", fulfilled: "تم التنفيذ", partially_fulfilled: "نُفِّذ جزئياً", on_hold: "معلّق", cancelled: "ملغي على الموقع", other: "أخرى" },
+    sizes: { normal: "عادي", bulky: "كبير" },
+    total: "أوردر", remaining: "باقي التحصيل", saved: "تم الحفظ", none: "لا توجد طلبات مطابقة.", fetched: "تم فحص طلبات الموقع", added: "تمت إضافة الأوردر",
+    errors: { not_connected: "الموقع غير مربوط.", order_not_found: "لا يوجد طلب على الموقع بهذا الرقم.", bad_number: "اكتب رقم الأوردر، مثلاً 1025." },
+  },
   customers: {
     countryDefault: "المملكة العربية السعودية",
     cr: "رقم السجل التجاري (10 أرقام)",

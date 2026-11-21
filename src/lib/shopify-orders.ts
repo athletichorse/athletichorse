@@ -12,7 +12,7 @@ export const ORDERS_QUERY = `query Orders($first: Int!, $after: String, $q: Stri
       legacyResourceId name createdAt updatedAt cancelledAt
       displayFinancialStatus displayFulfillmentStatus currencyCode email phone
       customer { firstName lastName defaultEmailAddress { emailAddress } defaultPhoneNumber { phoneNumber } }
-      shippingAddress { name phone city }
+      shippingAddress { name phone city province address1 address2 }
       subtotalPriceSet { shopMoney { amount } }
       totalTaxSet { shopMoney { amount } }
       totalShippingPriceSet { shopMoney { amount } }
@@ -36,7 +36,7 @@ export type ShopifyOrderNode = {
   displayFinancialStatus: string | null; displayFulfillmentStatus: string | null; currencyCode: string;
   email: string | null; phone: string | null;
   customer: { firstName: string | null; lastName: string | null; defaultEmailAddress: { emailAddress: string } | null; defaultPhoneNumber: { phoneNumber: string } | null } | null;
-  shippingAddress: { name: string | null; phone: string | null; city: string | null } | null;
+  shippingAddress: { name: string | null; phone: string | null; city: string | null; province?: string | null; address1?: string | null; address2?: string | null } | null;
   subtotalPriceSet: Money; totalTaxSet: Money; totalShippingPriceSet: Money; totalDiscountsSet: Money; currentTotalPriceSet: Money;
   lineItems: { nodes: { id: string; name: string; sku: string | null; quantity: number; currentQuantity: number; variant: { legacyResourceId: string } | null; originalUnitPriceSet: Money; discountedTotalSet: Money }[] };
 };
@@ -63,6 +63,8 @@ export function mapOrder(o: ShopifyOrderNode) {
     phone: c?.defaultPhoneNumber?.phoneNumber || o.shippingAddress?.phone || o.phone || "",
     email: c?.defaultEmailAddress?.emailAddress || o.email || "",
     city: o.shippingAddress?.city ?? "",
+    province: o.shippingAddress?.province ?? "",
+    address: [o.shippingAddress?.address1, o.shippingAddress?.address2].filter(Boolean).join(", "),
     subtotal: amt(o.subtotalPriceSet),
     shipping: amt(o.totalShippingPriceSet),
     discounts: amt(o.totalDiscountsSet),
@@ -105,8 +107,8 @@ export async function getAccessToken(cfg: OrdersConfig, fetchImpl: typeof fetch 
   return body.access_token;
 }
 
-/** All orders updated since `sinceIso` (or all orders when null). */
-export async function fetchOrders(cfg: OrdersConfig, sinceIso: string | null, fetchImpl: typeof fetch = fetch): Promise<ShopifyOrderNode[]> {
+/** All orders updated since `sinceIso` (or all orders when null). `raw` = a Shopify search instead (e.g. name:#1025). */
+export async function fetchOrders(cfg: OrdersConfig, sinceIso: string | null, fetchImpl: typeof fetch = fetch, raw?: string): Promise<ShopifyOrderNode[]> {
   const token = await getAccessToken(cfg, fetchImpl);
   const out: ShopifyOrderNode[] = [];
   let after: string | null = null;
@@ -114,7 +116,7 @@ export async function fetchOrders(cfg: OrdersConfig, sinceIso: string | null, fe
     const res = await fetchImpl(`https://${cfg.store}/admin/api/${API_VERSION}/graphql.json`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-shopify-access-token": token },
-      body: JSON.stringify({ query: ORDERS_QUERY, variables: { first: 50, after, q: sinceIso ? `updated_at:>'${sinceIso}'` : null } }),
+      body: JSON.stringify({ query: ORDERS_QUERY, variables: { first: 50, after, q: raw ?? (sinceIso ? `updated_at:>'${sinceIso}'` : null) } }),
       cache: "no-store",
       signal: AbortSignal.timeout(60_000),
     });

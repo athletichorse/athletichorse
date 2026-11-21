@@ -45,7 +45,7 @@ async function checkPage(page, path, label) {
 }
 
 const browser = await chromium.launch();
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/orders", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
 
 // ---------------------------------------------------------------- 1. setup + flows (desktop, English)
 console.log("\n== Setup and main flows (desktop, English)");
@@ -517,6 +517,37 @@ await page.goto(BASE + "/audit", { waitUntil: "networkidle" });
 const auditTxt = await page.locator("table").first().innerText();
 for (const a of ["stock.receipt", "customer.create", "staff.create", "company.update"]) if (!auditTxt.includes(a)) fail("audit", `missing ${a}`);
 ok("audit log records stock, customers, staff and company changes");
+
+// order follow-up: website orders; each cell saves on its own; filters
+where = "order follow-up";
+await page.goto(BASE + "/sales/orders", { waitUntil: "networkidle" });
+{
+  const row = page.locator('[data-testid=orders-table] tr[data-order="#E2E1"]');
+  await row.waitFor({ timeout: 15000 }).catch(() => {});
+  const rowTxt = await row.innerText().catch(() => "");
+  if (!/Riyadh Region - Riyadh/.test(rowTxt) || !/230\.00/.test(rowTxt)) fail("orders", `cash-on-delivery order row: ${rowTxt.replace(/\s+/g, " ").slice(0, 200)}`);
+  const paid = await page.locator('[data-testid=orders-table] tr[data-order="#E2E2"]').innerText().catch(() => "");
+  if (!/0\.00/.test(paid) || !/paid online/.test(paid)) fail("orders", `paid order should have nothing to collect: ${paid.replace(/\s+/g, " ").slice(0, 160)}`);
+  if (!/Left to collect: 230\.00/.test(await page.locator("[data-testid=orders-counts]").innerText())) fail("orders", "left to collect should be 230.00");
+  await row.locator('input[aria-label^="Shipping company"]').fill("Aramex");
+  await row.locator('input[aria-label^="Waybill no."]').fill("AWB-E2E-77");
+  await row.locator('input[aria-label^="Notes"]').fill("call before delivery");
+  await row.locator('input[aria-label^="Notes"]').press("Tab");
+  await row.locator('select[aria-label^="Order status"]').selectOption("confirmed");
+  await row.locator('select[aria-label^="Branch in charge"]').selectOption({ label: "Riyadh Branch" });
+  await page.waitForTimeout(1500);
+  await page.reload({ waitUntil: "networkidle" });
+  const r2 = page.locator('[data-testid=orders-table] tr[data-order="#E2E1"]');
+  const kept = [await r2.locator('input[aria-label^="Shipping company"]').inputValue(), await r2.locator('input[aria-label^="Waybill no."]').inputValue(), await r2.locator('select[aria-label^="Order status"]').inputValue(), await r2.locator('input[aria-label^="Notes"]').inputValue()];
+  if (kept.join("|") !== "Aramex|AWB-E2E-77|confirmed|call before delivery") fail("orders", `cells not saved: ${kept.join("|")}`);
+  else ok("order follow-up: shipping company, waybill, status, branch and notes each save on their own");
+  await page.goto(BASE + "/sales/orders?nowaybill=1", { waitUntil: "networkidle" });
+  const noWb = await page.locator("[data-testid=orders-table]").innerText().catch(() => "");
+  await page.goto(BASE + "/sales/orders?q=AWB-E2E-77", { waitUntil: "networkidle" });
+  const byWb = await page.locator("[data-testid=orders-table]").innerText().catch(() => "");
+  if (/#E2E1/.test(noWb) || !/#E2E2/.test(noWb) || !/#E2E1/.test(byWb) || /#E2E2/.test(byWb)) fail("orders", "filters: without waybill / search by waybill");
+  else ok("order follow-up filters: without waybill, search by waybill");
+}
 
 // backups: monthly reminder on Home → download a full backup → the file has every table → reminder gone
 where = "backups";

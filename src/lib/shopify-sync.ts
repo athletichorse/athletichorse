@@ -86,6 +86,33 @@ async function keepPortalPrices(products: ShopifyProduct[]): Promise<ShopifyProd
   return products.map((p) => ({ ...p, variants: p.variants.map((v) => { const k = known.get(String(v.id)); return k ? { ...v, ...k } : v; }) }));
 }
 
+
+/** Shipping region and street of each order (kept next to what sync_shopify_orders() saves). */
+async function saveAddresses(orders: { id: string; province?: string; address?: string }[]) {
+  for (const o of orders) {
+    if (!o.province && !o.address) continue;
+    await db().from("web_orders").update({ province: (o.province ?? "").slice(0, 120), address: (o.address ?? "").slice(0, 300) }).eq("shopify_order_id", Number(o.id));
+  }
+}
+
+/** One website order by its number (e.g. 1025 or #1025): fetched and saved like the sync does. */
+export async function syncOneOrder(number: string): Promise<{ ok: true; found: boolean } | { ok: false; error: string }> {
+  const cfg = ordersConfig();
+  if (!cfg) return { ok: false, error: "not_connected" };
+  const n = number.trim().replace(/^#/, "");
+  if (!/^[A-Za-z0-9-]{1,30}$/.test(n)) return { ok: false, error: "bad_number" };
+  try {
+    const orders = (await fetchOrders(cfg, null, fetch, `name:#${n}`)).map(mapOrder).filter((o) => o.name.replace(/^#/, "") === n);
+    if (!orders.length) return { ok: true, found: false };
+    const { error } = await db().rpc("sync_shopify_orders", { p_orders: orders });
+    if (error) return { ok: false, error: error.message };
+    await saveAddresses(orders);
+    return { ok: true, found: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 /** Website orders since a moment (webhooks): same upsert as the full sync, no run log. */
 export async function syncOrdersSince(sinceIso: string): Promise<SyncResult> {
   const cfg = ordersConfig();
@@ -95,6 +122,7 @@ export async function syncOrdersSince(sinceIso: string): Promise<SyncResult> {
     for (const part of chunk(orders, 50)) {
       const { error } = await db().rpc("sync_shopify_orders", { p_orders: part });
       if (error) throw new Error(error.message);
+      await saveAddresses(part);
     }
     return { ok: true, counts: { fetched: orders.length } };
   } catch (err) {
@@ -121,6 +149,7 @@ export async function runOrdersSync(trigger: "manual" | "daily", userId: string 
     for (const part of chunk(orders, 50)) {
       const { data, error } = await db().rpc("sync_shopify_orders", { p_orders: part });
       if (error) throw new Error(error.message);
+      await saveAddresses(part);
       for (const k of ["orders_new", "orders_updated", "customers_new", "stock_moves"] as const) counts[k] += Number(data?.[k] ?? 0);
     }
     await db().from("sync_runs").update({ status: "ok", finished_at: new Date().toISOString(), counts }).eq("id", run.id);

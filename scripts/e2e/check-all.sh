@@ -22,6 +22,10 @@ OWNER=$(echo "$DATABASE_URL" | sed -E 's#postgres://([^:]+):.*#\1#')
 su postgres -c "dropdb --if-exists $DB; createdb -O $OWNER $DB"
 su postgres -c "psql -q -d $DB -c 'create schema if not exists extensions; create extension if not exists pgcrypto schema extensions; create schema if not exists auth; create table if not exists auth.users (id uuid primary key default gen_random_uuid(), email text, encrypted_password text, created_at timestamptz default now()); grant all on schema auth, extensions to public; grant all on auth.users to public;'"
 for f in supabase/migrations/*.sql; do psql -q "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f" >/dev/null; done
+# two website orders for the order follow-up page (cash on delivery, and paid online)
+psql -q "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "insert into web_orders (shopify_order_id, name, created_at, updated_at, financial_status, fulfillment_status, customer_name, phone, city, province, address, total) values
+  (90001, '#E2E1', now() - interval '1 day', now(), 'pending', 'unfulfilled', 'Web Buyer', '+966500000001', 'Riyadh', 'Riyadh Region', 'King Fahd Rd 1', 230),
+  (90002, '#E2E2', now() - interval '2 days', now(), 'paid', 'fulfilled', 'Web Buyer 2', '+966500000002', 'Jeddah', 'Makkah Region', '', 99) on conflict do nothing" >/dev/null
 
 step "build and start (website app looks connected, so its buttons are tested too)"
 pkill -f fake-supabase || true; pkill -f next-server || true; pkill -f "next start" || true
