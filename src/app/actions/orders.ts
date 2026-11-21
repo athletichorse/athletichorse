@@ -7,6 +7,8 @@ import { db } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
 import { runOrdersSync, syncOneOrder } from "@/lib/shopify-sync";
 import { FOLLOW_STATUSES } from "@/lib/order-follow";
+import { ordersConfig } from "@/lib/shopify-orders";
+import { WEBSITE_ACTIONS, cancelOnWebsite, markPaidOnWebsite, shipOnWebsite, type WebsiteAction, type WebsiteResult } from "@/lib/website-orders";
 
 type Field = "status" | "courier" | "waybill" | "size" | "branch_id" | "notes";
 
@@ -56,4 +58,39 @@ export async function addOrderAction(form: FormData) {
   revalidatePath("/sales/orders");
   if (!r.ok) redirect(`/sales/orders?err=${encodeURIComponent(r.error)}`);
   redirect(r.found ? `/sales/orders?added=${encodeURIComponent(n.replace(/^#/, ""))}` : `/sales/orders?err=order_not_found`);
+}
+
+/**
+ * Change the order on the website itself: ship (with the company + waybill saved here),
+ * mark paid, or cancel. Then the order is read back from the website and the follow-up
+ * status moves along (shipped / collected / cancelled).
+ */
+export async function websiteOrderAction(orderId: string, action: WebsiteAction): Promise<WebsiteResult> {
+  const s = await requireStaff();
+  if (!s.perms.has("sales.website_orders") || !s.perms.has("sales.website_orders_edit")) return { ok: false, error: "forbidden" };
+  if (!/^[0-9a-f-]{36}$/i.test(orderId) || !(WEBSITE_ACTIONS as readonly string[]).includes(action)) return { ok: false, error: "bad_request" };
+  const cfg = ordersConfig();
+  if (!cfg) return { ok: false, error: "not_connected" };
+  const { data: o } = await db().from("web_orders").select("id, name, shopify_order_id, cancelled_at").eq("id", orderId).maybeSingle();
+  if (!o) return { ok: false, error: "not_found" };
+  if (o.cancelled_at) return { ok: false, error: "already_cancelled" };
+  const { data: f } = await db().from("web_order_follow").select("courier, waybill").eq("order_id", orderId).maybeSingle();
+  let r: WebsiteResult;
+  try {
+    if (action === "ship") {
+      if (!f?.waybill) return { ok: false, error: "need_waybill" };
+      r = await shipOnWebsite(cfg, o.shopify_order_id, f.courier ?? "", f.waybill);
+    } else if (action === "paid") r = await markPaidOnWebsite(cfg, o.shopify_order_id);
+    else r = await cancelOnWebsite(cfg, o.shopify_order_id, `Cancelled from the staff portal by ${s.username}`);
+  } catch (e) {
+    r = { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+  await audit(s.id, `order.website_${action}`, "web_order", orderId, { order: o.name, ok: r.ok, error: r.ok ? null : r.error });
+  if (!r.ok) return r;
+  const status = action === "ship" ? "shipped" : action === "paid" ? "collected" : "cancelled";
+  await db().from("web_order_follow").upsert({ order_id: orderId, status, updated_by: s.id, updated_at: new Date().toISOString() });
+  await syncOneOrder(o.name);
+  revalidatePath(`/sales/orders/${orderId}`);
+  revalidatePath("/sales/orders");
+  return { ok: true };
 }

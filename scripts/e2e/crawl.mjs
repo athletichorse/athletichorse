@@ -535,6 +535,19 @@ await page.goto(BASE + "/sales/orders", { waitUntil: "networkidle" });
   const det = await page.locator("main").innerText().catch(() => "");
   if (!/Web Test Item/.test(det) || !/WEB-SKU-1/.test(det) || !/Web Buyer/.test(det) || !/King Fahd Rd 1/.test(det)) fail("orders", `order details: ${det.replace(/\s+/g, " ").slice(0, 200)}`);
   else ok("order number opens the order's details in the portal: customer, address, items, totals");
+  // website buttons: pending cash-on-delivery order → ship / paid / cancel; each asks first
+  const wa = page.locator("[data-testid=website-actions]");
+  if (!(await wa.count())) fail("orders", "order page has no 'On the website' buttons");
+  else {
+    const n = await Promise.all(["ship", "paid", "cancel"].map((a) => wa.locator(`[data-testid=website-${a}]`).count()));
+    if (n.some((x) => x !== 1)) fail("orders", `website buttons ship/paid/cancel: ${n.join("/")}`);
+    await wa.locator("[data-testid=website-paid]").click();
+    await wa.locator("[data-testid=website-yes]").click();
+    const said = await wa.locator("[role=status]").innerText({ timeout: 15000 }).catch(() => "");
+    // the test stack has no website connected: it must say so, not break
+    if (!/isn't connected/.test(said)) fail("orders", `mark-paid without a website should say not connected: ${said}`);
+    else ok("order page: ship / mark paid / cancel on the website, each asks first and reports back");
+  }
   await page.goto(BASE + "/sales/orders", { waitUntil: "networkidle" });
   const paid = await page.locator('[data-testid=orders-table] tr[data-order="#E2E2"]').innerText().catch(() => "");
   if (!/0\.00/.test(paid) || !/paid online/.test(paid)) fail("orders", `paid order should have nothing to collect: ${paid.replace(/\s+/g, " ").slice(0, 160)}`);

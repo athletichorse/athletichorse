@@ -39,6 +39,7 @@ export const PERMISSION_KEYS = [
   "sales.view",
   "sales.view_all_branches",
   "sales.website_orders",
+  "sales.website_orders_edit", // ship / mark paid / cancel on the website itself
   // Stock / المخازن
   "stock.view",
   "stock.transfer",

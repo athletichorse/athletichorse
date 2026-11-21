@@ -435,6 +435,7 @@ const en: Dict = {
     duplicate: "A price level with this name already exists.",
   },
   orders: {
+    website: { title: "On the website", nothing: "Nothing to change on the website for this order.", ship: "Mark shipped (send tracking)", paid: "Mark as paid", cancel: "Cancel on the website", shipSure: "Mark shipped on the website? The customer gets an email with the waybill.", paidSure: "Mark this order as paid on the website?", cancelSure: "Cancel this order on the website and return the items to stock? This can't be undone.", yes: "Yes", no: "No", working: "Working…", needWaybill: "Type the shipping company and waybill no. on the orders page first.", done: { ship: "Done: shipped on the website, tracking sent to the customer.", paid: "Done: marked as paid on the website.", cancel: "Done: cancelled on the website." }, errors: { failed: "The website said:", not_connected: "The website isn't connected.", need_waybill: "Type the waybill no. first.", nothing_to_ship: "Nothing left to ship on the website.", already_cancelled: "This order is already cancelled.", forbidden: "You don't have permission to change orders on the website.", network: "No connection. Try again.", not_found: "Order not found." } },
     detail: { title: "Order", openWebsite: "Open on the website", customer: "Customer", name: "Name", phone: "Mobile", email: "Email", street: "Street", followUp: "Follow-up", money: "Amounts", subtotal: "Items", shipping: "Shipping", discounts: "Discounts", tax: "VAT", total: "Total", collected: "Collected", notYet: "Not yet", items: "Items", item: "Item", qty: "Qty", unitPrice: "Unit price", lineTotal: "Line total" },
     title: "Order follow-up", subtitle: "Every website order: region, date, shipping company and waybill, amount to collect, status and branch in charge. Each cell saves on its own.",
     fetch: "Fetch website orders", add: "Add order", number: "Order no.", search: "Search: order no., waybill, address, customer",
@@ -985,6 +986,7 @@ const en: Dict = {
       "pos.skip_customer": "Sell without the customer's mobile",
       "pos.past_shifts": "Closed shifts",
       "sales.website_orders": "Website orders",
+      "sales.website_orders_edit": "Change orders on the website (ship, paid, cancel)",
       "stock.requests": "Restock requests",
       "stock.all_locations": "Stock of all branches and stores",
       "products.add": "Add items",

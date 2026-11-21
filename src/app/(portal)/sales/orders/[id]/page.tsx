@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePermission } from "@/lib/auth";
+import { WebsiteOrderButtons } from "@/components/WebsiteOrderButtons";
 import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { formatDateTime } from "@/lib/time";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 /** One website order: customer, address, items, totals, follow-up and collection — inside the portal. */
 export default async function WebOrderPage({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermission("sales.website_orders");
+  const me = await requirePermission("sales.website_orders");
   const { t, locale } = await getDict();
   const O = t.orders, D = t.orders.detail;
   const { id } = await params;
@@ -31,6 +32,7 @@ export default async function WebOrderPage({ params }: { params: Promise<{ id: s
   const status = (f?.status ?? (o.cancelled_at ? "cancelled" : "new")) as FollowStatus;
   const store = (process.env.SHOPIFY_STORE ?? "").replace(/\.myshopify\.com.*$/, "").replace(/^https?:\/\//, "");
   const shopifyUrl = store && /^[a-z0-9-]+$/.test(store) ? `https://admin.shopify.com/store/${store}/orders/${o.shopify_order_id}` : null;
+  const canEdit = me.perms.has("sales.website_orders_edit");
   const m = (v: unknown) => Number(v ?? 0).toFixed(2);
   const productOf = (vid: string | null) => variants?.find((v) => v.id === vid)?.product_id;
   const row = (label: string, value: React.ReactNode) => (
@@ -44,6 +46,18 @@ export default async function WebOrderPage({ params }: { params: Promise<{ id: s
           {shopifyUrl && <a href={shopifyUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost" data-testid="open-shopify">{D.openWebsite} ↗</a>}
         </div>
       </PageHeader>
+      {canEdit && (
+        <WebsiteOrderButtons
+          t={t}
+          orderId={o.id}
+          hasWaybill={Boolean(f?.waybill)}
+          show={{
+            ship: !o.cancelled_at && ["unfulfilled", "partially_fulfilled", "on_hold", "scheduled", "in_progress", "open"].includes(String(o.fulfillment_status || "unfulfilled")),
+            paid: !o.cancelled_at && ["pending", "partially_paid", "authorized"].includes(String(o.financial_status ?? "")),
+            cancel: !o.cancelled_at,
+          }}
+        />
+      )}
       <div className="mb-4 grid gap-4 md:grid-cols-3">
         <section className="card">
           <h2 className="card-title">{D.customer}</h2>
