@@ -544,8 +544,8 @@ await page.goto(BASE + "/sales/orders", { waitUntil: "networkidle" });
     await wa.locator("[data-testid=website-paid]").click();
     await wa.locator("[data-testid=website-yes]").click();
     const said = await wa.locator("[role=status]").innerText({ timeout: 15000 }).catch(() => "");
-    // the test stack has no website connected: it must say so, not break
-    if (!/isn't connected/.test(said)) fail("orders", `mark-paid without a website should say not connected: ${said}`);
+    // the test stack's website is a dummy: the answer must be a clear message, not a crash
+    if (!/isn't connected|The website said:/.test(said)) fail("orders", `mark-paid on a dummy website should report the website's answer: ${said}`);
     else ok("order page: ship / mark paid / cancel on the website, each asks first and reports back");
   }
   await page.goto(BASE + "/sales/orders", { waitUntil: "networkidle" });
