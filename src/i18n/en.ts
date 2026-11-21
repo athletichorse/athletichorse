@@ -446,6 +446,16 @@ const en: Dict = {
     total: "Orders", remaining: "Left to collect", saved: "Saved", none: "No orders match.", fetched: "Website orders checked", added: "Order added",
     errors: { not_connected: "The website is not connected.", order_not_found: "No website order with this number.", bad_number: "Type the order number, e.g. 1025." },
   },
+  collections: {
+    title: "Collections", subtitle: "Cash-on-delivery money the shipping companies owe you and pay, checked order by order.",
+    waitingOrders: "Orders waiting", noneWaiting: "No orders waiting to be collected (an order shows here once it has a shipping company and an amount to collect).",
+    newTitle: "New collection (a payment from a shipping company)", courier: "Shipping company", ref: "Statement no.", date: "Date", method: "Received by", bank: "Bank transfer", cash: "Cash", notes: "Notes",
+    uploadStatement: "Upload the company's statement", uploadHint: "Excel or CSV with the waybill no., the collected amount and (optional) fees — orders are matched by waybill.",
+    matched: "Matched by waybill", unmatched: "Waybills not found in your orders", alreadyCollected: "Already collected before", noWaybillColumn: "No waybill column found in the file.",
+    pick: "Collect", order: "Order", waybill: "Waybill", expected: "Expected", collected: "Collected", fee: "Fee", fees: "Fees", difference: "Difference", orders: "Orders", net: "Net received", received: "received",
+    save: "Save collection", saved: "Collection saved — orders collected", history: "Collections received", noHistory: "No collections yet.",
+    errors: { courier_required: "Choose the shipping company.", no_orders: "Tick at least one order.", bad_amount: "Check the amounts.", not_found: "An order was not found.", bad_date: "Check the date." },
+  },
   customers: {
     countryDefault: "Saudi Arabia",
     cr: "Commercial registration no. (10 digits)",

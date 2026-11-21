@@ -45,7 +45,7 @@ async function checkPage(page, path, label) {
 }
 
 const browser = await chromium.launch();
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/orders", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/orders", "/sales/collections", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
 
 // ---------------------------------------------------------------- 1. setup + flows (desktop, English)
 console.log("\n== Setup and main flows (desktop, English)");
@@ -548,6 +548,32 @@ await page.goto(BASE + "/sales/orders", { waitUntil: "networkidle" });
   const byWb = await page.locator("[data-testid=orders-table]").innerText().catch(() => "");
   if (/#E2E1/.test(noWb) || !/#E2E2/.test(noWb) || !/#E2E1/.test(byWb) || /#E2E2/.test(byWb)) fail("orders", "filters: without waybill / search by waybill");
   else ok("order follow-up filters: without waybill, search by waybill");
+}
+
+// collections: the shipping company's statement (by waybill) → orders collected
+where = "collections";
+await page.goto(BASE + "/sales/collections", { waitUntil: "networkidle" });
+{
+  const waiting = await page.locator("[data-testid=waiting]").innerText();
+  if (!/Aramex/.test(waiting) || !/230\.00/.test(waiting)) fail("collections", `waiting per company: ${waiting.replace(/\s+/g, " ")}`);
+  const csv = `${OUT}/statement.csv`;
+  fs.writeFileSync(csv, "رقم البوليصة,المبلغ المحصل,الرسوم\nAWB-E2E-77,230,15\nAWB-UNKNOWN-1,50,0\n");
+  await page.locator("#col-courier").fill("Aramex");
+  await page.locator("#col-ref").fill("ST-E2E-1");
+  await page.locator("[data-testid=statement-file]").setInputFiles(csv);
+  await page.waitForSelector("text=/Matched by waybill: 1 \/ 2/", { timeout: 10000 }).catch(() => {});
+  const tot = (await page.locator("[data-testid=collection-totals]").innerText()).replace(/\s+/g, " ");
+  if (!/Net received: 215\.00/i.test(tot) || !/AWB-UNKNOWN-1/.test(await page.locator("[data-testid=unmatched]").innerText().catch(() => ""))) fail("collections", `statement matching: ${tot}`);
+  else ok("collections: statement matched by waybill (1 of 2), unknown waybill listed, net 230 − 15 = 215.00");
+  await page.locator('[data-testid=collection-form] button:text-is("Save collection")').click();
+  await page.waitForSelector("text=/Collection saved/", { timeout: 15000 }).catch(() => {});
+  await page.reload({ waitUntil: "networkidle" });
+  const hist = await page.locator("[data-testid=collections-history]").innerText().catch(() => "");
+  if (!/ST-E2E-1/.test(hist) || !/215\.00/.test(hist)) fail("collections", `history: ${hist.replace(/\s+/g, " ").slice(0, 200)}`);
+  await page.goto(BASE + "/sales/orders?q=AWB-E2E-77", { waitUntil: "networkidle" });
+  const st = await page.locator('[data-testid=orders-table] tr[data-order="#E2E1"] select[aria-label^="Order status"]').inputValue().catch(() => "");
+  if (st !== "collected") fail("collections", `order status after collection: ${st}`);
+  else ok("collection saved: shown in history, the order is now 'Collected' on the follow-up page");
 }
 
 // backups: monthly reminder on Home → download a full backup → the file has every table → reminder gone
