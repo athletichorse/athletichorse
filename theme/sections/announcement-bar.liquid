@@ -3,6 +3,15 @@
   if msg_1 == blank
     assign msg_1 = 'general.announcement.message' | t
   endif
+  comment
+    White Friday (same window as sections/mega-sale.liquid): first message becomes the sale message, linked to the sale.
+  endcomment
+  assign wf_now = 'now' | date: '%s' | plus: 0
+  assign wf_link = ''
+  if wf_now >= 1794258000 and wf_now < 1796072400
+    assign msg_1 = 'sections.mega_sale.announce' | t
+    assign wf_link = collections['11-11-mega-sale'].url
+  endif
   assign msg_2 = section.settings.message_2
   if msg_2 == blank
     assign msg_2 = 'general.announcement.business_inquiry' | t
@@ -22,7 +31,7 @@
     </div>
     <div class="ah-announce__track" aria-live="polite">
       <p class="ah-announce__msg is-active" data-announce-msg>
-        {%- if section.settings.link != blank -%}<a href="{{ section.settings.link }}">{{ msg_1 | replace: '[riyal]', riyal }}</a>{%- else -%}{{ msg_1 | replace: '[riyal]', riyal }}{%- endif -%}
+        {%- if wf_link != blank -%}<a href="{{ wf_link }}" class="ah-announce__wf">{{ msg_1 | replace: '[riyal]', riyal }}</a>{%- elsif section.settings.link != blank -%}<a href="{{ section.settings.link }}">{{ msg_1 | replace: '[riyal]', riyal }}</a>{%- else -%}{{ msg_1 | replace: '[riyal]', riyal }}{%- endif -%}
       </p>
       <p class="ah-announce__msg" data-announce-msg>{{ msg_3 }}</p>
       <p class="ah-announce__msg" data-announce-msg>{{ msg_2 }}</p>

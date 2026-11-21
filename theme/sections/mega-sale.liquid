@@ -59,71 +59,76 @@
     endfor
     assign pick_handles = picks | split: ','
   -%}
-  <div class="ah-1111__hero">
-    {%- if section.settings.bg_image -%}
-      {{ section.settings.bg_image | image_url: width: 1800 | image_tag: class: 'ah-1111__bg', loading: 'eager', fetchpriority: 'high', widths: '750,1100,1500,1800', sizes: '100vw', alt: '' }}
-    {%- endif -%}
-    <div class="ah-1111__shapes" aria-hidden="true">
-      <span class="ah-1111__shape ah-1111__shape--ring"></span>
-      <span class="ah-1111__shape ah-1111__shape--dot"></span>
-      <span class="ah-1111__shape ah-1111__shape--blob"></span>
-      <span class="ah-1111__shape ah-1111__shape--dots"></span>
+  <div class="ah-1111__hero ah-wf">
+    <div class="ah-wf__shapes" aria-hidden="true">
+      <span class="ah-wf__orb ah-wf__orb--1"></span>
+      <span class="ah-wf__orb ah-wf__orb--2"></span>
+      <span class="ah-wf__ring"></span>
+      <span class="ah-wf__dots"></span>
+      <span class="ah-wf__float ah-wf__float--1">{%- render 'icon', name: 'sale' -%}</span>
+      <span class="ah-wf__float ah-wf__float--2">{%- render 'icon', name: 'truck' -%}</span>
+      <span class="ah-wf__float ah-wf__float--3"><b>%</b></span>
+      <span class="ah-wf__float ah-wf__float--4">{%- render 'icon', name: 'cash' -%}</span>
+      <span class="ah-wf__spark ah-wf__spark--1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c.8 6.4 4.6 10.6 12 12-7.4 1.4-11.2 5.6-12 12-.8-6.4-4.6-10.6-12-12C7.4 10.6 11.2 6.4 12 0Z" fill="currentColor"/></svg></span>
+      <span class="ah-wf__spark ah-wf__spark--2"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c.8 6.4 4.6 10.6 12 12-7.4 1.4-11.2 5.6-12 12-.8-6.4-4.6-10.6-12-12C7.4 10.6 11.2 6.4 12 0Z" fill="currentColor"/></svg></span>
+      <span class="ah-wf__spark ah-wf__spark--3"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c.8 6.4 4.6 10.6 12 12-7.4 1.4-11.2 5.6-12 12-.8-6.4-4.6-10.6-12-12C7.4 10.6 11.2 6.4 12 0Z" fill="currentColor"/></svg></span>
     </div>
 
-    <div class="ah-1111__strip" aria-hidden="true">
-      <div class="ah-1111__strip-track" dir="ltr">
-        {%- for i in (1..2) -%}
-          <span dir="auto">{%- render 'icon', name: 'flag' -%} We've extended the offer!</span>
-          <span dir="auto">{%- render 'icon', name: 'sale' -%} مددنا العرض!</span>
-          <span dir="auto">{%- render 'icon', name: 'star-outline' -%} {{ 'sections.mega_sale.strip_off' | t: percent: max_off }}</span>
-          <span dir="auto">{%- render 'icon', name: 'clock' -%} {{ 'sections.mega_sale.until' | t }}</span>
-          <span dir="auto">{%- render 'icon', name: 'cash' -%} {{ 'sections.mega_sale.perk_cod' | t }}</span>
-          <span dir="auto">{%- render 'icon', name: 'truck' -%} {{ 'sections.mega_sale.perk_delivery' | t }}</span>
+    <div class="ah-wf__tapes" aria-hidden="true">
+      <div class="ah-wf__tape ah-wf__tape--a"><div class="ah-wf__tape-track" dir="ltr">
+        {%- for i in (1..4) -%}
+          <span>WHITE FRIDAY</span><i>✦</i><span>الجمعة البيضاء</span><i>✦</i><span dir="auto">{{ 'sections.mega_sale.strip_off' | t: percent: max_off }}</span><i>✦</i>
         {%- endfor -%}
-      </div>
+      </div></div>
+      <div class="ah-wf__tape ah-wf__tape--b"><div class="ah-wf__tape-track ah-wf__tape-track--rev" dir="ltr">
+        {%- for i in (1..4) -%}
+          <span dir="auto">{{ 'sections.mega_sale.tape_extended' | t }}</span><i>●</i><span dir="auto">{{ 'sections.mega_sale.until' | t }}</span><i>●</i><span dir="auto">{{ 'sections.mega_sale.perk_cod' | t }}</span><i>●</i>
+        {%- endfor -%}
+      </div></div>
     </div>
 
-    <div class="container ah-1111__inner">
-      <div class="ah-1111__copy">
-        <span class="ah-1111__flag">{%- render 'icon', name: 'flag' -%}{{ 'sections.mega_sale.flag' | t }}</span>
-        <h2 class="ah-1111__title"><span class="ah-1111__num">{{ 'sections.mega_sale.title_a' | t }}</span><span class="ah-1111__word">{{ 'sections.mega_sale.title_b' | t }}</span></h2>
-        <p class="ah-1111__until">{%- render 'icon', name: 'clock' -%}<span>{{ 'sections.mega_sale.until' | t }}</span></p>
-        <p class="ah-1111__sub">{{ 'sections.mega_sale.subtitle_html' | t: percent: max_off }}</p>
-        <div class="ah-1111__ctas">
-          <a href="{{ jump_discount }}" class="ah-btn ah-1111__btn"{% if section.settings.show_rails %} data-ah-jump{% endif %}>{{ 'sections.mega_sale.cta_discount' | t }}</a>
-          <a href="{{ jump_cheapest }}" class="ah-btn ah-1111__btn ah-1111__btn--ghost"{% if section.settings.show_rails %} data-ah-jump{% endif %}>{{ 'sections.mega_sale.cta_cheapest' | t }}</a>
+    <div class="container ah-1111__inner ah-wf__inner">
+      <div class="ah-wf__copy">
+        <span class="ah-wf__flag">{%- render 'icon', name: 'flag' -%}{{ 'sections.mega_sale.flag' | t }}</span>
+        <h2 class="ah-wf__title"><span class="ah-wf__t1">{{ 'sections.mega_sale.title_a' | t }}</span><span class="ah-wf__t2">{{ 'sections.mega_sale.title_b' | t }}</span></h2>
+        <p class="ah-wf__until">{%- render 'icon', name: 'clock' -%}<span>{{ 'sections.mega_sale.until' | t }}</span></p>
+        <p class="ah-wf__sub">{{ 'sections.mega_sale.subtitle_html' | t: percent: max_off }}</p>
+        <div class="ah-wf__ctas">
+          <a href="{{ jump_discount }}" class="ah-btn ah-wf__btn"{% if section.settings.show_rails %} data-ah-jump{% endif %}>{{ 'sections.mega_sale.cta_discount' | t }}</a>
+          <a href="{{ jump_cheapest }}" class="ah-btn ah-wf__btn ah-wf__btn--ghost"{% if section.settings.show_rails %} data-ah-jump{% endif %}>{{ 'sections.mega_sale.cta_cheapest' | t }}</a>
         </div>
-        <ul class="ah-1111__perks" role="list">
+        <ul class="ah-wf__perks" role="list">
           <li>{%- render 'icon', name: 'cash' -%}{{ 'sections.mega_sale.perk_cod' | t }}</li>
           <li>{%- render 'icon', name: 'truck' -%}{{ 'sections.mega_sale.perk_delivery' | t }}</li>
           <li>{%- render 'icon', name: 'return' -%}{{ 'sections.mega_sale.perk_returns' | t }}</li>
         </ul>
       </div>
 
-      <div class="ah-1111__visual">
-        <div class="ah-1111__badge" aria-hidden="true">
+      <div class="ah-wf__visual">
+        <div class="ah-1111__badge ah-wf__badge" aria-hidden="true">
           <svg class="ah-1111__badge-ring" viewBox="0 0 120 120"><defs><path id="ah1111c-{{ section.id }}" d="M60 60m-46 0a46 46 0 1 1 92 0a46 46 0 1 1 -92 0"/></defs><text><textPath href="#ah1111c-{{ section.id }}" textLength="288" lengthAdjust="spacingAndGlyphs">{{ 'sections.mega_sale.badge_ring' | t }}</textPath></text></svg>
           <span class="ah-1111__badge-core"><small>{{ 'sections.mega_sale.badge_up_to' | t }}</small><b dir="ltr">{{ max_off }}%</b><small>{{ 'sections.mega_sale.badge_off' | t }}</small></span>
         </div>
-        <div class="ah-1111__tiles">
+        <div class="ah-wf__tiles">
           {%- for h in pick_handles -%}
             {%- assign tp = all_products[h] -%}
             {%- if tp and tp.featured_image -%}
               {%- assign t_off = tp.compare_at_price | minus: tp.price | times: 100.0 | divided_by: tp.compare_at_price | round -%}
-              <a href="{{ tp.url }}" class="ah-1111__tile ah-1111__tile--{{ forloop.index }}">
+              <a href="{{ tp.url }}" class="ah-wf__tile ah-wf__tile--{{ forloop.index }}">
                 {{ tp.featured_image | image_url: width: 360 | image_tag: loading: 'eager', widths: '180,270,360', sizes: '(min-width: 990px) 180px, 30vw', alt: tp.title }}
-                <span class="ah-1111__tile-off" dir="ltr">−{{ t_off }}%</span>
+                <span class="ah-wf__tile-off" dir="ltr">−{{ t_off }}%</span>
+                <span class="ah-wf__tile-price">{%- render 'money', cents: tp.price -%}</span>
               </a>
             {%- endif -%}
           {%- endfor -%}
         </div>
-        <div class="ah-1111__clock" aria-live="off">
-          <span class="ah-1111__clock-label">{{ 'sections.mega_sale.ends_in' | t }}</span>
-          <div class="ah-1111__units">
-            <span class="ah-1111__unit"><b data-u="d">00</b><small>{{ 'sections.mega_sale.days' | t }}</small></span>
-            <span class="ah-1111__unit"><b data-u="h">00</b><small>{{ 'sections.mega_sale.hours' | t }}</small></span>
-            <span class="ah-1111__unit"><b data-u="m">00</b><small>{{ 'sections.mega_sale.minutes' | t }}</small></span>
-            <span class="ah-1111__unit"><b data-u="s">00</b><small>{{ 'sections.mega_sale.seconds' | t }}</small></span>
+        <div class="ah-wf__clock" aria-live="off">
+          <span class="ah-wf__clock-label">{%- render 'icon', name: 'clock' -%}{{ 'sections.mega_sale.ends_in' | t }}</span>
+          <div class="ah-wf__units">
+            <span class="ah-wf__unit"><b data-u="d">00</b><small>{{ 'sections.mega_sale.days' | t }}</small></span>
+            <span class="ah-wf__unit"><b data-u="h">00</b><small>{{ 'sections.mega_sale.hours' | t }}</small></span>
+            <span class="ah-wf__unit"><b data-u="m">00</b><small>{{ 'sections.mega_sale.minutes' | t }}</small></span>
+            <span class="ah-wf__unit"><b data-u="s">00</b><small>{{ 'sections.mega_sale.seconds' | t }}</small></span>
           </div>
         </div>
       </div>

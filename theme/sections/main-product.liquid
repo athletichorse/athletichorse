@@ -176,6 +176,7 @@
     </div>
 
     {%- render 'price', product: product, variant: current_variant, show_off: true, data_attr: true -%}
+    {%- render 'wf-deal', product: product -%}
     <p class="ah-pinfo__tax">{{ 'sections.product.tax_included' | t }}</p>
 
     {%- form 'product', product, data-product-form: '', class: 'ah-buy' -%}

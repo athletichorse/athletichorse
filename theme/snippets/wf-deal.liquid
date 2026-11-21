@@ -1,0 +1,28 @@
+{%- comment -%}
+  White Friday urgency strip under the price on product pages: only for discounted products, only while the sale runs.
+  Window matches sections/mega-sale.liquid (start 10 Nov, end 1 Dec 2026 00:00 Riyadh).
+{%- endcomment -%}
+{%- liquid
+  assign wf_end = 1796072400
+  assign wf_now = 'now' | date: '%s' | plus: 0
+-%}
+{%- if product.compare_at_price > product.price and wf_now >= 1794258000 and wf_now < wf_end -%}
+  <div class="ah-wf-deal" data-wf-deal data-end="{{ wf_end }}">
+    <span class="ah-wf-deal__tag">{%- render 'icon', name: 'sale' -%}{{ 'sections.mega_sale.pdp_tag' | t }}</span>
+    <span class="ah-wf-deal__time">{{ 'sections.mega_sale.pdp_ends' | t }} <b data-wf-left dir="ltr"></b></span>
+  </div>
+  <script>
+    (function () {
+      var el = document.currentScript.previousElementSibling;
+      var end = parseInt(el.getAttribute('data-end'), 10) * 1000, out = el.querySelector('[data-wf-left]');
+      var d = {{ 'sections.mega_sale.d_short' | t | json }}, h = {{ 'sections.mega_sale.h_short' | t | json }}, m = {{ 'sections.mega_sale.m_short' | t | json }};
+      function tick() {
+        var left = Math.floor((end - Date.now()) / 1000);
+        if (left <= 0) { el.hidden = true; return; }
+        out.textContent = Math.floor(left / 86400) + d + ' ' + Math.floor(left % 86400 / 3600) + h + ' ' + Math.floor(left % 3600 / 60) + m;
+        setTimeout(tick, 30000);
+      }
+      tick();
+    })();
+  </script>
+{%- endif -%}
