@@ -42,10 +42,19 @@ export function buildSections(t: Dict, perms: Perms, role?: Role): Section[] {
       ],
     },
     {
-      key: "sales", label: t.menu.sales, href: "/sales", icon: "sales", match: ["/sales"],
-      show: !till && perms.has("sales.view"),
+      key: "purchasing", label: t.menu.purchasing, href: "/purchasing", icon: "purchasing", match: ["/purchasing"],
+      show: !till && perms.has("purchasing.view"),
       tabs: [
-        { label: t.menu.sales, href: "/sales" },
+        { label: t.purchasing.title, href: "/purchasing" },
+        { label: t.purchasing.suppliers, href: "/purchasing/suppliers" },
+      ],
+    },
+    {
+      key: "sales", label: t.menu.sales, href: "/sales", icon: "sales", match: ["/sales"],
+      show: !till && any(perms, "sales.view", "sales.b2b"),
+      tabs: [
+        ...(perms.has("sales.view") ? [{ label: t.menu.sales, href: "/sales" }] : []),
+        ...(perms.has("sales.b2b") ? [{ label: t.b2b.title, href: "/sales/b2b" }] : []),
         ...(perms.has("sales.website_orders") ? [{ label: t.orders.title, href: "/sales/orders" }, { label: t.collections.title, href: "/sales/collections" }] : []),
         ...(perms.has("reports.view") ? [{ label: t.reports.title, href: "/sales/reports" }] : []),
       ],

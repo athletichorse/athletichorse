@@ -31,7 +31,7 @@ const fail = (where, what) => {
 const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/products/labels", "/staff", "/staff/employees", "/staff/attendance",
   "/staff/payroll", "/staff/commission", "/staff/advances", "/staff/slips", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/pos/shifts", "/pos/day", "/pos/expense-types",
   "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/stock/new?kind=write_off", "/stock/docs", "/stock/count",
-  "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/sales", "/sales?tab=returns", "/sales?tab=website", "/sales/reports", "/sales/orders", "/sales/collections", "/customers",
+  "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/sales", "/sales?tab=returns", "/sales?tab=website", "/sales/reports", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/customers",
   "/stock-log", "/audit", "/audit/hours", "/audit/devices"];
 // never pressed by the audit (they end the session or change who can log in)
 const SKIP_CLICK = /log ?out|تسجيل الخروج|English|العربية/i;
