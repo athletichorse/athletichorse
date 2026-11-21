@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
@@ -48,7 +49,21 @@ export default async function Home() {
     missingSku: (missing ?? []).reduce((n, r) => n + Number(r.missing_sku), 0),
     lastSync: lastSync ?? null,
   };
+  // monthly reminder for the owner: download a full backup once a month
+  let needBackup = false;
+  if (s.perms.has("settings.edit")) {
+    const { data: dl } = await db().from("settings").select("value").eq("key", "backup_downloaded_at").maybeSingle();
+    const month = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" }).slice(0, 7);
+    needBackup = typeof dl?.value !== "string" || month(new Date(dl.value)) !== month(new Date());
+  }
   return (
+    <>
+    {needBackup && (
+      <p className="alert-err no-print mb-4 flex flex-wrap items-center gap-3" data-testid="backup-reminder">
+        <span className="flex-1">{t.company.backup.reminder}</span>
+        <Link href="/company/backup" className="font-semibold underline">{t.company.backup.open}</Link>
+      </p>
+    )}
     <Overview
       s={s}
       t={t}
@@ -60,5 +75,6 @@ export default async function Home() {
       catalog={catalog}
       pulse={pulse}
     />
+    </>
   );
 }

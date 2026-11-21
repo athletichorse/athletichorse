@@ -1,5 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["sin1"],
-  "crons": [{ "path": "/api/cron/shopify-sync", "schedule": "0 0 * * *" }]
+  "regions": [
+    "sin1"
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/shopify-sync",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/backup",
+      "schedule": "0 23 * * *"
+    }
+  ]
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requirePermission } from "@/lib/auth";
 import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
@@ -51,7 +52,9 @@ export default async function CompanyPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <PageHeader title={t.company.title} t={t} />
+      <PageHeader title={t.company.title} t={t}>
+        <Link href="/company/backup" className="btn-ghost no-print" data-testid="open-backups">{t.company.backup.open}</Link>
+      </PageHeader>
       {err && <p className="alert-err">{err}</p>}
       {sp.ok && <p className="alert-ok">{t.saved}</p>}
       {sp.done && <p className="alert-ok">{w.done}{sp.n ? ` (${sp.n})` : ""}</p>}
