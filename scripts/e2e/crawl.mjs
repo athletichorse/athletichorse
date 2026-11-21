@@ -79,7 +79,7 @@ where = "links";
 const seen = new Set();
 for (const r of ROUTES) {
   await page.goto(BASE + r, { waitUntil: "networkidle" });
-  const hrefs = await page.$$eval("a[href^='/']", (as) => as.map((a) => a.getAttribute("href")));
+  const hrefs = await page.$$eval("a[href^='/']:not([download])", (as) => as.map((a) => a.getAttribute("href")));
   // /lang links change this browser's language; they are tested separately below.
   for (const h of hrefs) if (!h.startsWith("/lang")) seen.add(h.split("#")[0]);
 }
