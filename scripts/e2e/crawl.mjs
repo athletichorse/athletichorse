@@ -45,7 +45,7 @@ async function checkPage(page, path, label) {
 }
 
 const browser = await chromium.launch();
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/reports/sales", "/sales/reports/analysis", "/sales/reports/invoices", "/sales/reports/treasury", "/sales/reports/b2b", "/sales/reports/purchases", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/reports/sales", "/sales/reports/analysis", "/sales/reports/invoices", "/sales/reports/treasury", "/sales/reports/b2b", "/sales/reports/purchases", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/purchasing/expenses", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
 
 // ---------------------------------------------------------------- 1. setup + flows (desktop, English)
 console.log("\n== Setup and main flows (desktop, English)");
@@ -714,6 +714,37 @@ await page.goto(BASE + "/sales/b2b/new", { waitUntil: "networkidle" });
   else ok("B2B list: the order is 'Invoiced', 310.50 total, 210.50 left to pay");
 }
 
+
+// recurring expenses: shop rent from last month → both months due/overdue → reminder on Home → pay one
+where = "expenses";
+await page.goto(BASE + "/purchasing/expenses", { waitUntil: "networkidle" });
+{
+  const now = new Date(Date.now() + 3 * 3600_000);
+  const prev = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)).toISOString().slice(0, 10);
+  await page.evaluate(() => document.querySelector("details:has([data-testid=new-expense])")?.setAttribute("open", ""));
+  await page.locator("#ex-name-new").fill("Shop rent E2E");
+  await page.locator("#ex-amount-new").fill("3000");
+  await page.locator("#ex-day-new").fill("1");
+  await page.locator("#ex-start-new").fill(prev);
+  await page.locator("#ex-freq-new").selectOption("monthly");
+  await Promise.all([page.waitForURL(/ok=1|err=/, { timeout: 20000 }), page.locator('form:has(#ex-name-new) button:text-is("Save")').click()]);
+  if (page.url().includes("err=")) fail("expenses", "save: " + decodeURIComponent(page.url().split("err=")[1]));
+  const due = page.locator('[data-testid=expenses-due] tr[data-expense="Shop rent E2E"]');
+  const n = await due.count();
+  if (n < 2) fail("expenses", `rent from last month should be due twice (last month + this month), shows ${n}`);
+  else ok("recurring expense: monthly shop rent from last month — 2 months due, the past one marked overdue");
+  await page.goto(BASE + "/", { waitUntil: "networkidle" });
+  if (!(await page.locator("[data-testid=expenses-reminder]").count())) fail("expenses", "no overdue reminder on Home");
+  else ok("Home reminds about overdue recurring expenses");
+  await page.goto(BASE + "/purchasing/expenses", { waitUntil: "networkidle" }); // fresh address, so the next "ok=1" is this payment
+  await page.locator('[data-testid=expenses-due] tr[data-expense="Shop rent E2E"]').first().locator("summary").click();
+  await page.locator('[data-testid=expenses-due] tr[data-expense="Shop rent E2E"]').first().locator('input[aria-label="Ref."]').fill("TRF-RENT-1");
+  await Promise.all([page.waitForURL(/\?(ok=1|err=)/, { timeout: 20000 }), page.locator('[data-testid=expenses-due] tr[data-expense="Shop rent E2E"]').first().locator('button:text-is("Save payment")').click()]);
+  const hist = await page.locator("[data-testid=expense-payments]").innerText().catch(() => "");
+  const left = await page.locator('[data-testid=expenses-due] tr[data-expense="Shop rent E2E"]').count();
+  if (!/TRF-RENT-1/.test(hist) || !/3000\.00/.test(hist) || left !== n - 1) fail("expenses", `after paying: payments "${hist.slice(0, 120)}", still due ${left}`);
+  else ok("pay the oldest month: it leaves the due list and shows in payments");
+}
 
 // ---------------------------------------------------------------- cashier
 where = "pos";

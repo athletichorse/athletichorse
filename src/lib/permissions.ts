@@ -46,6 +46,7 @@ export const PERMISSION_KEYS = [
   "purchasing.edit", // suppliers and purchase orders
   "purchasing.receive", // receive goods into a store
   "purchasing.pay", // supplier payments
+  "purchasing.expenses", // recurring expenses (rent, internet…) and paying them
   // Stock / المخازن
   "stock.view",
   "stock.transfer",
@@ -129,7 +130,7 @@ export const ROLE_DEFAULTS: Record<Role, readonly PermissionKey[]> = {
   manager: ALL.filter(
     (k) => k !== "permissions.edit" && k !== "settings.edit" && k !== "staff.payroll_edit" && !(APPROVAL_ALL as string[]).includes(k),
   ),
-  accountant: ["sales.view", "sales.view_all_branches", "sales.website_orders", "sales.b2b", "purchasing.view", "purchasing.pay", "reports.view", "products.view", "products.view_cost", "customers.view", "stock.view", "stock.log", "stock.all_locations", "audit.view", "staff.payroll", "staff.payroll_edit", "pos.past_shifts"],
+  accountant: ["sales.view", "sales.view_all_branches", "sales.website_orders", "sales.b2b", "purchasing.view", "purchasing.pay", "purchasing.expenses", "reports.view", "products.view", "products.view_cost", "customers.view", "stock.view", "stock.log", "stock.all_locations", "audit.view", "staff.payroll", "staff.payroll_edit", "pos.past_shifts"],
   warehouse: ["purchasing.view", "purchasing.receive", "stock.view", "stock.transfer", "stock.receive", "stock.count", "stock.log", "stock.write_off", "stock.requests", "stock.all_locations", "products.view", "products.labels", "approval.stock_receive", "approval.write_off"],
   cashier: [...cashierBase, "sales.view", ...APPROVAL_ALL],
   pos: [...deskBase, ...APPROVAL_ALL],

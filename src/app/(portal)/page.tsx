@@ -4,6 +4,7 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { riyadhDate } from "@/lib/time";
 import { Overview, type OverviewLoc } from "@/components/Overview";
+import { dueList, type Recurring } from "@/lib/recurring";
 
 export default async function Home() {
   const s = await requireStaff();
@@ -56,8 +57,24 @@ export default async function Home() {
     const month = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" }).slice(0, 7);
     needBackup = typeof dl?.value !== "string" || month(new Date(dl.value)) !== month(new Date());
   }
+  // recurring expenses past their due day and not paid yet
+  let overdue = { n: 0, total: 0 };
+  if (s.perms.has("purchasing.expenses")) {
+    const [{ data: rex }, { data: rpaid }] = await Promise.all([
+      db().from("recurring_expenses").select("id, frequency, due_day, start_on, end_on, active, amount").eq("active", true),
+      db().from("expense_payments").select("recurring_id, period").not("recurring_id", "is", null),
+    ]);
+    const late = dueList((rex ?? []) as Recurring[], new Set((rpaid ?? []).map((p) => `${p.recurring_id}|${p.period}`)), riyadhDate(new Date()), 0).filter((d) => d.overdue);
+    overdue = { n: late.length, total: late.reduce((a, d) => a + d.amount, 0) };
+  }
   return (
     <>
+    {overdue.n > 0 && (
+      <p className="alert-err no-print mb-4 flex flex-wrap items-center gap-3" data-testid="expenses-reminder">
+        <span className="flex-1">{t.expenses.reminder} {overdue.n} · <span dir="ltr">{overdue.total.toFixed(2)}</span></span>
+        <Link href="/purchasing/expenses" className="font-semibold underline">{t.expenses.open}</Link>
+      </p>
+    )}
     {needBackup && (
       <p className="alert-err no-print mb-4 flex flex-wrap items-center gap-3" data-testid="backup-reminder">
         <span className="flex-1">{t.company.backup.reminder}</span>

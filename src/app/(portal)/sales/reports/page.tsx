@@ -37,7 +37,7 @@ export default async function ReportsHub() {
       { key: "b2b", href: "/sales/reports/b2b", perm: "sales.b2b" }, { key: "website", href: "/sales/orders", perm: "sales.website_orders" },
       { key: "courier", href: "/sales/collections", perm: "sales.website_orders" },
     ] },
-    { key: "purchasing", cards: [{ key: "purchases", href: "/sales/reports/purchases", perm: "purchasing.view" }] },
+    { key: "purchasing", cards: [{ key: "purchases", href: "/sales/reports/purchases", perm: "purchasing.view" }, { key: "expenses", href: "/purchasing/expenses", perm: "purchasing.expenses" }] },
   ];
   const shown = groups.map((g) => ({ ...g, cards: g.cards.filter((c) => !c.perm || me.perms.has(c.perm)) })).filter((g) => g.cards.length);
   return (
