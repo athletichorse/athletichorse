@@ -45,7 +45,7 @@ async function checkPage(page, path, label) {
 }
 
 const browser = await chromium.launch();
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/orders", "/sales/collections", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
 
 // ---------------------------------------------------------------- 1. setup + flows (desktop, English)
 console.log("\n== Setup and main flows (desktop, English)");
@@ -535,6 +535,19 @@ await page.goto(BASE + "/sales/orders", { waitUntil: "networkidle" });
   const det = await page.locator("main").innerText().catch(() => "");
   if (!/Web Test Item/.test(det) || !/WEB-SKU-1/.test(det) || !/Web Buyer/.test(det) || !/King Fahd Rd 1/.test(det)) fail("orders", `order details: ${det.replace(/\s+/g, " ").slice(0, 200)}`);
   else ok("order number opens the order's details in the portal: customer, address, items, totals");
+  // website buttons: pending cash-on-delivery order → ship / paid / cancel; each asks first
+  const wa = page.locator("[data-testid=website-actions]");
+  if (!(await wa.count())) fail("orders", "order page has no 'On the website' buttons");
+  else {
+    const n = await Promise.all(["ship", "paid", "cancel"].map((a) => wa.locator(`[data-testid=website-${a}]`).count()));
+    if (n.some((x) => x !== 1)) fail("orders", `website buttons ship/paid/cancel: ${n.join("/")}`);
+    await wa.locator("[data-testid=website-paid]").click();
+    await wa.locator("[data-testid=website-yes]").click();
+    const said = await wa.locator("[role=status]").innerText({ timeout: 15000 }).catch(() => "");
+    // the test stack's website is a dummy: the answer must be a clear message, not a crash
+    if (!/isn't connected|The website said:/.test(said)) fail("orders", `mark-paid on a dummy website should report the website's answer: ${said}`);
+    else ok("order page: ship / mark paid / cancel on the website, each asks first and reports back");
+  }
   await page.goto(BASE + "/sales/orders", { waitUntil: "networkidle" });
   const paid = await page.locator('[data-testid=orders-table] tr[data-order="#E2E2"]').innerText().catch(() => "");
   if (!/0\.00/.test(paid) || !/paid online/.test(paid)) fail("orders", `paid order should have nothing to collect: ${paid.replace(/\s+/g, " ").slice(0, 160)}`);
@@ -604,6 +617,95 @@ await page.goto(BASE + "/company/backup", { waitUntil: "networkidle" });
   await page.goto(BASE + "/", { waitUntil: "networkidle" });
   if (await page.locator("[data-testid=backup-reminder]").count()) fail("backups", "reminder still shown after this month's download");
   else ok("monthly backup reminder on Home goes away after the download");
+}
+
+
+// purchasing: supplier (EGP) → purchase order → receive part of it → stock doc, average cost, owed → pay
+where = "purchasing";
+await page.goto(BASE + "/purchasing/suppliers", { waitUntil: "networkidle" });
+{
+  await page.evaluate(() => document.querySelector("details:has([data-testid=new-supplier])")?.setAttribute("open", ""));
+  await page.locator("#sup-name").fill("Nile Supplies E2E");
+  await page.locator("#sup-factory").fill("Cairo Factory");
+  await page.locator("#sup-currency").selectOption("EGP");
+  await Promise.all([page.waitForURL(/\/purchasing\/suppliers\/[0-9a-f-]{36}\?/, { timeout: 20000 }), page.locator('form:has(#sup-name) button:text-is("Save")').click()]);
+  const supUrl = page.url().split("?")[0];
+  await page.locator('a:has-text("New purchase order")').first().click();
+  await page.waitForURL(/\/purchasing\/new\?supplier=/, { timeout: 20000 });
+  await page.locator("#po-store").selectOption({ label: "Main Warehouse" });
+  if ((await page.locator("#po-cur").inputValue()) !== "EGP") fail("purchasing", "new order did not take the supplier's currency (EGP)");
+  await page.locator("#po-rate").fill("0.08");
+  const box = page.locator('input[aria-label="Scan or type SKU / name, then Enter"]');
+  await box.fill("E2E-SKU-001"); await box.press("Enter");
+  await page.locator('input[aria-label="Qty E2E-SKU-001"]').fill("5");
+  await page.locator('input[aria-label="Unit cost (EGP) E2E-SKU-001"]').fill("500");
+  const poTot = await page.locator("[data-testid=po-total]").innerText().catch(() => "");
+  if (!/2500\.00 EGP/.test(poTot) || !/200\.00 SAR/.test(poTot)) fail("purchasing", `order total preview: ${poTot}`);
+  await Promise.all([page.waitForURL(/\/purchasing\/[0-9a-f-]{36}\?ok=1/, { timeout: 20000 }), page.click("[data-testid=po-save-ordered]")]);
+  if (!/Ordered/.test(await page.locator("h1 + p, main").first().innerText())) fail("purchasing", "order not marked Ordered");
+  else ok("purchasing: supplier in EGP, purchase order of 5 × 500 EGP (= 200 SAR at 0.08) saved as Ordered");
+  const rc = page.locator("[data-testid=receive]");
+  await rc.locator('input[aria-label="Qty E2E-SKU-001"]').fill("3");
+  await page.locator("#rc-bill").fill("EG-INV-1");
+  await rc.locator("[data-testid=receive-now]").click();
+  await rc.locator("[role=status]").waitFor({ timeout: 20000 }).catch(() => {});
+  const said = await rc.locator("[role=status]").innerText().catch(() => "");
+  if (!/Saved/.test(said)) fail("purchasing", `receive: ${said}`);
+  await page.waitForSelector("[data-testid=po-receipts]", { timeout: 20000 }).catch(() => {});
+  const rcs = (await page.locator("[data-testid=po-receipts]").innerText().catch(() => "")).replace(/\s+/g, " ");
+  if (!/EG-INV-1/.test(rcs) || !/1500\.00 EGP/.test(rcs) || !/120\.00/.test(rcs)) fail("purchasing", `received so far: ${rcs}`);
+  else if (!/Partly received/.test(await page.locator("main").innerText())) fail("purchasing", "status should be Partly received");
+  else ok("receive 3 of 5: stock document made, 1500 EGP = 120 SAR owed, order 'Partly received'");
+  await page.goto(supUrl, { waitUntil: "networkidle" });
+  const head = await page.locator("main").innerText();
+  if (!/We owe: 1500\.00 EGP/.test(head)) fail("purchasing", "supplier balance should be 1500.00 EGP");
+  await page.locator("#pay-amount").fill("500");
+  await page.locator("#pay-rate").fill("0.08");
+  await Promise.all([page.waitForURL(/ok=1|err=/, { timeout: 20000 }), page.locator('[data-testid=supplier-pay] button:text-is("Pay the supplier")').click()]);
+  const after = await page.locator("main").innerText();
+  if (!/We owe: 1000\.00 EGP/.test(after) || !/We owe \(SAR\): 80\.00/.test(after)) fail("purchasing", `after paying 500 EGP: ${after.slice(0, 200)}`);
+  else ok("pay the supplier 500 EGP: statement shows the payment, 1000 EGP (80 SAR) still owed");
+}
+
+// B2B: business order → deliver (out of stock, on the customer's account) → payment → invoiced
+where = "b2b";
+await page.goto(BASE + "/sales/b2b/new", { waitUntil: "networkidle" });
+{
+  await page.locator("#b2b-cust").fill("0559876543"); await page.locator("#b2b-cust").press("Enter");
+  await page.locator("[data-testid=b2b-customer]").waitFor({ timeout: 15000 }).catch(() => fail("b2b", "customer not found by mobile"));
+  await page.locator("#b2b-store").selectOption({ label: "Main Warehouse" });
+  await page.locator("#b2b-ref").fill("CLUB-PO-9");
+  const box = page.locator('input[aria-label="Scan or type SKU / name, then Enter"]');
+  await box.fill("E2E-SKU-001"); await box.press("Enter");
+  await page.locator('input[aria-label="Qty E2E-SKU-001"]').fill("3");
+  await page.locator('input[aria-label="Price (incl. VAT) E2E-SKU-001"]').fill("115");
+  await page.locator('input[aria-label="Disc. % E2E-SKU-001"]').fill("10");
+  const tot = (await page.locator("[data-testid=b2b-totals]").innerText()).replace(/\s+/g, " ");
+  if (!/Before VAT: 270\.00/.test(tot) || !/VAT: 40\.50/.test(tot) || !/Total: 310\.50/.test(tot)) fail("b2b", `totals preview: ${tot}`);
+  await Promise.all([page.waitForURL(/\/sales\/b2b\/[0-9a-f-]{36}\?ok=1/, { timeout: 20000 }), page.click("[data-testid=b2b-save]")]);
+  ok("B2B order: customer by mobile, 3 × 115 with 10% off = 310.50 (270.00 + 40.50 VAT)");
+  // open it again without "?ok=1", so the next "saved" is this payment's
+  const b2bUrl = page.url().split("?")[0];
+  await page.goto(b2bUrl, { waitUntil: "networkidle" });
+  await page.click("[data-testid=b2b-to-delivered]");
+  await page.click("[data-testid=b2b-yes]");
+  await page.waitForSelector("[data-testid=b2b-to-invoiced]", { timeout: 20000 }).catch(() => fail("b2b", "not delivered"));
+  await page.locator("#bp-amount").fill("100");
+  await Promise.all([page.waitForURL(/\?(ok=1|err=)/, { timeout: 20000 }), page.locator('[data-testid=b2b-pay] button:text-is("Add payment")').click()]);
+  await page.waitForLoadState("networkidle");
+  const money = (await page.locator("[data-testid=b2b-money]").innerText()).replace(/\s+/g, " ");
+  if (!/Paid 100\.00/.test(money) || !/Left to pay 210\.50/.test(money)) fail("b2b", `after a payment of 100: ${money}`);
+  else ok("deliver (taken from stock, on the customer's account), pay 100: 210.50 left");
+  await page.click("[data-testid=b2b-to-invoiced]");
+  await page.locator('input[aria-label="Invoice no."]').fill("INV-B2B-1");
+  await page.click("[data-testid=b2b-yes]");
+  await page.waitForFunction(() => !document.querySelector("[data-testid=b2b-steps]"), null, { timeout: 20000 }).catch(() => {});
+  const det = await page.locator("main").innerText();
+  if (!/INV-B2B-1/.test(det)) fail("b2b", "invoice no. not shown after 'Mark invoiced'");
+  await page.goto(BASE + "/sales/b2b?status=invoiced", { waitUntil: "networkidle" });
+  const list = (await page.locator("[data-testid=b2b-table]").innerText().catch(() => "")).replace(/\s+/g, " ");
+  if (!/VIP Customer/.test(list) || !/310\.50/.test(list) || !/210\.50/.test(list)) fail("b2b", `list: ${list.slice(0, 200)}`);
+  else ok("B2B list: the order is 'Invoiced', 310.50 total, 210.50 left to pay");
 }
 
 
@@ -833,16 +935,16 @@ for (const [device, opts] of [["desktop", { viewport: { width: 1280, height: 900
       if (lang === "ar" && (await p.locator("html").getAttribute("dir")) !== "rtl") fail(w, "not right-to-left in Arabic");
       await p.screenshot({ path: `${OUT}/${device}-${lang}${r.replace(/[\/]/g, "_") || "_home"}.png`, fullPage: false });
     }
-    // the 6 main sections: all on screen, each opens its page and is highlighted there
+    // the 7 main sections: all on screen, each opens its page and is highlighted there
     w = `${device}/${lang} menu`;
     await p.goto(BASE + "/");
     const keys = await p.$$eval("[data-testid=sections] a", (as) => as.map((a) => a.getAttribute("data-section")));
-    if (keys.join(",") !== "pos,stock,sales,products,customers,staff") fail(w, `main sections are ${keys.join(",")}`);
+    if (keys.join(",") !== "pos,stock,purchasing,sales,products,customers,staff") fail(w, `main sections are ${keys.join(",")}`);
     for (const k of keys) {
       await p.click(`[data-testid=sections] a[data-section=${k}]`);
       await p.waitForFunction((key) => document.querySelector(`[data-testid=sections] a[data-section=${key}]`)?.getAttribute("aria-current") === "page", k, { timeout: 30000 }).catch(() => fail(w, `${k} not highlighted after opening it`));
     }
-    ok(`${device}/${lang}: 6 main sections open their pages`);
+    ok(`${device}/${lang}: 7 main sections open their pages`);
     ok(`${device}/${lang}: ${ROUTES.length + 1} pages checked`);
     await c.close();
   }

@@ -39,6 +39,13 @@ export const PERMISSION_KEYS = [
   "sales.view",
   "sales.view_all_branches",
   "sales.website_orders",
+  "sales.website_orders_edit", // ship / mark paid / cancel on the website itself
+  "sales.b2b", // B2B (business) orders: create, move through the stages, payments
+  // Purchasing / المشتريات
+  "purchasing.view",
+  "purchasing.edit", // suppliers and purchase orders
+  "purchasing.receive", // receive goods into a store
+  "purchasing.pay", // supplier payments
   // Stock / المخازن
   "stock.view",
   "stock.transfer",
@@ -95,6 +102,7 @@ export const PERMISSION_GROUPS: Record<string, readonly PermissionKey[]> = {
   pos: PERMISSION_KEYS.filter((k) => k.startsWith("pos.")),
   sales: PERMISSION_KEYS.filter((k) => k.startsWith("sales.") || k === "reports.view"),
   stock: PERMISSION_KEYS.filter((k) => k.startsWith("stock.")),
+  purchasing: PERMISSION_KEYS.filter((k) => k.startsWith("purchasing.")),
   products: PERMISSION_KEYS.filter((k) => k.startsWith("products.")),
   customers: PERMISSION_KEYS.filter((k) => k.startsWith("customers.")),
   staff: PERMISSION_KEYS.filter((k) => k.startsWith("staff.")),
@@ -121,8 +129,8 @@ export const ROLE_DEFAULTS: Record<Role, readonly PermissionKey[]> = {
   manager: ALL.filter(
     (k) => k !== "permissions.edit" && k !== "settings.edit" && k !== "staff.payroll_edit" && !(APPROVAL_ALL as string[]).includes(k),
   ),
-  accountant: ["sales.view", "sales.view_all_branches", "sales.website_orders", "reports.view", "products.view", "products.view_cost", "customers.view", "stock.view", "stock.log", "stock.all_locations", "audit.view", "staff.payroll", "staff.payroll_edit", "pos.past_shifts"],
-  warehouse: ["stock.view", "stock.transfer", "stock.receive", "stock.count", "stock.log", "stock.write_off", "stock.requests", "stock.all_locations", "products.view", "products.labels", "approval.stock_receive", "approval.write_off"],
+  accountant: ["sales.view", "sales.view_all_branches", "sales.website_orders", "sales.b2b", "purchasing.view", "purchasing.pay", "reports.view", "products.view", "products.view_cost", "customers.view", "stock.view", "stock.log", "stock.all_locations", "audit.view", "staff.payroll", "staff.payroll_edit", "pos.past_shifts"],
+  warehouse: ["purchasing.view", "purchasing.receive", "stock.view", "stock.transfer", "stock.receive", "stock.count", "stock.log", "stock.write_off", "stock.requests", "stock.all_locations", "products.view", "products.labels", "approval.stock_receive", "approval.write_off"],
   cashier: [...cashierBase, "sales.view", ...APPROVAL_ALL],
   pos: [...deskBase, ...APPROVAL_ALL],
   cashier_pos: [...new Set<PermissionKey>([...cashierBase, ...deskBase, "sales.view", ...APPROVAL_ALL])],
