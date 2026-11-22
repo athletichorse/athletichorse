@@ -45,7 +45,7 @@ async function checkPage(page, path, label) {
 }
 
 const browser = await chromium.launch();
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/reports/sales", "/sales/reports/analysis", "/sales/reports/invoices", "/sales/reports/treasury", "/sales/reports/b2b", "/sales/reports/purchases", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
 
 // ---------------------------------------------------------------- 1. setup + flows (desktop, English)
 console.log("\n== Setup and main flows (desktop, English)");
@@ -918,6 +918,36 @@ await cp.goto(customerUrl, { waitUntil: "networkidle" });
 if (await cp.locator("form#edit").count()) fail("cashier", "cashier sees the customer edit form without the permission");
 else ok("customer edit form only for people given \"Edit customers\"");
 await cctx.close();
+
+// ---------------------------------------------------------------- reports
+where = "reports";
+await page.goto(BASE + "/sales/reports", { waitUntil: "networkidle" });
+{
+  const cards = await page.$$eval("[data-testid=reports-hub] [data-report]", (as) => as.map((a) => a.getAttribute("data-report")));
+  const want = ["sales", "analysis", "invoices", "treasury", "collections", "b2b", "purchases", "endOfDay", "itemHistory"];
+  const missing = want.filter((w) => !cards.includes(w));
+  if (missing.length) fail("reports", `hub cards missing: ${missing.join(", ")}`);
+  else ok(`reports hub: ${cards.length} report cards in groups`);
+  await page.click("[data-report=invoices]");
+  await page.waitForURL(/\/sales\/reports\/invoices/, { timeout: 20000 });
+  const inv = await page.locator("[data-testid=invoices-table]").innerText().catch(() => "");
+  if (!/[A-Z0-9]{2,20}-\d{6}/.test(inv)) fail("reports", `invoices list shows no invoices: ${inv.slice(0, 120)}`);
+  else ok("invoices report lists today's invoices");
+  await page.goto(BASE + "/sales/reports/analysis", { waitUntil: "networkidle" });
+  const an = (await page.locator("[data-testid=analysis-table]").innerText().catch(() => "")).replace(/\s+/g, " ");
+  if (!an.trim()) fail("reports", "sales analysis shows no items after today's sales");
+  else ok("sales analysis & buy plan: items sold with stock now and pieces to buy");
+  await page.goto(BASE + "/sales/reports/treasury", { waitUntil: "networkidle" });
+  if (!(await page.locator("#collections").count())) fail("reports", "treasury report has no branch collections table");
+  else ok("treasury report: days of the month + collections per branch vs last year");
+  await page.goto(BASE + "/sales/reports/b2b", { waitUntil: "networkidle" });
+  if (!/210\.50/.test(await page.locator("[data-testid=b2b-due]").innerText().catch(() => ""))) fail("reports", "B2B report: 210.50 still to collect not shown");
+  else ok("B2B report: the delivered order still owes 210.50");
+  await page.goto(BASE + "/sales/reports/purchases", { waitUntil: "networkidle" });
+  const pr = (await page.locator("[data-testid=purchases-by-supplier]").innerText().catch(() => "")).replace(/\s+/g, " ");
+  if (!/Nile Supplies E2E/.test(pr) || !/120\.00/.test(pr) || !/80\.00/.test(pr)) fail("reports", `purchases report: ${pr.slice(0, 200)}`);
+  else ok("purchases report: Nile Supplies — 120.00 received, 80.00 still owed");
+}
 
 // ---------------------------------------------------------------- 2. every page × desktop/phone × en/ar
 for (const [device, opts] of [["desktop", { viewport: { width: 1280, height: 900 } }], ["phone", { ...devices["iPhone 13"] }]]) {
