@@ -26,8 +26,11 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
     db().from("expense_types").select("id, name_en, name_ar, active").order("sort"),
     db().from("locations").select("id, name_en, name_ar").eq("active", true).order("code"),
   ]);
-  const rows = (items ?? []) as Row[];
-  const paid = new Set((pays ?? []).map((p) => `${p.recurring_id}|${p.period}`));
+  // dates as YYYY-MM-DD whatever form the database sends them in
+  const d10 = (v: string | null) => (v ? String(v).slice(0, 10) : null);
+  const rows = ((items ?? []) as Row[]).map((r) => ({ ...r, start_on: d10(r.start_on)!, end_on: d10(r.end_on) }));
+  const payList = (pays ?? []).map((p) => ({ ...p, period: d10(p.period)!, paid_on: d10(p.paid_on)! }));
+  const paid = new Set(payList.map((p) => `${p.recurring_id}|${p.period}`));
   const due = dueList(rows, paid, today);
   const byId = new Map(rows.map((r) => [r.id, r]));
   const tname = (id: string | null) => { const x = types?.find((y) => y.id === id); return x ? (locale === "ar" && x.name_ar) || x.name_en : "—"; };
@@ -35,10 +38,10 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const f = (x: number) => x.toFixed(2);
   const overdueTotal = due.filter((d) => d.overdue).reduce((a, d) => a + d.amount, 0);
   const dueMonth = due.filter((d) => d.dueOn.startsWith(month)).reduce((a, d) => a + d.amount, 0);
-  const paidMonth = (pays ?? []).filter((p) => p.paid_on.startsWith(month)).reduce((a, p) => a + Number(p.amount), 0);
+  const paidMonth = payList.filter((p) => p.paid_on.startsWith(month)).reduce((a, p) => a + Number(p.amount), 0);
   const monthly = rows.filter((r) => r.active).reduce((a, r) => a + perMonth(r), 0);
   const byMonth = new Map<string, number>();
-  for (const p of pays ?? []) if (p.paid_on.startsWith(year)) byMonth.set(p.paid_on.slice(0, 7), (byMonth.get(p.paid_on.slice(0, 7)) ?? 0) + Number(p.amount));
+  for (const p of payList) if (p.paid_on.startsWith(year)) byMonth.set(p.paid_on.slice(0, 7), (byMonth.get(p.paid_on.slice(0, 7)) ?? 0) + Number(p.amount));
   const err = sp.err ? (E.errors as Record<string, string>)[sp.err] ?? sp.err : null;
 
   const fields = (r?: Row) => (
@@ -141,11 +144,11 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
       <div className="grid gap-4 lg:grid-cols-3">
         <section className="card overflow-hidden p-0 lg:col-span-2">
           <h2 className="card-title px-5 pt-5">{E.history}</h2>
-          {(pays ?? []).length === 0 ? <p className="px-5 pb-5 text-sm text-gray-500">{E.noPayments}</p> : (
+          {payList.length === 0 ? <p className="px-5 pb-5 text-sm text-gray-500">{E.noPayments}</p> : (
             <div className="overflow-x-auto"><table className="table table-compact" data-export data-testid="expense-payments">
               <thead><tr><th>{E.paidOn}</th><th>{E.name}</th><th>{E.period}</th><th>{E.method}</th><th>{E.amount}</th></tr></thead>
               <tbody>
-                {(pays ?? []).slice(0, 200).map((p) => (
+                {payList.slice(0, 200).map((p) => (
                   <tr key={p.id}>
                     <td className="cell-title" dir="ltr">{p.paid_on}</td>
                     <td data-label={E.name}>{byId.get(p.recurring_id ?? "")?.name ?? "—"}{p.ref && <span className="text-xs text-gray-400" dir="ltr"> · {p.ref}</span>}</td>

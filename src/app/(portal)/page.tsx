@@ -64,7 +64,8 @@ export default async function Home() {
       db().from("recurring_expenses").select("id, frequency, due_day, start_on, end_on, active, amount").eq("active", true),
       db().from("expense_payments").select("recurring_id, period").not("recurring_id", "is", null),
     ]);
-    const late = dueList((rex ?? []) as Recurring[], new Set((rpaid ?? []).map((p) => `${p.recurring_id}|${p.period}`)), riyadhDate(new Date()), 0).filter((d) => d.overdue);
+    const items = ((rex ?? []) as Recurring[]).map((r) => ({ ...r, start_on: String(r.start_on).slice(0, 10), end_on: r.end_on ? String(r.end_on).slice(0, 10) : null }));
+    const late = dueList(items, new Set((rpaid ?? []).map((p) => `${p.recurring_id}|${String(p.period).slice(0, 10)}`)), riyadhDate(new Date()), 0).filter((d) => d.overdue);
     overdue = { n: late.length, total: late.reduce((a, d) => a + d.amount, 0) };
   }
   return (
