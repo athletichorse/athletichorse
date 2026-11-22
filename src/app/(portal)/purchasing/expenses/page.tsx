@@ -5,12 +5,12 @@ import { db } from "@/lib/supabase/admin";
 import { riyadhDate } from "@/lib/time";
 import { PageHeader } from "@/components/PageHeader";
 import { PendingButton } from "@/components/PendingButton";
-import { payRecurringAction, saveRecurringAction } from "@/app/actions/recurring-expenses";
+import { addOneOffExpenseAction, payRecurringAction, saveRecurringAction } from "@/app/actions/recurring-expenses";
 import { EXPENSE_METHODS, FREQUENCIES, dueList, perMonth, type Frequency, type Recurring } from "@/lib/recurring";
 
 export const dynamic = "force-dynamic";
 
-type Row = Recurring & { name: string; expense_type_id: string | null; location_id: string | null; payee: string | null; method: string; notes: string };
+type Row = Recurring & { amount_kind: "fixed" | "variable"; name: string; expense_type_id: string | null; location_id: string | null; payee: string | null; method: string; notes: string };
 
 /** Recurring expenses: what is due / overdue (pay it here), every expense with its schedule, and the payments. */
 export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
@@ -22,7 +22,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const year = today.slice(0, 4), month = today.slice(0, 7);
   const [{ data: items }, { data: pays }, { data: types }, { data: locs }] = await Promise.all([
     db().from("recurring_expenses").select("*").order("active", { ascending: false }).order("name"),
-    db().from("expense_payments").select("id, recurring_id, period, paid_on, amount, method, ref, created_at").gte("period", `${Number(year) - 2}-01-01`).order("paid_on", { ascending: false }).limit(2000),
+    db().from("expense_payments").select("id, recurring_id, name, period, paid_on, amount, method, ref, created_at").gte("period", `${Number(year) - 2}-01-01`).order("paid_on", { ascending: false }).limit(2000),
     db().from("expense_types").select("id, name_en, name_ar, active").order("sort"),
     db().from("locations").select("id, name_en, name_ar").eq("active", true).order("code"),
   ]);
@@ -49,10 +49,12 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
       {r && <input type="hidden" name="id" value={r.id} />}
       <div className="sm:col-span-2"><label className="label" htmlFor={`ex-name-${r?.id ?? "new"}`}>{E.name}</label><input id={`ex-name-${r?.id ?? "new"}`} name="name" className="input" required maxLength={120} defaultValue={r?.name} placeholder={locale === "ar" ? "إيجار المحل" : "Shop rent"} /></div>
       <div><label className="label" htmlFor={`ex-amount-${r?.id ?? "new"}`}>{E.amount}</label><input id={`ex-amount-${r?.id ?? "new"}`} name="amount" className="input" dir="ltr" inputMode="decimal" required defaultValue={r ? Number(r.amount).toFixed(2) : ""} /></div>
+      <div><label className="label" htmlFor={`ex-kind-${r?.id ?? "new"}`}>{E.amountKind}</label>
+        <select id={`ex-kind-${r?.id ?? "new"}`} name="amount_kind" className="input" defaultValue={r?.amount_kind ?? "fixed"}><option value="fixed">{E.amountKinds.fixed}</option><option value="variable">{E.amountKinds.variable}</option></select></div>
       <div><label className="label" htmlFor={`ex-freq-${r?.id ?? "new"}`}>{E.frequency}</label>
         <select id={`ex-freq-${r?.id ?? "new"}`} name="frequency" className="input" defaultValue={r?.frequency ?? "monthly"}>{FREQUENCIES.map((x) => <option key={x} value={x}>{E.frequencies[x]}</option>)}</select></div>
       <div><label className="label" htmlFor={`ex-day-${r?.id ?? "new"}`}>{E.dueDay}</label><input id={`ex-day-${r?.id ?? "new"}`} name="due_day" type="number" min={1} max={28} className="input" dir="ltr" defaultValue={r?.due_day ?? 1} /></div>
-      <div><label className="label" htmlFor={`ex-start-${r?.id ?? "new"}`}>{E.startOn}</label><input id={`ex-start-${r?.id ?? "new"}`} name="start_on" type="date" className="input" required defaultValue={r?.start_on ?? `${month}-01`} /></div>
+      <div><label className="label" htmlFor={`ex-start-${r?.id ?? "new"}`}>{E.startOn} / {E.dateOnce}</label><input id={`ex-start-${r?.id ?? "new"}`} name="start_on" type="date" className="input" required defaultValue={r?.start_on ?? `${month}-01`} /></div>
       <div><label className="label" htmlFor={`ex-end-${r?.id ?? "new"}`}>{E.endOn}</label><input id={`ex-end-${r?.id ?? "new"}`} name="end_on" type="date" className="input" defaultValue={r?.end_on ?? ""} /></div>
       <div><label className="label" htmlFor={`ex-method-${r?.id ?? "new"}`}>{E.method}</label>
         <select id={`ex-method-${r?.id ?? "new"}`} name="method" className="input" defaultValue={r?.method ?? "bank"}>{EXPENSE_METHODS.map((x) => <option key={x} value={x}>{E.methods[x]}</option>)}</select></div>
@@ -68,7 +70,9 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <PageHeader title={E.title} subtitle={E.subtitle} t={t} filename="recurring-expenses" />
+      <PageHeader title={E.title} subtitle={E.subtitle} t={t} filename="recurring-expenses">
+        <Link href="/purchasing/expenses/plan" className="btn-ghost no-print" data-testid="open-plan">{E.openPlan}</Link>
+      </PageHeader>
       {err && <p className="alert-err mb-4">{err}</p>}
       {sp.ok && <p className="alert-ok mb-4">{t.saved}</p>}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-testid="expense-totals">
@@ -91,7 +95,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                   <tr key={`${d.id}-${d.period}`} data-expense={r.name}>
                     <td className="cell-title">{r.name}<div className="text-xs text-gray-400">{lname(r.location_id)} · {E.period} {d.period.slice(0, 7)}</div></td>
                     <td data-label={E.dueOn} dir="ltr">{d.dueOn} {d.overdue ? <span className="badge bg-red-50 text-red-700">{E.overdue}</span> : <span className="badge-gray">{E.upcoming}</span>}</td>
-                    <td data-label={E.amount} dir="ltr" className="font-semibold">{f(d.amount)}</td>
+                    <td data-label={E.amount} dir="ltr" className="font-semibold">{r.amount_kind === "variable" ? "≈ " : ""}{f(d.amount)}{r.amount_kind === "variable" && <div className="text-xs font-normal text-gray-400">{E.estimate}</div>}</td>
                     <td className="no-print">
                       <details><summary className="btn-ghost cursor-pointer list-none py-1.5">{E.pay}</summary>
                         <form action={payRecurringAction} className="mt-2 grid gap-2 sm:grid-cols-5">
@@ -117,6 +121,22 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         <form action={saveRecurringAction} className="mt-4 space-y-3">{fields()}<div className="flex justify-end"><PendingButton label={E.save} pendingLabel={E.saving} /></div></form>
       </details>
 
+      <details className="card no-print mb-4">
+        <summary className="cursor-pointer font-semibold" data-testid="one-off">+ {E.oneOff}</summary>
+        <p className="mt-1 text-xs text-gray-500">{E.oneOffHint}</p>
+        <form action={addOneOffExpenseAction} className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <input type="hidden" name="client_id" value={crypto.randomUUID()} />
+          <div className="sm:col-span-2"><label className="label" htmlFor="oo-name">{E.oneOffName}</label><input id="oo-name" name="name" className="input" required maxLength={120} /></div>
+          <div><label className="label" htmlFor="oo-amount">{E.amount}</label><input id="oo-amount" name="amount" className="input" dir="ltr" inputMode="decimal" required /></div>
+          <div><label className="label" htmlFor="oo-on">{E.paidOn}</label><input id="oo-on" name="paid_on" type="date" className="input" defaultValue={today} /></div>
+          <div><label className="label" htmlFor="oo-type">{E.type}</label><select id="oo-type" name="expense_type_id" className="input"><option value="">—</option>{(types ?? []).filter((x) => x.active).map((x) => <option key={x.id} value={x.id}>{(locale === "ar" && x.name_ar) || x.name_en}</option>)}</select></div>
+          <div><label className="label" htmlFor="oo-loc">{E.place}</label><select id="oo-loc" name="location_id" className="input"><option value="">—</option>{(locs ?? []).map((x) => <option key={x.id} value={x.id}>{(locale === "ar" && x.name_ar) || x.name_en}</option>)}</select></div>
+          <div><label className="label" htmlFor="oo-method">{E.method}</label><select id="oo-method" name="method" className="input">{EXPENSE_METHODS.map((x) => <option key={x} value={x}>{E.methods[x]}</option>)}</select></div>
+          <div><label className="label" htmlFor="oo-ref">{E.ref}</label><input id="oo-ref" name="ref" className="input" dir="ltr" maxLength={60} /></div>
+          <div className="flex justify-end sm:col-span-2 lg:col-span-4"><PendingButton label={E.save} pendingLabel={E.saving} /></div>
+        </form>
+      </details>
+
       <section className="card mb-4 overflow-hidden p-0">
         <h2 className="card-title px-5 pt-5">{E.all}</h2>
         {rows.length === 0 ? <p className="px-5 pb-5 text-sm text-gray-500">{E.none}</p> : (
@@ -126,9 +146,9 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
               {rows.map((r) => (
                 <tr key={r.id} className={r.active ? "" : "opacity-60"}>
                   <td className="cell-title">{r.name}{!r.active && <span className="badge-gray ms-1">{t.inactive}</span>}{r.payee && <div className="text-xs text-gray-400">{r.payee}</div>}</td>
-                  <td data-label={E.amount} dir="ltr" className="font-semibold">{f(Number(r.amount))}</td>
+                  <td data-label={E.amount} dir="ltr" className="font-semibold">{r.amount_kind === "variable" ? "≈ " : ""}{f(Number(r.amount))}</td>
                   <td data-label={E.frequency}>{E.frequencies[r.frequency as Frequency]}</td>
-                  <td data-label={E.dueDay} dir="ltr">{r.due_day} <span className="text-xs text-gray-400">{r.start_on}{r.end_on ? ` → ${r.end_on}` : ""}</span></td>
+                  <td data-label={E.dueDay} dir="ltr">{r.frequency === "occasional" ? r.start_on : <>{r.due_day} <span className="text-xs text-gray-400">{r.start_on}{r.end_on ? ` → ${r.end_on}` : ""}</span></>}</td>
                   <td data-label={E.type}>{tname(r.expense_type_id)}</td>
                   <td data-label={E.place}>{lname(r.location_id)}</td>
                   <td className="no-print"><details><summary className="cursor-pointer text-sm underline">{E.edit}</summary>
@@ -151,7 +171,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                 {payList.slice(0, 200).map((p) => (
                   <tr key={p.id}>
                     <td className="cell-title" dir="ltr">{p.paid_on}</td>
-                    <td data-label={E.name}>{byId.get(p.recurring_id ?? "")?.name ?? "—"}{p.ref && <span className="text-xs text-gray-400" dir="ltr"> · {p.ref}</span>}</td>
+                    <td data-label={E.name}>{byId.get(p.recurring_id ?? "")?.name ?? p.name ?? "—"}{p.ref && <span className="text-xs text-gray-400" dir="ltr"> · {p.ref}</span>}</td>
                     <td data-label={E.period} dir="ltr">{p.period.slice(0, 7)}</td>
                     <td data-label={E.method}>{E.methods[p.method as keyof typeof E.methods] ?? p.method}</td>
                     <td data-label={E.amount} dir="ltr" className="font-semibold">{f(Number(p.amount))}</td>

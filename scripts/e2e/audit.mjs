@@ -31,7 +31,7 @@ const fail = (where, what) => {
 const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/products/labels", "/staff", "/staff/employees", "/staff/attendance",
   "/staff/payroll", "/staff/commission", "/staff/advances", "/staff/slips", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/pos/shifts", "/pos/day", "/pos/expense-types",
   "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/stock/new?kind=write_off", "/stock/docs", "/stock/count",
-  "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/sales", "/sales?tab=returns", "/sales?tab=website", "/sales/reports", "/sales/reports/sales", "/sales/reports/analysis", "/sales/reports/invoices", "/sales/reports/treasury", "/sales/reports/b2b", "/sales/reports/purchases", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/purchasing/expenses", "/customers",
+  "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/sales", "/sales?tab=returns", "/sales?tab=website", "/sales/reports", "/sales/reports/sales", "/sales/reports/analysis", "/sales/reports/invoices", "/sales/reports/treasury", "/sales/reports/b2b", "/sales/reports/purchases", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/purchasing/expenses", "/purchasing/expenses/plan", "/sales/reports/finance", "/customers",
   "/stock-log", "/audit", "/audit/hours", "/audit/devices"];
 // never pressed by the audit (they end the session or change who can log in)
 const SKIP_CLICK = /log ?out|تسجيل الخروج|English|العربية/i;

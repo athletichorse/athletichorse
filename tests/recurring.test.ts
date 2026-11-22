@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dueList, perMonth, periods, type Recurring } from "@/lib/recurring";
+import { dueList, perMonth, periods, yearPlan, type Recurring } from "@/lib/recurring";
 
 const rent: Recurring = { id: "r", frequency: "monthly", due_day: 5, start_on: "2026-09-01", end_on: null, active: true, amount: 3000 };
 const car: Recurring = { id: "c", frequency: "quarterly", due_day: 20, start_on: "2026-08-10", end_on: "2027-02-01", active: true, amount: 1500 };
@@ -20,5 +20,14 @@ describe("recurring expenses", () => {
     expect(dueList([{ ...rent, active: false }], new Set(), "2026-11-22")).toEqual([]);
     expect(perMonth(car)).toBe(500);
     expect(perMonth({ amount: 12000, frequency: "yearly" })).toBe(1000);
+  });
+  it("occasional: once on its date; yearly plan per month", () => {
+    const fee: Recurring = { id: "o", frequency: "occasional", due_day: 1, start_on: "2026-12-15", end_on: null, active: true, amount: 800 };
+    expect(periods(fee, "2027-12")).toEqual(["2026-12-01"]);
+    expect(dueList([fee], new Set(), "2026-11-22").map((d) => d.dueOn)).toEqual(["2026-12-15"]);
+    expect(perMonth(fee)).toBe(0);
+    expect(yearPlan(fee, "2026")[11]).toBe(800);
+    expect(yearPlan(car, "2026")).toEqual([0, 0, 0, 0, 0, 0, 0, 1500, 0, 0, 1500, 0]);
+    expect(yearPlan(rent, "2027").reduce((a, b) => a + b, 0)).toBe(36000);
   });
 });

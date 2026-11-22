@@ -45,7 +45,7 @@ async function checkPage(page, path, label) {
 }
 
 const browser = await chromium.launch();
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/reports/sales", "/sales/reports/analysis", "/sales/reports/invoices", "/sales/reports/treasury", "/sales/reports/b2b", "/sales/reports/purchases", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/purchasing/expenses", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/reports/sales", "/sales/reports/analysis", "/sales/reports/invoices", "/sales/reports/treasury", "/sales/reports/b2b", "/sales/reports/purchases", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/purchasing/expenses", "/purchasing/expenses/plan", "/sales/reports/finance", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
 
 // ---------------------------------------------------------------- 1. setup + flows (desktop, English)
 console.log("\n== Setup and main flows (desktop, English)");
@@ -744,6 +744,36 @@ await page.goto(BASE + "/purchasing/expenses", { waitUntil: "networkidle" });
   const left = await page.locator('[data-testid=expenses-due] tr[data-expense="Shop rent E2E"]').count();
   if (!/TRF-RENT-1/.test(hist) || !/3000\.00/.test(hist) || left !== n - 1) fail("expenses", `after paying: payments "${hist.slice(0, 120)}", still due ${left}`);
   else ok("pay the oldest month: it leaves the due list and shows in payments");
+  // occasional expense with a changing amount, and a one-off expense
+  await page.evaluate(() => document.querySelector("details:has([data-testid=new-expense])")?.setAttribute("open", ""));
+  await page.locator("#ex-name-new").fill("Insurance renewal E2E");
+  await page.locator("#ex-amount-new").fill("1200");
+  await page.locator("#ex-kind-new").selectOption("variable");
+  await page.locator("#ex-freq-new").selectOption("occasional");
+  const soonDay = new Date(Date.now() + 3 * 3600_000 + 3 * 86_400_000).toISOString().slice(0, 10);
+  await page.locator("#ex-start-new").fill(soonDay);
+  await Promise.all([page.waitForURL(/ok=1|err=/, { timeout: 20000 }), page.locator('form:has(#ex-name-new) button:text-is("Save")').click()]);
+  const occ = await page.locator('[data-testid=expenses-due] tr[data-expense="Insurance renewal E2E"]').innerText().catch(() => "");
+  if (!occ.includes(soonDay) || !/≈ 1200\.00/.test(occ)) fail("expenses", `occasional estimate due on its date: ${occ.replace(/\s+/g, " ")}`);
+  else ok("occasional expense with a changing amount: due once on its date, shown as an estimate (≈)");
+  await page.goto(BASE + "/purchasing/expenses", { waitUntil: "networkidle" });
+  await page.evaluate(() => document.querySelector("details:has([data-testid=one-off])")?.setAttribute("open", ""));
+  await page.locator("#oo-name").fill("AC repair E2E");
+  await page.locator("#oo-amount").fill("450");
+  await Promise.all([page.waitForURL(/\?(ok=1|err=)/, { timeout: 20000 }), page.locator('form:has(#oo-name) button:text-is("Save")').click()]);
+  if (!/AC repair E2E/.test(await page.locator("[data-testid=expense-payments]").innerText().catch(() => ""))) fail("expenses", "one-off expense not in payments");
+  else ok("one-off expense recorded (not on the list)");
+  await page.goto(BASE + "/", { waitUntil: "networkidle" });
+  if (!(await page.locator("[data-testid=expenses-soon]").count())) fail("expenses", "Home doesn't show expenses due in the next 7 days");
+  else ok("Home: reminder for expenses due in the next 7 days");
+  await page.goto(BASE + "/purchasing/expenses/plan", { waitUntil: "networkidle" });
+  const plan = await page.locator("[data-testid=plan-table]").innerText().catch(() => "");
+  if (!/Shop rent E2E/.test(plan) || !/AC repair|Other expenses/.test(plan)) fail("expenses", `yearly plan: ${plan.replace(/\s+/g, " ").slice(0, 160)}`);
+  else ok("yearly plan: each expense × 12 months (planned / paid) with one-off expenses");
+  await page.goto(BASE + "/sales/reports/finance", { waitUntil: "networkidle" });
+  const fin = (await page.locator("[data-testid=finance-table] tfoot").innerText().catch(() => "")).replace(/\s+/g, " ");
+  if (!/3450\.00/.test(fin)) fail("expenses", `financial report should show 3450.00 expenses paid this year: ${fin}`);
+  else ok("yearly financial report: sales and costs month by month (expenses 3450.00 this year)");
 }
 
 // ---------------------------------------------------------------- cashier

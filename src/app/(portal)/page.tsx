@@ -58,21 +58,29 @@ export default async function Home() {
     needBackup = typeof dl?.value !== "string" || month(new Date(dl.value)) !== month(new Date());
   }
   // recurring expenses past their due day and not paid yet
-  let overdue = { n: 0, total: 0 };
+  let overdue = { n: 0, total: 0 }, soon = { n: 0, total: 0 };
   if (s.perms.has("purchasing.expenses")) {
     const [{ data: rex }, { data: rpaid }] = await Promise.all([
       db().from("recurring_expenses").select("id, frequency, due_day, start_on, end_on, active, amount").eq("active", true),
       db().from("expense_payments").select("recurring_id, period").not("recurring_id", "is", null),
     ]);
     const items = ((rex ?? []) as Recurring[]).map((r) => ({ ...r, start_on: String(r.start_on).slice(0, 10), end_on: r.end_on ? String(r.end_on).slice(0, 10) : null }));
-    const late = dueList(items, new Set((rpaid ?? []).map((p) => `${p.recurring_id}|${String(p.period).slice(0, 10)}`)), riyadhDate(new Date()), 0).filter((d) => d.overdue);
-    overdue = { n: late.length, total: late.reduce((a, d) => a + d.amount, 0) };
+    const late = dueList(items, new Set((rpaid ?? []).map((p) => `${p.recurring_id}|${String(p.period).slice(0, 10)}`)), riyadhDate(new Date()), 7);
+    const old = late.filter((d) => d.overdue), next = late.filter((d) => !d.overdue);
+    overdue = { n: old.length, total: old.reduce((a, d) => a + d.amount, 0) };
+    soon = { n: next.length, total: next.reduce((a, d) => a + d.amount, 0) };
   }
   return (
     <>
     {overdue.n > 0 && (
       <p className="alert-err no-print mb-4 flex flex-wrap items-center gap-3" data-testid="expenses-reminder">
         <span className="flex-1">{t.expenses.reminder} {overdue.n} · <span dir="ltr">{overdue.total.toFixed(2)}</span></span>
+        <Link href="/purchasing/expenses" className="font-semibold underline">{t.expenses.open}</Link>
+      </p>
+    )}
+    {soon.n > 0 && (
+      <p className="alert-ok no-print mb-4 flex flex-wrap items-center gap-3" data-testid="expenses-soon">
+        <span className="flex-1">{t.expenses.soon} {soon.n} · <span dir="ltr">{soon.total.toFixed(2)}</span></span>
         <Link href="/purchasing/expenses" className="font-semibold underline">{t.expenses.open}</Link>
       </p>
     )}

@@ -27,19 +27,21 @@ export async function saveRecurringAction(form: FormData) {
   if (!name) return back("name");
   const amount = num(form.get("amount"), 2);
   if (!amount) return back("amount");
-  const dueDay = Number(form.get("due_day"));
-  if (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 28) return back("day");
+  const frequency = String(form.get("frequency") ?? "monthly");
   const start = day(form.get("start_on"));
   if (!start) return back("start");
-  const end = day(form.get("end_on"));
+  // occasional: once, on its date (its day is the due day); no end date
+  const dueDay = frequency === "occasional" ? Math.min(28, Number(start.slice(8, 10))) : Number(form.get("due_day"));
+  if (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 28) return back("day");
+  const end = frequency === "occasional" ? null : day(form.get("end_on"));
   if (end && end < start) return back("end");
-  const frequency = String(form.get("frequency") ?? "monthly");
+  const amountKind = form.get("amount_kind") === "variable" ? "variable" : "fixed";
   const method = String(form.get("method") ?? "bank");
   if (!(FREQUENCIES as readonly string[]).includes(frequency) || !(EXPENSE_METHODS as readonly string[]).includes(method)) return back("bad");
   const typeId = isId(form.get("expense_type_id")) ? String(form.get("expense_type_id")) : null;
   const locId = isId(form.get("location_id")) ? String(form.get("location_id")) : null;
   const row = {
-    name, amount, frequency, method, due_day: dueDay, start_on: start, end_on: end, expense_type_id: typeId, location_id: locId,
+    name, amount, amount_kind: amountKind, frequency, method, due_day: dueDay, start_on: start, end_on: end, expense_type_id: typeId, location_id: locId,
     payee: txt(form.get("payee"), 120) || null, notes: String(form.get("notes") ?? "").trim().slice(0, 1000), updated_at: new Date().toISOString(),
   };
   if (id) {
@@ -76,5 +78,27 @@ export async function payRecurringAction(form: FormData) {
   await audit(s.id, "expense.paid", "recurring_expense", rid, { name: r.name, period, amount });
   revalidatePath("/purchasing/expenses");
   revalidatePath("/");
+  back();
+}
+
+/** An expense that isn't on the list (a repair, a fee…): saved as a one-off payment. */
+export async function addOneOffExpenseAction(form: FormData) {
+  const s = await staff();
+  const name = txt(form.get("name"), 120);
+  if (!name) return back("name");
+  const amount = num(form.get("amount"), 2);
+  if (!amount) return back("amount");
+  const method = String(form.get("method") ?? "bank");
+  if (!(EXPENSE_METHODS as readonly string[]).includes(method)) return back("bad");
+  const paidOn = day(form.get("paid_on")) ?? new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
+  const { error } = await db().from("expense_payments").insert({
+    client_id: isId(form.get("client_id")) ? String(form.get("client_id")) : crypto.randomUUID(),
+    recurring_id: null, name, period: `${paidOn.slice(0, 7)}-01`, paid_on: paidOn, amount, method,
+    ref: txt(form.get("ref"), 60) || null, location_id: isId(form.get("location_id")) ? String(form.get("location_id")) : null,
+    expense_type_id: isId(form.get("expense_type_id")) ? String(form.get("expense_type_id")) : null, created_by: s.id,
+  });
+  if (error && !/duplicate key/i.test(error.message)) return back(error.message);
+  if (!error) await audit(s.id, "expense.one_off", "expense_payment", null, { name, amount });
+  revalidatePath("/purchasing/expenses");
   back();
 }
