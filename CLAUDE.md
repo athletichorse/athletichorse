@@ -45,6 +45,7 @@ Work branch: `claude/epic-thompson-9cypg1`. Theme source lives in `theme/`.
 ## Order attribution ("Came from")
 - `initAttribution()` in `theme/assets/app.js` saves cart attributes (Came from, Landing page, First visit, Last source, Campaign) and re-saves them on every add-to-cart and right before every checkout (`window.ahSaveAttribution`), including the discount-code redirect.
 - **17 Nov:** Shopify's "Buy it now" payment button skipped the cart, so those orders had no attributes. It is replaced on product pages by our own `[data-buy-now]` button ("Buy it now" / "اشترِ الآن") that adds to cart → saves attributes → `/checkout`. Don't bring back `{{ form | payment_button }}`.
+- Traffic tagged `utm_source=fb|ig, utm_medium=paid, utm_campaign=120253571037620486` (~880 sessions, 0 orders by 22 Nov) is NOT ours and not in any of the owner's ad accounts (checked 22 Nov) — treat as outside traffic. Our Meta ads tag `utm_source=facebook|instagram, utm_medium=paid_social, utm_campaign=<campaign name>`.
 - 13 older orders without attributes (#1007–#1033) were back-filled from Shopify's `customerJourneySummary` (extra attribute "Filled in from: Shopify visit data").
 
 ## SEO (17 Nov 2026)
