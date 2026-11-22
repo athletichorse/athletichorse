@@ -138,6 +138,12 @@ await addForm.locator('input[name="uses_pos"]').check();
 await Promise.all([page.waitForURL(/ok=1/, { waitUntil: "commit", timeout: 30000 }), addForm.locator('button:text-is("Add")').click()]);
 if (!(await page.locator("text=Dammam Branch").first().isVisible())) fail("locations", "new branch not listed");
 else ok("add a branch");
+{
+  // sales points (not branches): Bulky and the sports event, each with its own till
+  const list = await page.locator("main").innerText();
+  if (!/Bulky/.test(list) || !/Sports event \(Abdallah\)/.test(list) || !/Sales point/.test(list)) fail("locations", "sales points Bulky / Sports event (Abdallah) not listed as 'Sales point'");
+  else ok("sales points listed: Bulky, Sports event (Abdallah)");
+}
 await page.locator("summary", { hasText: "Main Warehouse" }).click();
 const editWh = page.locator("details", { has: page.locator("summary", { hasText: "Main Warehouse" }) });
 await editWh.locator('input[name="address_en"]').fill("Riyadh, Al Sulay");
@@ -712,6 +718,11 @@ await page.goto(BASE + "/sales/b2b/new", { waitUntil: "networkidle" });
 // ---------------------------------------------------------------- cashier
 where = "pos";
 await page.goto(BASE + "/pos", { waitUntil: "networkidle" });
+{
+  const tills = await page.locator("select").first().locator("option").allInnerTexts();
+  if (!tills.some((x) => /Bulky/.test(x)) || !tills.some((x) => /Sports event/.test(x))) fail("pos", `sales points missing from the till's place list: ${tills.join(", ")}`);
+  else ok("the till can open a shift at the sales points (Bulky, Sports event)");
+}
 await page.locator("select").first().selectOption({ label: "Riyadh Branch" });
 await page.locator('input[inputmode="decimal"]').first().fill("100");
 await page.click('button:text-is("Open shift")');

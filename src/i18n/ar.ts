@@ -110,7 +110,7 @@ const ar = {
     fromWebsite: "على الموقع",
     overview: "نظرة عامة على الشركة",
     overviewHint: "كل الفروع والمخازن في مكان واحد.",
-    branches: "الفروع",
+    branches: "الفروع ونقاط البيع",
     warehouses: "المخازن",
     posLocations: "نقاط البيع",
     activeStaff: "الموظفون النشطون",
@@ -899,7 +899,7 @@ const ar = {
     usesPos: "يستخدم الكاشير",
     addressAr: "العنوان (عربي)",
     addressEn: "العنوان (إنجليزي)",
-    kinds: { branch: "فرع", warehouse: "مخزن", sub_store: "مخزن فرعي" },
+    kinds: { branch: "فرع", sales_point: "نقطة بيع", warehouse: "مخزن", sub_store: "مخزن فرعي" },
   },
   company: {
     backup: {

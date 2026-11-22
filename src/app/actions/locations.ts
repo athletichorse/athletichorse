@@ -6,7 +6,7 @@ import { assertPermission } from "@/lib/auth";
 import { db } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
 
-const KINDS = ["branch", "warehouse", "sub_store"] as const;
+const KINDS = ["branch", "warehouse", "sub_store", "sales_point"] as const;
 const back = (err?: string) => redirect(err ? `/locations?err=${encodeURIComponent(err)}` : "/locations?ok=1");
 
 export async function saveLocationAction(form: FormData) {
