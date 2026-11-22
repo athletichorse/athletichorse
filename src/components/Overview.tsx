@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { buildSections } from "@/components/menu";
 import { Icon, type IconName } from "@/components/icons";
 
-export type OverviewLoc = { id: string; code: string; name_ar: string; name_en: string; kind: "branch" | "warehouse" | "sub_store"; uses_pos: boolean; active: boolean };
+export type OverviewLoc = { id: string; code: string; name_ar: string; name_en: string; kind: "branch" | "warehouse" | "sub_store" | "sales_point"; uses_pos: boolean; active: boolean };
 type Loc = OverviewLoc;
 
 function Stat({ label, value, icon, href, warn }: { label: string; value: string | number; icon: IconName; href?: string; warn?: boolean }) {
@@ -48,7 +48,7 @@ export function Overview({ s, t, locale, now, locs, staff, webLocId, catalog, pu
     ...buildSections(t, s.perms, s.role).map(({ label, href, icon }) => ({ label, href, icon })),
     ...(s.perms.has("settings.edit") ? [{ label: t.nav.company, href: "/company", icon: "company" as const }] : []),
   ];
-  const kindBadge = (k: Loc["kind"]) => (k === "branch" ? "badge-green" : k === "warehouse" ? "badge-blue" : "badge-gray");
+  const kindBadge = (k: Loc["kind"]) => (k === "branch" ? "badge-green" : k === "sales_point" ? "badge bg-amber-50 text-amber-800" : k === "warehouse" ? "badge-blue" : "badge-gray");
 
   return (
     <>
@@ -67,8 +67,8 @@ export function Overview({ s, t, locale, now, locs, staff, webLocId, catalog, pu
             <Stat label={t.home.belowZero} value={pulse.belowZero} icon="stock" href="/stock/shortages?rule=%3C&value=0" warn={pulse.belowZero > 0} />
           </div>
           <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-            <Stat label={t.home.branches} value={locs.filter((l) => l.kind === "branch" && l.active).length} icon="company" href={s.perms.has("locations.edit") ? "/locations" : undefined} />
-            <Stat label={t.home.warehouses} value={locs.filter((l) => l.kind !== "branch" && l.active).length} icon="stock" href={s.perms.has("locations.edit") ? "/locations" : undefined} />
+            <Stat label={t.home.branches} value={locs.filter((l) => (l.kind === "branch" || l.kind === "sales_point") && l.active).length} icon="company" href={s.perms.has("locations.edit") ? "/locations" : undefined} />
+            <Stat label={t.home.warehouses} value={locs.filter((l) => (l.kind === "warehouse" || l.kind === "sub_store") && l.active).length} icon="stock" href={s.perms.has("locations.edit") ? "/locations" : undefined} />
             <Stat label={t.home.activeStaff} value={staff.filter((p) => p.active).length} icon="staff" href="/staff" />
             <Stat label={t.products.title} value={catalog.products.toLocaleString("en-US")} icon="products" href="/products" />
             <Stat label={t.home.fromWebsite} value={catalog.website.toLocaleString("en-US")} icon="web" href="/products" />

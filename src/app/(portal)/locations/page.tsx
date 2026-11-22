@@ -5,7 +5,7 @@ import { db } from "@/lib/supabase/admin";
 import { PageHeader } from "@/components/PageHeader";
 import { saveLocationAction } from "@/app/actions/locations";
 
-type Loc = { id: string; code: string; name_ar: string; name_en: string; kind: "branch" | "warehouse" | "sub_store"; parent_id: string | null; uses_pos: boolean; address_ar: string; address_en: string; active: boolean };
+type Loc = { id: string; code: string; name_ar: string; name_en: string; kind: "branch" | "warehouse" | "sub_store" | "sales_point"; parent_id: string | null; uses_pos: boolean; address_ar: string; address_en: string; active: boolean };
 
 export default async function LocationsPage({ searchParams }: { searchParams: Promise<{ err?: string; ok?: string }> }) {
   await requirePermission("locations.edit");
@@ -15,7 +15,7 @@ export default async function LocationsPage({ searchParams }: { searchParams: Pr
   const locs = (data ?? []) as Loc[];
   const name = (l?: Loc) => (l ? (locale === "ar" ? l.name_ar : l.name_en || l.name_ar) : "—");
   const parents = locs.filter((l) => l.kind !== "sub_store");
-  const kindBadge = (k: Loc["kind"]) => (k === "branch" ? "badge-green" : k === "warehouse" ? "badge-blue" : "badge-gray");
+  const kindBadge = (k: Loc["kind"]) => (k === "branch" ? "badge-green" : k === "sales_point" ? "badge bg-amber-50 text-amber-800" : k === "warehouse" ? "badge-blue" : "badge-gray");
 
   const fields = (l?: Loc) => (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -27,7 +27,7 @@ export default async function LocationsPage({ searchParams }: { searchParams: Pr
       <div>
         <label className="label">{t.locations.kind}</label>
         <select name="kind" defaultValue={l?.kind ?? "branch"} className="input">
-          {(["branch", "warehouse", "sub_store"] as const).map((k) => <option key={k} value={k}>{t.locations.kinds[k]}</option>)}
+          {(["branch", "sales_point", "warehouse", "sub_store"] as const).map((k) => <option key={k} value={k}>{t.locations.kinds[k]}</option>)}
         </select>
       </div>
       <div>

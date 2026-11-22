@@ -112,7 +112,7 @@ const en: Dict = {
     fromWebsite: "On the website",
     overview: "Business overview",
     overviewHint: "Every branch and warehouse in one place.",
-    branches: "Branches",
+    branches: "Branches & sales points",
     warehouses: "Warehouses",
     posLocations: "POS locations",
     activeStaff: "Active staff",
@@ -901,7 +901,7 @@ const en: Dict = {
     usesPos: "Uses POS",
     addressAr: "Address (Arabic)",
     addressEn: "Address (English)",
-    kinds: { branch: "Branch", warehouse: "Warehouse", sub_store: "Sub-store" },
+    kinds: { branch: "Branch", sales_point: "Sales point", warehouse: "Warehouse", sub_store: "Sub-store" },
   },
   company: {
     backup: {
