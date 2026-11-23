@@ -657,7 +657,7 @@ await page.goto(BASE + "/purchasing/suppliers", { waitUntil: "networkidle" });
   await box.fill("E2E-SKU-001"); await box.press("Enter");
   await page.locator('input[aria-label="Qty E2E-SKU-001"]').fill("5");
   await page.locator('input[aria-label="Unit cost (EGP) E2E-SKU-001"]').fill("500");
-  await page.locator("[data-testid=po-cbm]").waitFor({ timeout: 10000 }).catch(() => {});
+  await page.waitForFunction(() => /Cartons: 1/.test(document.querySelector("[data-testid=po-cbm]")?.textContent ?? ""), null, { timeout: 10000 }).catch(() => {});
   const cbmTxt = (await page.locator("[data-testid=po-cbm]").innerText().catch(() => "")).replace(/\s+/g, " ");
   if (!/Cartons: 1/.test(cbmTxt) || !/0\.05 CBM/.test(cbmTxt) || !/20 ft container \(33 CBM\) 0\.2%/.test(cbmTxt)) fail("purchasing", `cartons / CBM / container: ${cbmTxt}`);
   else ok("purchase order: 5 pieces = 1 carton, 0.05 CBM, 0.2% of a 20 ft container");
@@ -974,7 +974,7 @@ await exv.locator("[data-testid=expense-supplier]").selectOption({ label: "Nile 
 await exv.locator("input[inputmode=decimal]").fill("50");
 await exv.locator("input:not([inputmode])").first().fill("cash to driver e2e");
 await exv.locator('button:text-is("Save expense")').click();
-await page.waitForFunction(() => /Nile Supplies E2E/.test(document.querySelector("[data-testid=expenses]")?.textContent ?? ""), null, { timeout: 15000 }).catch(() => {});
+await page.waitForFunction(() => /Total:\s*55\.00/.test(document.querySelector("[data-testid=expenses]")?.textContent ?? ""), null, { timeout: 15000 }).catch(() => {});
 const supTxt = await exv.innerText();
 if (!/Supplier payment · Nile Supplies E2E/.test(supTxt) || !/Total:\s*55\.00/.test(supTxt)) fail("pos", `supplier payment from the drawer: ${supTxt.replace(/\s+/g, " ").slice(0, 220)}`);
 else ok("cashier pays a supplier from the drawer: listed with the supplier, drawer total 55.00");
