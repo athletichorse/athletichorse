@@ -62,7 +62,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         <input type="hidden" name="id" value={p.id} />
         <fieldset disabled={!canEdit} className="space-y-6">
           <section className="card">
-            <ProductFields t={t} locale={locale} groups={(groups ?? []) as Group[]} value={p} nameLocked={fromWebsite} suppliers={names.suppliers} factories={names.factories} />
+            <ProductFields t={t} locale={locale} groups={(groups ?? []) as Group[]} value={p} nameLocked={fromWebsite} suppliers={names.suppliers} factories={names.factories} seeCost={seeCost} />
             <label className="mt-4 flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" name="active" defaultChecked={p.active} className="h-4 w-4 accent-[var(--brand)]" /> {t.active}
             </label>

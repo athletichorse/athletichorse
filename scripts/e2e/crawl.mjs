@@ -213,10 +213,16 @@ await page.fill('input[name="name_ar"]', "منتج تجريبي");
 const firstSku = page.locator('input[name^="sku:"]').first();
 await firstSku.fill("E2E-SKU-001");
 await page.locator('input[name^="cost:"]').first().fill("12.5");
+// storage & buying: place in the store, pieces per carton, carton CBM, China price
+await page.fill("#lg-bin", "A-03-2");
+await page.fill("#lg-upc", "10");
+await page.fill("#lg-cbm", "0.05");
+await page.fill("#lg-cp", "18");
 await Promise.all([page.waitForURL(/ok=1|err=/, { waitUntil: "commit", timeout: 30000 }), page.click("text=Save changes")]);
 if (page.url().includes("err=")) fail("product edit", decodeURIComponent(page.url().split("err=")[1]));
 else if ((await page.locator('input[name^="sku:"]').first().inputValue()) !== "E2E-SKU-001") fail("product edit", "SKU not saved");
-else ok("edit a website product: Arabic name, SKU, cost");
+else if ((await page.inputValue("#lg-bin")) !== "A-03-2" || (await page.inputValue("#lg-upc")) !== "10" || (await page.inputValue("#lg-cbm")) !== "0.05" || (await page.inputValue("#lg-cp")) !== "18") fail("product edit", "storage & buying fields not saved");
+else ok("edit a website product: Arabic name, SKU, cost, shelf A-03-2, 10 per carton, 0.05 CBM, China price 18");
 
 // new product + groups
 where = "new product";
@@ -645,6 +651,10 @@ await page.goto(BASE + "/purchasing/suppliers", { waitUntil: "networkidle" });
   await box.fill("E2E-SKU-001"); await box.press("Enter");
   await page.locator('input[aria-label="Qty E2E-SKU-001"]').fill("5");
   await page.locator('input[aria-label="Unit cost (EGP) E2E-SKU-001"]').fill("500");
+  await page.locator("[data-testid=po-cbm]").waitFor({ timeout: 10000 }).catch(() => {});
+  const cbmTxt = (await page.locator("[data-testid=po-cbm]").innerText().catch(() => "")).replace(/\s+/g, " ");
+  if (!/Cartons: 1/.test(cbmTxt) || !/0\.05 CBM/.test(cbmTxt) || !/20 ft container \(33 CBM\) 0\.2%/.test(cbmTxt)) fail("purchasing", `cartons / CBM / container: ${cbmTxt}`);
+  else ok("purchase order: 5 pieces = 1 carton, 0.05 CBM, 0.2% of a 20 ft container");
   const poTot = await page.locator("[data-testid=po-total]").innerText().catch(() => "");
   if (!/2500\.00 EGP/.test(poTot) || !/200\.00 SAR/.test(poTot)) fail("purchasing", `order total preview: ${poTot}`);
   await Promise.all([page.waitForURL(/\/purchasing\/[0-9a-f-]{36}\?ok=1/, { timeout: 20000 }), page.click("[data-testid=po-save-ordered]")]);

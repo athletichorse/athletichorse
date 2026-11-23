@@ -5,14 +5,15 @@ export const UNITS = ["piece", "pair", "set", "box", "kg", "m"] as const;
 export const UNIT_AR: Record<string, string> = { piece: "قطعة", pair: "زوج", set: "طقم", box: "كرتونة", kg: "كجم", m: "متر" };
 
 /** Shared product fields (names, group, sub-group, unit, service). */
-export function ProductFields({ t, locale, groups, value, nameLocked, suppliers = [], factories = [] }: {
+export function ProductFields({ t, locale, groups, value, nameLocked, suppliers = [], factories = [], seeCost = false }: {
   t: Dict;
   locale: Locale;
   groups: Group[];
-  value?: { name_en: string; name_ar: string; group_id: string | null; subgroup_id: string | null; unit: string; is_service: boolean; supplier_name?: string | null; factory_name?: string | null };
+  value?: { name_en: string; name_ar: string; group_id: string | null; subgroup_id: string | null; unit: string; is_service: boolean; supplier_name?: string | null; factory_name?: string | null } & Logistics;
   nameLocked?: boolean;
   suppliers?: string[];
   factories?: string[];
+  seeCost?: boolean;
 }) {
   const label = (g: Group) => (locale === "ar" && g.name_ar ? g.name_ar : g.name_en);
   const top = groups.filter((g) => !g.parent_id);
@@ -52,6 +53,7 @@ export function ProductFields({ t, locale, groups, value, nameLocked, suppliers 
         </select>
       </div>
       <SupplierFields t={t} suppliers={suppliers} factories={factories} supplier={value?.supplier_name} factory={value?.factory_name} />
+      <LogisticsFields t={t} value={value} seeCost={seeCost} />
       <label className="flex items-center gap-2 self-end pb-2.5 text-sm text-gray-700">
         <input type="checkbox" name="is_service" defaultChecked={value?.is_service} className="h-4 w-4 accent-[var(--brand)]" /> {t.products.isService}
       </label>
@@ -67,6 +69,7 @@ export function productError(t: Dict, err?: string) {
   if (err === "duplicate") return t.products.duplicateCode;
   if (err === "name") return t.products.newForm.nameRequired;
   if (err === "type_needs_group") return t.products.newForm.typeNeedsGroup;
+  if (err === "logistics") return t.products.logistics.bad;
   return err;
 }
 
@@ -87,5 +90,28 @@ export function SupplierFields({ t, suppliers, factories, supplier, factory }: {
         <datalist id="np-factories">{factories.map((x) => <option key={x} value={x} />)}</datalist>
       </div>
     </>
+  );
+}
+
+export type Logistics = { bin_location?: string | null; units_per_carton?: number | null; carton_cbm?: number | string | null; china_price?: number | string | null; china_currency?: string | null };
+
+/** Where it is stored, pieces per carton, carton size (CBM), and the China price (only for people who may see costs). */
+export function LogisticsFields({ t, value, seeCost }: { t: Dict; value?: Logistics; seeCost: boolean }) {
+  const L = t.products.logistics;
+  const n = (v: number | string | null | undefined) => (v === null || v === undefined ? "" : String(Number(v)));
+  return (
+    <fieldset className="grid gap-4 rounded-lg border border-[var(--line)] p-3 sm:col-span-full sm:grid-cols-2 lg:grid-cols-4">
+      <legend className="px-1 text-sm font-semibold">{L.title}</legend>
+      <div><label className="label" htmlFor="lg-bin">{L.bin}</label><input id="lg-bin" name="bin_location" className="input" dir="ltr" maxLength={60} defaultValue={value?.bin_location ?? ""} placeholder="A-03-2" /></div>
+      <div><label className="label" htmlFor="lg-upc">{L.perCarton}</label><input id="lg-upc" name="units_per_carton" className="input" dir="ltr" inputMode="numeric" defaultValue={n(value?.units_per_carton)} /></div>
+      <div><label className="label" htmlFor="lg-cbm">{L.cbm}</label><input id="lg-cbm" name="carton_cbm" className="input" dir="ltr" inputMode="decimal" defaultValue={n(value?.carton_cbm)} placeholder="0.085" /><p className="hint">{L.cbmHint}</p></div>
+      {seeCost && (
+        <div><label className="label" htmlFor="lg-cp">{L.chinaPrice}</label>
+          <div className="flex gap-2">
+            <input id="lg-cp" name="china_price" className="input min-w-0 flex-1" dir="ltr" inputMode="decimal" defaultValue={n(value?.china_price)} />
+            <select name="china_currency" className="input w-24" defaultValue={value?.china_currency ?? "CNY"} aria-label={L.currency}>{["CNY", "USD", "SAR", "EGP", "EUR"].map((c) => <option key={c}>{c}</option>)}</select>
+          </div></div>
+      )}
+    </fieldset>
   );
 }

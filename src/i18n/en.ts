@@ -137,6 +137,7 @@ const en: Dict = {
     marketing: "Marketing",
   },
   products: {
+    logistics: { title: "Storage & buying", bin: "Place in the store (shelf / bin)", perCarton: "Pieces per carton", cbm: "Carton size (CBM)", cbmHint: "Length × width × height in metres, e.g. 0.6 × 0.4 × 0.35 = 0.084", chinaPrice: "China price (per piece)", currency: "Currency", bad: "Check pieces per carton (whole number), CBM (more than 0) and the China price." },
     newForm: {
       supplier: "Supplier name", factory: "Factory name", listHint: "Choose from the list or type a new name.",
       nameRequired: "Type the item's name (Arabic or English).",
@@ -437,6 +438,7 @@ const en: Dict = {
     duplicate: "A price level with this name already exists.",
   },
   purchasing: {
+    cartons: "cartons", cartonsTotal: "Cartons", cbmTotal: "Total size", containers: { "20ft": "20 ft container (33 CBM)", "40ft": "40 ft container (67 CBM)", "40hq": "40 ft high cube (76 CBM)" }, missingPack: "{n} item(s) have no pieces-per-carton or CBM yet: add them on the product page.",
     find: "Search", title: "Purchases", subtitle: "Purchase orders to suppliers, receiving into the stores, and what you owe",
     suppliers: "Suppliers", newOrder: "New purchase order", editOrder: "Change purchase order", order: "Purchase order",
     supplier: "Supplier", factory: "Factory", store: "Receive into", currency: "Currency", rate: "Rate to SAR", rateHint: "1 {cur} = ? SAR",

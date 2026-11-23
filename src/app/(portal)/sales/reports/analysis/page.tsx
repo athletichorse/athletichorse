@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ReportFilters } from "@/components/ReportFilters";
 import { reportAccess } from "@/lib/report-access";
 import { allRows, range, toBuy } from "@/lib/report-range";
+import { cartons } from "@/lib/logistics";
 
 export const dynamic = "force-dynamic";
 type SP = { from?: string; to?: string; loc?: string; ch?: string; cover?: string; buy?: string; q?: string };
@@ -43,6 +44,7 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
   }
   const vids = [...sold.keys()];
   const info = new Map<string, { name: string; sku: string | null; pid: string }>();
+  const pack = new Map<string, { units_per_carton: number | null; carton_cbm: number | null }>();
   const stock = new Map<string, number>();
   for (let i = 0; i < vids.length; i += 300) {
     const part = vids.slice(i, i + 300);
@@ -52,10 +54,14 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
     ]);
     for (const v of vs ?? []) info.set(v.variant_id, { pid: v.product_id, sku: v.sku, name: `${(locale === "ar" && v.name_ar) || v.name_en}${[v.option1, v.option2, v.option3].filter(Boolean).length ? " · " + [v.option1, v.option2, v.option3].filter(Boolean).join(" / ") : ""}` });
     for (const s of st ?? []) if (!loc || s.location_id === loc) stock.set(s.variant_id, (stock.get(s.variant_id) ?? 0) + Number(s.qty));
+    const pids = [...new Set((vs ?? []).map((v) => v.product_id))];
+    const { data: ps } = pids.length ? await db().from("products").select("id, units_per_carton, carton_cbm").in("id", pids) : { data: [] };
+    for (const v of vs ?? []) { const p = ps?.find((x) => x.id === v.product_id); if (p) pack.set(v.variant_id, p); }
   }
   let rows = vids.map((v) => {
     const s = sold.get(v)!; const total = s.b + s.w; const st = stock.get(v) ?? 0;
-    return { v, ...info.get(v), b: s.b, w: s.w, total, stock: st, ...toBuy(total, days, st, cover) };
+    const tb = toBuy(total, days, st, cover);
+    return { v, ...info.get(v), b: s.b, w: s.w, total, stock: st, ...tb, ...cartons(tb.buy, pack.get(v)) };
   }).filter((r) => r.total > 0 && (!q || `${r.name ?? ""} ${r.sku ?? ""}`.toLowerCase().includes(q)));
   if (sp.buy) rows = rows.filter((r) => r.buy > 0);
   rows.sort((a, b) => b.buy - a.buy || b.total - a.total);
@@ -77,7 +83,7 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
       <section className="card overflow-hidden p-0">
         {shown.length === 0 ? <p className="p-5 text-sm text-gray-500">{P.none}</p> : (
           <div className="overflow-x-auto"><table className="table table-compact" data-export data-testid="analysis-table">
-            <thead><tr><th>{P.item}</th><th>SKU</th><th>{P.branchQty}</th><th>{P.webQty}</th><th>{P.soldQty}</th><th>{P.perDay}</th><th>{P.stock}</th><th>{P.daysLeft}</th><th>{P.toBuy}</th></tr></thead>
+            <thead><tr><th>{P.item}</th><th>SKU</th><th>{P.branchQty}</th><th>{P.webQty}</th><th>{P.soldQty}</th><th>{P.perDay}</th><th>{P.stock}</th><th>{P.daysLeft}</th><th>{P.toBuy}</th><th>{t.purchasing.cartonsTotal}</th><th>CBM</th></tr></thead>
             <tbody>
               {shown.map((r) => (
                 <tr key={r.v}>
@@ -90,11 +96,14 @@ export default async function AnalysisPage({ searchParams }: { searchParams: Pro
                   <td data-label={P.stock} dir="ltr">{n(r.stock)}</td>
                   <td data-label={P.daysLeft} dir="ltr">{r.daysLeft ?? "—"}</td>
                   <td data-label={P.toBuy} dir="ltr" className={r.buy > 0 ? "font-semibold text-[var(--brand)]" : ""}>{r.buy}</td>
+                  <td data-label={t.purchasing.cartonsTotal} dir="ltr">{r.cartons ?? "—"}</td>
+                  <td data-label="CBM" dir="ltr">{r.cbm ?? "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table></div>
         )}
+        {shown.some((r) => r.cbm) && <p className="px-5 py-3 text-sm" data-testid="analysis-cbm">{t.purchasing.cbmTotal}: <b dir="ltr">{Math.round(shown.reduce((a, r) => a + (r.cbm ?? 0), 0) * 1000) / 1000} CBM</b></p>}
         {rows.length > shown.length && <p className="p-3 text-xs text-gray-500">{P.limitNote.replace("{n}", String(shown.length))}</p>}
       </section>
     </>

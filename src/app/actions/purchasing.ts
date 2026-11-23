@@ -168,3 +168,21 @@ export async function receivePurchaseAction(input: ReceiveInput): Promise<R<{ do
   revalidatePath("/purchasing");
   return { ok: true, docNo: String(r.doc_no ?? "") };
 }
+
+export type PackInfo = { units_per_carton: number | null; carton_cbm: number | null; china_price: number | null; china_currency: string; bin: string | null };
+/** Carton, CBM and China price of the items on a purchase order. */
+export async function poItemInfoAction(variantIds: string[]): Promise<Record<string, PackInfo>> {
+  const s = await staffWith("purchasing.edit");
+  if (!s) return {};
+  const ids = (variantIds ?? []).filter(isId).slice(0, 500);
+  if (!ids.length) return {};
+  const { data: vs } = await db().from("product_variants").select("id, product_id").in("id", ids);
+  const pids = [...new Set((vs ?? []).map((v) => v.product_id))];
+  const { data: ps } = pids.length ? await db().from("products").select("id, units_per_carton, carton_cbm, china_price, china_currency, bin_location").in("id", pids) : { data: [] };
+  const out: Record<string, PackInfo> = {};
+  for (const v of vs ?? []) {
+    const p = ps?.find((x) => x.id === v.product_id);
+    if (p) out[v.id] = { units_per_carton: p.units_per_carton, carton_cbm: p.carton_cbm === null ? null : Number(p.carton_cbm), china_price: p.china_price === null ? null : Number(p.china_price), china_currency: p.china_currency ?? "CNY", bin: p.bin_location };
+  }
+  return out;
+}
