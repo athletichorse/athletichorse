@@ -31,8 +31,9 @@ psql -q "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "insert into web_order_lines (orde
 step "build and start (website app looks connected, so its buttons are tested too)"
 pkill -f fake-supabase || true; pkill -f next-server || true; pkill -f "next start" || true
 (PORT=54321 nohup node scripts/e2e/fake-supabase.mjs > "$OUT-fake.log" 2>&1 &)
+# the test site never talks to the real Meta ad account
 npm run -s build >/dev/null
-(SHOPIFY_STORE=audit-test.myshopify.com SHOPIFY_CLIENT_ID=dummy SHOPIFY_CLIENT_SECRET=dummy nohup npx next start -p 3105 > "$OUT-next.log" 2>&1 &)
+(env -u META_ACCESS_TOKEN -u META_AD_ACCOUNT_ID SHOPIFY_STORE=audit-test.myshopify.com SHOPIFY_CLIENT_ID=dummy SHOPIFY_CLIENT_SECRET=dummy nohup npx next start -p 3105 > "$OUT-next.log" 2>&1 &)
 sleep 6
 
 # browser checks: run them all, then report (one failing does not hide the others)
