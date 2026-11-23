@@ -14,5 +14,7 @@ describe("logistics", () => {
     expect(decimal("٠٫٠٨٥", 4)).toBe(0.085);
     expect(decimal("", 2)).toBeNull();
     expect(decimal("1.23456", 4)).toBeNaN();
+    expect(decimal("24", 0)).toBe(24);
+    expect(decimal("2.5", 0)).toBeNaN();
   });
 });

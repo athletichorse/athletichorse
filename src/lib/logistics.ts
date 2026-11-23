@@ -23,5 +23,6 @@ export const fill = (cbm: number) => CONTAINERS.map((c) => ({ ...c, pct: Math.ro
 export function decimal(v: unknown, dec: number): number | null {
   const s = String(v ?? "").trim().replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660)).replace("٫", ".").replace(/[,\s]/g, "");
   if (!s) return null;
-  return new RegExp(`^\\d{1,9}(\\.\\d{1,${dec}})?$`).test(s) ? Number(s) : NaN;
+  const re = dec > 0 ? new RegExp(`^\\d{1,9}(\\.\\d{1,${dec}})?$`) : /^\d{1,9}$/;
+  return re.test(s) ? Number(s) : NaN;
 }
