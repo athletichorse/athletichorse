@@ -36,6 +36,7 @@ export default async function ReportsHub() {
     { key: "customers", cards: [
       { key: "b2b", href: "/sales/reports/b2b", perm: "sales.b2b" }, { key: "website", href: "/sales/orders", perm: "sales.website_orders" },
       { key: "courier", href: "/sales/collections", perm: "sales.website_orders" },
+      { key: "marketing", href: "/marketing", perm: "marketing.view" },
     ] },
     { key: "purchasing", cards: [{ key: "purchases", href: "/sales/reports/purchases", perm: "purchasing.view" }, { key: "expenses", href: "/purchasing/expenses", perm: "purchasing.expenses" }, { key: "finance", href: "/sales/reports/finance", perm: "purchasing.expenses" }] },
   ];

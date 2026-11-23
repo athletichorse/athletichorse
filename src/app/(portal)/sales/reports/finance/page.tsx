@@ -20,7 +20,7 @@ export default async function FinanceReport({ searchParams }: { searchParams: Pr
   const mOf = (iso: string) => Number(new Date(new Date(iso).getTime() + 3 * 3600_000).toISOString().slice(5, 7)) - 1; // Riyadh month
   const mOfDay = (d: string) => Number(String(d).slice(5, 7)) - 1;
   const z = () => Array(12).fill(0) as number[];
-  const till = z(), b2b = z(), web = z(), buy = z(), pay = z(), exp = z(), cash = z();
+  const till = z(), b2b = z(), web = z(), buy = z(), pay = z(), exp = z(), cash = z(), mkt = z();
   const [invs, b2bs, webs, rcs, payroll, eps, drawer, { data: types }, { data: rex }] = await Promise.all([
     allRows<{ kind: string; issued_at: string; net_total: string }>((a, b) => db().from("invoices").select("kind, issued_at, net_total").gte("issued_at", fromIso).lt("issued_at", toIso).range(a, b)),
     allRows<{ delivered_at: string; net_total: string }>((a, b) => db().from("b2b_orders").select("delivered_at, net_total").in("status", ["delivered", "invoiced"]).gte("delivered_at", fromIso).lt("delivered_at", toIso).range(a, b)),
@@ -41,16 +41,23 @@ export default async function FinanceReport({ searchParams }: { searchParams: Pr
   for (const p of payroll) if (counted.has(String(p.month).slice(0, 7))) pay[mOfDay(p.month)] += Number(p.net);
   for (const e of eps) exp[mOfDay(e.paid_on)] += Number(e.amount);
   for (const d of drawer) cash[mOf(d.created_at)] += Number(d.amount);
+  // marketing: Meta ads by day + money typed on campaigns (in their start month)
+  const [metaDays, { data: camps }] = await Promise.all([
+    allRows<{ day: string; spend: string }>((a, b) => db().from("marketing_meta_daily").select("day, spend").gte("day", `${year}-01-01`).lte("day", `${year}-12-31`).range(a, b)),
+    db().from("marketing_campaigns").select("start_on, spend_manual").neq("status", "cancelled").gte("start_on", `${year}-01-01`).lte("start_on", `${year}-12-31`),
+  ]);
+  for (const d of metaDays) mkt[mOfDay(d.day)] += Number(d.spend);
+  for (const c of camps ?? []) mkt[mOfDay(c.start_on)] += Number(c.spend_manual);
   const byType = new Map<string, number>();
   for (const e of [...eps, ...drawer]) byType.set(e.expense_type_id ?? "", (byType.get(e.expense_type_id ?? "") ?? 0) + Number(e.amount));
   const tname = (id: string) => { const x = types?.find((y) => y.id === id); return x ? (locale === "ar" && x.name_ar) || x.name_en : F.other; };
   const planned = ((rex ?? []) as Recurring[]).filter((r) => r.active).map((r) => yearPlan({ ...r, start_on: String(r.start_on).slice(0, 10), end_on: r.end_on ? String(r.end_on).slice(0, 10) : null }, year)).reduce((a, p) => a.map((x, i) => x + p[i]), z());
   const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
   const sales = till.map((x, i) => x + b2b[i] + web[i]);
-  const costs = buy.map((x, i) => x + pay[i] + exp[i] + cash[i]);
+  const costs = buy.map((x, i) => x + pay[i] + exp[i] + cash[i] + mkt[i]);
   const f = (x: number) => x.toFixed(2);
   const monthName = (i: number) => new Date(Date.UTC(2000, i, 1)).toLocaleDateString(locale === "ar" ? "ar-SA-u-ca-gregory" : "en-GB", { month: "long", timeZone: "UTC" });
-  const cols: [string, number[], string?][] = [[F.till, till], [F.b2b, b2b], [F.web, web], [F.sales, sales, "font-semibold"], [F.purchases, buy], [F.salaries, pay], [F.expenses, exp], [F.cashier, cash], [F.costs, costs, "font-semibold"]];
+  const cols: [string, number[], string?][] = [[F.till, till], [F.b2b, b2b], [F.web, web], [F.sales, sales, "font-semibold"], [F.purchases, buy], [F.salaries, pay], [F.expenses, exp], [F.cashier, cash], [F.marketing, mkt], [F.costs, costs, "font-semibold"]];
   return (
     <>
       <PageHeader title={`${F.title} ${year}`} subtitle={F.hint} t={t} filename={`financial-${year}`}>

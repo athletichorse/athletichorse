@@ -56,6 +56,9 @@ export const PERMISSION_KEYS = [
   "stock.log",
   "stock.requests", // restock requests → transfers
   "stock.all_locations", // see every location's stock (off: own branch)
+  // Marketing / التسويق
+  "marketing.view",
+  "marketing.edit", // budget, campaigns, Meta sync
   // Products / المنتجات
   "products.view",
   "products.edit",
@@ -104,6 +107,7 @@ export const PERMISSION_GROUPS: Record<string, readonly PermissionKey[]> = {
   sales: PERMISSION_KEYS.filter((k) => k.startsWith("sales.") || k === "reports.view"),
   stock: PERMISSION_KEYS.filter((k) => k.startsWith("stock.")),
   purchasing: PERMISSION_KEYS.filter((k) => k.startsWith("purchasing.")),
+  marketing: PERMISSION_KEYS.filter((k) => k.startsWith("marketing.")),
   products: PERMISSION_KEYS.filter((k) => k.startsWith("products.")),
   customers: PERMISSION_KEYS.filter((k) => k.startsWith("customers.")),
   staff: PERMISSION_KEYS.filter((k) => k.startsWith("staff.")),
@@ -135,7 +139,7 @@ export const ROLE_DEFAULTS: Record<Role, readonly PermissionKey[]> = {
   cashier: [...cashierBase, "sales.view", ...APPROVAL_ALL],
   pos: [...deskBase, ...APPROVAL_ALL],
   cashier_pos: [...new Set<PermissionKey>([...cashierBase, ...deskBase, "sales.view", ...APPROVAL_ALL])],
-  marketing: ["customers.view", "products.view", "sales.view", "sales.website_orders", "reports.view"],
+  marketing: ["customers.view", "products.view", "sales.view", "sales.website_orders", "reports.view", "marketing.view", "marketing.edit"],
 };
 
 export type Override = { permission: string; allowed: boolean };

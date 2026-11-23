@@ -60,6 +60,14 @@ export function buildSections(t: Dict, perms: Perms, role?: Role): Section[] {
       ],
     },
     {
+      key: "marketing", label: t.menu.marketing, href: "/marketing", icon: "marketing", match: ["/marketing"],
+      show: !till && perms.has("marketing.view"),
+      tabs: [
+        { label: t.mkt.title, href: "/marketing" },
+        { label: t.mkt.campaigns, href: "/marketing/campaigns" },
+      ],
+    },
+    {
       key: "products", label: t.menu.products, href: "/products", icon: "products", match: ["/products", "/upload"],
       show: !till && perms.has("products.view"),
       tabs: [
