@@ -45,7 +45,7 @@ async function checkPage(page, path, label) {
 }
 
 const browser = await chromium.launch();
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/reports/sales", "/sales/reports/analysis", "/sales/reports/invoices", "/sales/reports/treasury", "/sales/reports/b2b", "/sales/reports/purchases", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/purchasing/expenses", "/purchasing/expenses/plan", "/sales/reports/finance", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/reports/sales", "/sales/reports/analysis", "/sales/reports/invoices", "/sales/reports/treasury", "/sales/reports/b2b", "/sales/reports/purchases", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/purchasing/expenses", "/purchasing/expenses/plan", "/sales/reports/finance", "/marketing", "/marketing/campaigns", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
 
 // ---------------------------------------------------------------- 1. setup + flows (desktop, English)
 console.log("\n== Setup and main flows (desktop, English)");
@@ -776,6 +776,41 @@ await page.goto(BASE + "/purchasing/expenses", { waitUntil: "networkidle" });
   else ok("yearly financial report: sales and costs month by month (expenses 3450.00 this year)");
 }
 
+// marketing: budget for this month → a campaign with typed spend → spent shows on the plan; Meta not connected here
+where = "marketing";
+await page.goto(BASE + "/marketing", { waitUntil: "networkidle" });
+{
+  const mo = new Date(Date.now() + 3 * 3600_000).getUTCMonth() + 1;
+  await page.locator(`input[name="b:influencer:${mo}"]`).fill("3000");
+  await page.locator(`input[name="b:meta:${mo}"]`).fill("1000");
+  await Promise.all([page.waitForURL(/ok=1|err=/, { timeout: 20000 }), page.locator('button:text-is("Save budget")').click()]);
+  const tot = (await page.locator("[data-testid=mkt-totals]").innerText()).replace(/\s+/g, " ");
+  if (!/Budget 4000\.00/.test(tot)) fail("marketing", `budget total: ${tot}`);
+  else ok("marketing plan: budget per channel per month saved (4000 this month)");
+  await page.goto(BASE + "/marketing/campaigns", { waitUntil: "networkidle" });
+  if (!(await page.locator("[data-testid=meta-not-connected]").count())) fail("marketing", "no 'Meta not connected' note on the test site");
+  await page.evaluate(() => document.querySelector("details:has([data-testid=new-campaign])")?.setAttribute("open", ""));
+  await page.locator("#mc-name-new").fill("Endurance season influencers E2E");
+  await page.locator("#mc-ch-new").selectOption("influencer");
+  await page.locator("#mc-st-new").selectOption("active");
+  await page.locator("#mc-budget-new").fill("3000");
+  await page.locator("#mc-spend-new").fill("2500");
+  await page.locator("#mc-code-new").fill("ENDURANCE10");
+  await Promise.all([page.waitForURL(/ok=1|err=/, { timeout: 20000 }), page.locator('form:has(#mc-name-new) button:text-is("Save")').click()]);
+  const row = await page.locator('[data-testid=campaigns-table] tr[data-campaign="Endurance season influencers E2E"]').innerText().catch(() => "");
+  if (!/2500\.00/.test(row) || !/Running/.test(row)) fail("marketing", `campaign row: ${row.replace(/\s+/g, " ")}`);
+  else ok("campaign saved: influencers, running, 2500 spent");
+  await page.locator('[data-testid=campaigns-table] tr[data-campaign="Endurance season influencers E2E"] a').first().click();
+  await page.waitForURL(/\/marketing\/campaigns\/[0-9a-f-]{36}/, { timeout: 20000 });
+  const nums = (await page.locator("[data-testid=campaign-numbers]").innerText()).replace(/\s+/g, " ");
+  if (!/2500\.00/.test(nums)) fail("marketing", `campaign page numbers: ${nums}`);
+  else ok("campaign page: budget, spent and sales in its dates");
+  await page.goto(BASE + "/marketing", { waitUntil: "networkidle" });
+  const inf = (await page.locator('[data-testid=mkt-plan] tr[data-channel=influencer]').innerText()).replace(/\s+/g, " ");
+  if (!/2500/.test(inf)) fail("marketing", `plan should show 2500 spent on influencers: ${inf.slice(0, 160)}`);
+  else ok("plan shows what was spent next to the budget, and marketing as % of sales");
+}
+
 // ---------------------------------------------------------------- cashier
 where = "pos";
 await page.goto(BASE + "/pos", { waitUntil: "networkidle" });
@@ -1037,16 +1072,16 @@ for (const [device, opts] of [["desktop", { viewport: { width: 1280, height: 900
       if (lang === "ar" && (await p.locator("html").getAttribute("dir")) !== "rtl") fail(w, "not right-to-left in Arabic");
       await p.screenshot({ path: `${OUT}/${device}-${lang}${r.replace(/[\/]/g, "_") || "_home"}.png`, fullPage: false });
     }
-    // the 7 main sections: all on screen, each opens its page and is highlighted there
+    // the 8 main sections: all on screen, each opens its page and is highlighted there
     w = `${device}/${lang} menu`;
     await p.goto(BASE + "/");
     const keys = await p.$$eval("[data-testid=sections] a", (as) => as.map((a) => a.getAttribute("data-section")));
-    if (keys.join(",") !== "pos,stock,purchasing,sales,products,customers,staff") fail(w, `main sections are ${keys.join(",")}`);
+    if (keys.join(",") !== "pos,stock,purchasing,sales,marketing,products,customers,staff") fail(w, `main sections are ${keys.join(",")}`);
     for (const k of keys) {
       await p.click(`[data-testid=sections] a[data-section=${k}]`);
       await p.waitForFunction((key) => document.querySelector(`[data-testid=sections] a[data-section=${key}]`)?.getAttribute("aria-current") === "page", k, { timeout: 30000 }).catch(() => fail(w, `${k} not highlighted after opening it`));
     }
-    ok(`${device}/${lang}: 7 main sections open their pages`);
+    ok(`${device}/${lang}: 8 main sections open their pages`);
     ok(`${device}/${lang}: ${ROUTES.length + 1} pages checked`);
     await c.close();
   }

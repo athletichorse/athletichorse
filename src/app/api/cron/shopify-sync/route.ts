@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { runOrdersSync, runShopifySync } from "@/lib/shopify-sync";
 import { ordersToQuotations, pushPrices, pushStock } from "@/lib/website-push";
+import { runMetaSync } from "@/lib/marketing-sync";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -24,6 +25,8 @@ export async function GET(req: NextRequest) {
   const quotes = await ordersToQuotations();
   const prices = await pushPrices(null);
   const stock = await pushStock(null);
+  // Meta ads results for the marketing plan (skipped when Meta isn't connected)
+  const meta = await runMetaSync();
   const ok = products.ok && (orders.ok || orders.error === "not_connected");
-  return NextResponse.json({ products, orders, quotes, prices, stock }, { status: ok ? 200 : 500 });
+  return NextResponse.json({ products, orders, quotes, prices, stock, meta }, { status: ok ? 200 : 500 });
 }

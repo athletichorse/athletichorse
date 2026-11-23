@@ -36,9 +36,9 @@ describe("till staff menu", () => {
       expect(nav.flatMap((x) => x.tabs.map((y) => y.href))).not.toContain("/locations");
     }
   });
-  it("the owner sees the 7 sections in order, every page belongs to one", () => {
+  it("the owner sees the 8 sections in order, every page belongs to one", () => {
     const owner = buildSections(en, resolvePermissions("owner", [], []), "owner");
-    expect(owner.map((x) => x.key)).toEqual(["pos", "stock", "purchasing", "sales", "products", "customers", "staff"]);
+    expect(owner.map((x) => x.key)).toEqual(["pos", "stock", "purchasing", "sales", "marketing", "products", "customers", "staff"]);
     expect(activeFor(owner, "/purchasing/suppliers/abc")).toMatchObject({ tab: "/purchasing/suppliers" });
     expect(activeFor(owner, "/purchasing/abc")).toMatchObject({ tab: "/purchasing" });
     expect(activeFor(owner, "/sales/b2b/abc")).toMatchObject({ tab: "/sales/b2b" });
