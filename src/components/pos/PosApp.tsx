@@ -33,7 +33,9 @@ type Props = {
   company: string; canManageOffline: boolean;
   /** tile names in the other language (shown small under each tile) */
   otherTiles: Dict["pos"]["tiles"];
-  expenseTypes: { id: string; name: string }[];
+  expenseTypes: { id: string; name: string; isSupplier?: boolean }[];
+  /** suppliers the cashier can pay from the drawer ("Supplier payment" expense type) */
+  suppliers: { id: string; name: string }[];
   shift: { id: string; locationId: string; openedAt: string; openingCash: string } | null;
   methods: Method[]; people: { id: string; name: string }[]; vatRate: string;
   quotes: { no: number; total: string; at: string }[];
@@ -154,7 +156,7 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
           {cashKind === "expense" && (
             <select className="input sm:col-span-2" value={expenseType} onChange={(e) => setExpenseType(e.target.value)}>
               <option value="">{t.pos.extra.expenseType}</option>
-              {p.expenseTypes.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+              {p.expenseTypes.filter((x) => !x.isSupplier).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
             </select>
           )}
           {cashKind === "customer_payment" && (
@@ -833,7 +835,9 @@ function ExpensesView(p: Props & { off: OfflineTill; setMsg: (m: { ok: boolean; 
   const { t, locale, err, off } = p;
   const E = t.pos.expenses;
   const s = p.shift!;
-  const [type, setType] = useState(p.expenseTypes[0]?.id ?? "");
+  const [type, setType] = useState(p.expenseTypes.find((x) => !x.isSupplier)?.id ?? p.expenseTypes[0]?.id ?? "");
+  const [supplier, setSupplier] = useState("");
+  const isSup = Boolean(p.expenseTypes.find((x) => x.id === type)?.isSupplier);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [mgr, setMgr] = useState({ u: "", p: "" });
@@ -851,18 +855,20 @@ function ExpensesView(p: Props & { off: OfflineTill; setMsg: (m: { ok: boolean; 
   async function save() {
     if (!/^\d{1,9}(\.\d{1,2})?$/.test(amount.trim()) || Number(amount) <= 0) return p.setMsg({ ok: false, text: err("bad_amount") });
     if (!type) return p.setMsg({ ok: false, text: err("expense_type_required") });
+    if (isSup && !supplier) return p.setMsg({ ok: false, text: err("supplier_required") });
+    const supName = isSup ? p.suppliers.find((x) => x.id === supplier)?.name ?? "" : "";
     const keepOffline = () => {
       if (!off.enabled) return p.setMsg({ ok: false, text: t.pos.offline.notEnabled });
       if (p.approval.discount) return p.setMsg({ ok: false, text: t.pos.offline.noApprovalOffline });
-      off.saveDrawer({ clientId: clientId.current, label: `${p.expenseTypes.find((x) => x.id === type)?.name ?? ""} ${amount.trim()}`, payload: { kind: "expense", amount: amount.trim(), reason: note, expenseTypeId: type } });
+      off.saveDrawer({ clientId: clientId.current, label: `${p.expenseTypes.find((x) => x.id === type)?.name ?? ""}${supName ? ` · ${supName}` : ""} ${amount.trim()}`, payload: { kind: "expense", amount: amount.trim(), reason: note, expenseTypeId: type, supplierId: isSup ? supplier : undefined } });
       clientId.current = uuid(); setAmount(""); setNote("");
       p.setMsg({ ok: true, text: t.pos.offline.savedOfflineDrawer });
     };
     if (!off.online) return keepOffline();
     setBusy(true);
     try {
-      const r = await cashMovementAction({ clientId: clientId.current, shiftId: s.id, kind: "expense", amount: amount.trim(), reason: note, expenseTypeId: type, approverUsername: mgr.u, approverPin: mgr.p });
-      if (r.ok) { clientId.current = uuid(); setAmount(""); setNote(""); setMgr({ u: "", p: "" }); p.setMsg({ ok: true, text: E.saved }); void load.current(); }
+      const r = await cashMovementAction({ clientId: clientId.current, shiftId: s.id, kind: "expense", amount: amount.trim(), reason: note, expenseTypeId: type, supplierId: isSup ? supplier : undefined, approverUsername: mgr.u, approverPin: mgr.p });
+      if (r.ok) { clientId.current = uuid(); setAmount(""); setNote(""); setSupplier(""); setMgr({ u: "", p: "" }); p.setMsg({ ok: true, text: isSup ? `${E.saved} · ${E.supplierPaid} ${supName}` : E.saved }); void load.current(); }
       else p.setMsg({ ok: false, text: err(r.error) });
     } catch (e) { if (looksOffline(e)) keepOffline(); else p.setMsg({ ok: false, text: String(e) }); }
     finally { setBusy(false); }
@@ -876,6 +882,15 @@ function ExpensesView(p: Props & { off: OfflineTill; setMsg: (m: { ok: boolean; 
           <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
             {p.expenseTypes.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
           </select></div>
+        {isSup && (
+          <div><label className="label" htmlFor="exp-supplier">{E.supplier}</label>
+            <select id="exp-supplier" className="input" value={supplier} onChange={(e) => setSupplier(e.target.value)} data-testid="expense-supplier">
+              <option value="">{E.pickSupplier}</option>
+              {p.suppliers.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </select>
+            {!p.suppliers.length && <p className="mt-1 text-xs text-gray-500">{E.noSuppliers}</p>}
+          </div>
+        )}
         <div><label className="label">{E.amount}</label><input className="input" dir="ltr" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
         <div><label className="label">{E.note}</label><input className="input" value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} /></div>
         {p.approval.discount && <Approval t={t} mgr={mgr} setMgr={setMgr} />}

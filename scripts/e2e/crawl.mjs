@@ -947,6 +947,16 @@ await page.waitForFunction(() => /taxi e2e/.test(document.querySelector("[data-t
 const exTxt = await exv.innerText();
 if (!/taxi e2e/.test(exTxt) || !/Total:\s*5\.00/.test(exTxt)) fail("pos", `expenses: ${exTxt.replace(/\s+/g, " ").slice(0, 200)}`);
 else ok("expense recorded from the Expenses screen; listed with this shift's total 5.00");
+// pay a supplier from the drawer: type "Supplier payment" → choose the supplier → it is on their account too
+await exv.locator("select").first().selectOption({ label: "Supplier payment" });
+await exv.locator("[data-testid=expense-supplier]").selectOption({ label: "Nile Supplies E2E" });
+await exv.locator("input[inputmode=decimal]").fill("50");
+await exv.locator("input:not([inputmode])").first().fill("cash to driver e2e");
+await exv.locator('button:text-is("Save expense")').click();
+await page.waitForFunction(() => /Nile Supplies E2E/.test(document.querySelector("[data-testid=expenses]")?.textContent ?? ""), null, { timeout: 15000 }).catch(() => {});
+const supTxt = await exv.innerText();
+if (!/Supplier payment · Nile Supplies E2E/.test(supTxt) || !/Total:\s*55\.00/.test(supTxt)) fail("pos", `supplier payment from the drawer: ${supTxt.replace(/\s+/g, " ").slice(0, 220)}`);
+else ok("cashier pays a supplier from the drawer: listed with the supplier, drawer total 55.00");
 
 // cash out, close shift
 await page.click('button:text-is("Drawer")'); // drawer panel: Cash out is the first choice
@@ -956,12 +966,12 @@ await page.click('section >> button:text-is("Save")');
 await page.waitForSelector(".alert-ok, .alert-err", { timeout: 15000 });
 ok("cash out recorded");
 await page.click('button:text-is("Close shift")');
-// expected: 100 + 70 + 90 (VIP) + 35 (quotation, paid cash) − 35 (refund) − 5 (expense) − 10 (cash out) = 245
-await page.locator('input[placeholder*="Counted cash"]').fill("245");
+// expected: 100 + 70 + 90 (VIP) + 35 (quotation, paid cash) − 35 (refund) − 5 (expense) − 50 (paid to a supplier) − 10 (cash out) = 195
+await page.locator('input[placeholder*="Counted cash"]').fill("195");
 await page.locator('section >> button:text-is("Close shift")').click();
 await page.waitForSelector("text=Shift closed", { timeout: 15000 });
 const closeTxt = await page.locator(".alert-ok").first().innerText();
-if (!/Expected cash 245\.00/.test(closeTxt) || !/Difference 0\.00/.test(closeTxt)) fail("pos", `close: ${closeTxt}`); else ok("close shift: expected 245.00 (after the expense) = counted, difference 0.00");
+if (!/Expected cash 195\.00/.test(closeTxt) || !/Difference 0\.00/.test(closeTxt)) fail("pos", `close: ${closeTxt}`); else ok("close shift: expected 195.00 (after the expense and the supplier payment) = counted, difference 0.00");
 
 // sales list
 await page.goto(BASE + "/sales", { waitUntil: "networkidle" });
@@ -1041,8 +1051,8 @@ await page.goto(BASE + "/sales/reports", { waitUntil: "networkidle" });
   else ok("B2B report: the delivered order still owes 210.50");
   await page.goto(BASE + "/sales/reports/purchases", { waitUntil: "networkidle" });
   const pr = (await page.locator("[data-testid=purchases-by-supplier]").innerText().catch(() => "")).replace(/\s+/g, " ");
-  if (!/Nile Supplies E2E/.test(pr) || !/120\.00/.test(pr) || !/80\.00/.test(pr)) fail("reports", `purchases report: ${pr.slice(0, 200)}`);
-  else ok("purchases report: Nile Supplies — 120.00 received, 80.00 still owed");
+  if (!/Nile Supplies E2E/.test(pr) || !/120\.00/.test(pr) || !/30\.00/.test(pr)) fail("reports", `purchases report: ${pr.slice(0, 200)}`);
+  else ok("purchases report: Nile Supplies — 120.00 received, 40 + 50 (paid at the till) paid, 30.00 still owed");
 }
 
 // ---------------------------------------------------------------- 2. every page × desktop/phone × en/ar

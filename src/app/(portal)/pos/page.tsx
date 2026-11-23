@@ -22,7 +22,10 @@ export default async function PosPage() {
     db().from("settings").select("value").eq("key", "vat_rate").maybeSingle(),
     db().from("company").select("legal_name_en, legal_name_ar").eq("id", 1).maybeSingle(),
   ]);
-  const { data: expenseTypes } = await db().from("expense_types").select("id, name_en, name_ar").eq("active", true).order("sort");
+  const [{ data: expenseTypes }, { data: suppliers }] = await Promise.all([
+    db().from("expense_types").select("id, name_en, name_ar, is_supplier").eq("active", true).order("sort"),
+    db().from("suppliers").select("id, name").eq("active", true).order("name").limit(2000),
+  ]);
   const companyName = (locale === "ar" ? company?.legal_name_ar : company?.legal_name_en) || company?.legal_name_en || BRAND[locale];
   const name = (l: { name_en: string; name_ar: string }) => (locale === "ar" ? l.name_ar : l.name_en || l.name_ar);
   const myLocs = (locs ?? []).filter((l) => me.locations === "all" || me.locations.includes(l.id)).map((l) => ({ id: l.id, name: name(l), code: l.code }));
@@ -40,7 +43,8 @@ export default async function PosPage() {
         me={{ id: me.id, name: me.fullName }}
         company={companyName}
         otherTiles={dictionaries[locale === "ar" ? "en" : "ar"].pos.tiles}
-        expenseTypes={(expenseTypes ?? []).map((e) => ({ id: e.id, name: (locale === "ar" && e.name_ar) || e.name_en }))}
+        expenseTypes={(expenseTypes ?? []).map((e) => ({ id: e.id, name: (locale === "ar" && e.name_ar) || e.name_en, isSupplier: Boolean(e.is_supplier) }))}
+        suppliers={suppliers ?? []}
         canManageOffline={me.role === "owner" || p("approval.approve")}
         locations={myLocs}
         shift={shift ? { id: shift.id, locationId: shift.location_id, openedAt: shift.opened_at, openingCash: String(shift.opening_cash) } : null}
