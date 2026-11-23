@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element -- product photos come from the website's CDN, already resized */
+import { expectedSar, readRates } from "@/lib/fx";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePermission } from "@/lib/auth";
@@ -22,12 +23,13 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   const seeCost = me.perms.has("products.view_cost");
   const canSale = me.perms.has("products.sale_prices");
 
-  const [{ data: p }, { data: vData }, { data: images }, { data: groups }, { data: storeUrl }] = await Promise.all([
+  const [{ data: p }, { data: vData }, { data: images }, { data: groups }, { data: storeUrl }, { data: fx }] = await Promise.all([
     db().from("products").select("*").eq("id", id).maybeSingle(),
     db().from("product_variants").select("id, sku, option1, option2, option3, price, compare_at_price, cost, active, shopify_variant_id, shopify_sku, image_url, wholesale_price, reorder_level, sale_price, sale_from, sale_to").eq("product_id", id).order("position"),
     db().from("product_images").select("url, alt").eq("product_id", id).order("position"),
     db().from("product_groups").select("id, parent_id, name_en, name_ar").eq("active", true).order("name_en"),
     db().from("settings").select("value").eq("key", "shopify_store_url").maybeSingle(),
+    db().from("settings").select("value").eq("key", "fx_rates").maybeSingle(),
   ]);
   const { data: pushSw } = await db().from("settings").select("value").eq("key", "shopify_push_prices").maybeSingle();
   // while portal prices go to the website, website items' prices are edited here
@@ -62,7 +64,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         <input type="hidden" name="id" value={p.id} />
         <fieldset disabled={!canEdit} className="space-y-6">
           <section className="card">
-            <ProductFields t={t} locale={locale} groups={(groups ?? []) as Group[]} value={p} nameLocked={fromWebsite} suppliers={names.suppliers} factories={names.factories} seeCost={seeCost} />
+            <ProductFields t={t} locale={locale} groups={(groups ?? []) as Group[]} value={p} nameLocked={fromWebsite} suppliers={names.suppliers} factories={names.factories} seeCost={seeCost} expected={expectedSar(p.china_price, p.china_currency, readRates(fx?.value))} />
             <label className="mt-4 flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" name="active" defaultChecked={p.active} className="h-4 w-4 accent-[var(--brand)]" /> {t.active}
             </label>

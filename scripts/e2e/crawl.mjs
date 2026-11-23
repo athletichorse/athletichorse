@@ -634,6 +634,12 @@ await page.goto(BASE + "/company/backup", { waitUntil: "networkidle" });
 
 // purchasing: supplier (EGP) → purchase order → receive part of it → stock doc, average cost, owed → pay
 where = "purchasing";
+// exchange rate for the expected purchase price (China price × rate)
+await page.goto(BASE + "/purchasing", { waitUntil: "networkidle" });
+await page.evaluate(() => document.querySelector("[data-testid=fx-rates]")?.setAttribute("open", ""));
+await page.fill("#fx-CNY", "0.52");
+await Promise.all([page.waitForURL(/ok=fx|err=/, { timeout: 20000 }), page.locator('[data-testid=fx-rates] button:text-is("Save")').click()]);
+if (!page.url().includes("ok=fx")) fail("purchasing", "exchange rates not saved");
 await page.goto(BASE + "/purchasing/suppliers", { waitUntil: "networkidle" });
 {
   await page.evaluate(() => document.querySelector("details:has([data-testid=new-supplier])")?.setAttribute("open", ""));
@@ -655,6 +661,11 @@ await page.goto(BASE + "/purchasing/suppliers", { waitUntil: "networkidle" });
   const cbmTxt = (await page.locator("[data-testid=po-cbm]").innerText().catch(() => "")).replace(/\s+/g, " ");
   if (!/Cartons: 1/.test(cbmTxt) || !/0\.05 CBM/.test(cbmTxt) || !/20 ft container \(33 CBM\) 0\.2%/.test(cbmTxt)) fail("purchasing", `cartons / CBM / container: ${cbmTxt}`);
   else ok("purchase order: 5 pieces = 1 carton, 0.05 CBM, 0.2% of a 20 ft container");
+  await page.waitForFunction(() => /46\.80 SAR/.test(document.querySelector("[data-testid=po-cbm]")?.textContent ?? ""), null, { timeout: 10000 }).catch(() => {});
+  const packTxt = await page.locator("[data-testid=line-pack]").first().innerText().catch(() => "");
+  const cbm2 = (await page.locator("[data-testid=po-cbm]").innerText().catch(() => "")).replace(/\s+/g, " ");
+  if (!/Expected purchase price: 9\.36 SAR/.test(packTxt) || !/Expected \(China price × rate\): 46\.80 SAR/.test(cbm2)) fail("purchasing", `expected price (18 CNY × 0.52): ${packTxt} | ${cbm2}`);
+  else ok("expected purchase price: 18 CNY × 0.52 = 9.36 SAR per piece, 46.80 for 5 (a guide, not the cost)");
   const poTot = await page.locator("[data-testid=po-total]").innerText().catch(() => "");
   if (!/2500\.00 EGP/.test(poTot) || !/200\.00 SAR/.test(poTot)) fail("purchasing", `order total preview: ${poTot}`);
   await Promise.all([page.waitForURL(/\/purchasing\/[0-9a-f-]{36}\?ok=1/, { timeout: 20000 }), page.click("[data-testid=po-save-ordered]")]);

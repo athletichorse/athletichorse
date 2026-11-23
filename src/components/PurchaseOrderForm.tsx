@@ -52,6 +52,7 @@ export function PurchaseOrderForm({ t, locale, suppliers, locations, initial, de
   const totCartons = packs.reduce((a, x) => a + (x.cartons ?? 0), 0);
   const totCbm = Math.round(packs.reduce((a, x) => a + (x.cbm ?? 0), 0) * 1000) / 1000;
   const missingPack = lines.filter((l, i) => packs[i].cbm === null).length;
+  const expTotal = lines.reduce((a, l) => a + (Number(l.qty) || 0) * (info[l.variantId]?.expected_sar ?? 0), 0);
   const P2 = t.products.logistics;
 
   function pickSupplier(id: string) {
@@ -105,6 +106,7 @@ export function PurchaseOrderForm({ t, locale, suppliers, locations, initial, de
             return <div className="text-xs text-gray-500" dir="ltr" data-testid="line-pack">
               {c.cartons !== null ? `${c.cartons} ${P.cartons}${c.cbm !== null ? ` · ${c.cbm} CBM` : ""}` : ""}
               {i.china_price !== null ? ` · ${P2.chinaPrice}: ${i.china_price} ${i.china_currency}` : ""}
+              {i.expected_sar !== null ? ` · ${P2.expected}: ${i.expected_sar} SAR` : ""}
             </div>;
           }} />
         {lines.length > 0 && (
@@ -115,7 +117,7 @@ export function PurchaseOrderForm({ t, locale, suppliers, locations, initial, de
         )}
         {lines.length > 0 && (
           <div className="mt-3 rounded-lg bg-gray-50 p-3 text-sm" data-testid="po-cbm">
-            <div className="flex flex-wrap gap-4"><span>{P.cartonsTotal}: <b dir="ltr">{totCartons}</b></span><span>{P.cbmTotal}: <b dir="ltr">{totCbm} CBM</b></span></div>
+            <div className="flex flex-wrap gap-4"><span>{P.cartonsTotal}: <b dir="ltr">{totCartons}</b></span><span>{P.cbmTotal}: <b dir="ltr">{totCbm} CBM</b></span>{expTotal > 0 && <span>{P2.expectedTotal}: <b dir="ltr">{expTotal.toFixed(2)} SAR</b></span>}</div>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
               {fill(totCbm).map((c) => (
                 <div key={c.key}>

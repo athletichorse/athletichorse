@@ -6,6 +6,7 @@ import { canUseLocation, requireStaff } from "@/lib/auth";
 import { db } from "@/lib/supabase/admin";
 import { audit } from "@/lib/audit";
 import { SUPPLIER_METHODS, errCode, isCurrency, latin, num } from "@/lib/purchasing";
+import { FX_CURRENCIES, expectedSar, readRates } from "@/lib/fx";
 
 type R<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 const isId = (v: unknown) => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v);
@@ -169,7 +170,7 @@ export async function receivePurchaseAction(input: ReceiveInput): Promise<R<{ do
   return { ok: true, docNo: String(r.doc_no ?? "") };
 }
 
-export type PackInfo = { units_per_carton: number | null; carton_cbm: number | null; china_price: number | null; china_currency: string; bin: string | null };
+export type PackInfo = { units_per_carton: number | null; carton_cbm: number | null; china_price: number | null; china_currency: string; bin: string | null; expected_sar: number | null };
 /** Carton, CBM and China price of the items on a purchase order. */
 export async function poItemInfoAction(variantIds: string[]): Promise<Record<string, PackInfo>> {
   const s = await staffWith("purchasing.edit");
@@ -179,10 +180,29 @@ export async function poItemInfoAction(variantIds: string[]): Promise<Record<str
   const { data: vs } = await db().from("product_variants").select("id, product_id").in("id", ids);
   const pids = [...new Set((vs ?? []).map((v) => v.product_id))];
   const { data: ps } = pids.length ? await db().from("products").select("id, units_per_carton, carton_cbm, china_price, china_currency, bin_location").in("id", pids) : { data: [] };
+  const { data: fx } = await db().from("settings").select("value").eq("key", "fx_rates").maybeSingle();
+  const rates = readRates(fx?.value);
   const out: Record<string, PackInfo> = {};
   for (const v of vs ?? []) {
     const p = ps?.find((x) => x.id === v.product_id);
-    if (p) out[v.id] = { units_per_carton: p.units_per_carton, carton_cbm: p.carton_cbm === null ? null : Number(p.carton_cbm), china_price: p.china_price === null ? null : Number(p.china_price), china_currency: p.china_currency ?? "CNY", bin: p.bin_location };
+    if (p) out[v.id] = { units_per_carton: p.units_per_carton, carton_cbm: p.carton_cbm === null ? null : Number(p.carton_cbm), china_price: p.china_price === null ? null : Number(p.china_price), china_currency: p.china_currency ?? "CNY", bin: p.bin_location, expected_sar: expectedSar(p.china_price, p.china_currency, rates) };
   }
   return out;
+}
+
+/** Exchange rates to SAR used for the expected purchase price (China price × rate). */
+export async function saveRatesAction(form: FormData) {
+  const s = await staffWith("purchasing.edit");
+  if (!s) redirect("/forbidden");
+  const rates: Record<string, number> = {};
+  for (const c of FX_CURRENCIES) {
+    const v = latin(form.get(`fx:${c}`));
+    if (!v) continue;
+    if (!/^\d{1,6}(\.\d{1,6})?$/.test(v) || Number(v) <= 0) redirect(`/purchasing?err=bad_rate`);
+    rates[c] = Number(v);
+  }
+  await db().from("settings").upsert({ key: "fx_rates", value: rates });
+  await audit(s.id, "purchasing.fx_rates", "settings", null, rates);
+  revalidatePath("/purchasing");
+  redirect("/purchasing?ok=fx");
 }
