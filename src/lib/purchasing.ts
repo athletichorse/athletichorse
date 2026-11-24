@@ -24,7 +24,8 @@ export const isCurrency = (c: string) => /^[A-Z]{3}$/.test(c);
 /** A positive number with at most `dec` decimals (as text), or null. */
 export function num(v: unknown, dec: number, allowZero = false): string | null {
   const s = latin(v);
-  if (!new RegExp(`^\\d{1,10}(\\.\\d{1,${dec}})?$`).test(s)) return null;
+  const re = dec > 0 ? new RegExp(`^\\d{1,10}(\\.\\d{1,${dec}})?$`) : /^\d{1,10}$/;
+  if (!re.test(s)) return null;
   if (!allowZero && Number(s) <= 0) return null;
   return s;
 }

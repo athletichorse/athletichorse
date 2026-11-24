@@ -9,6 +9,8 @@ describe("purchasing + B2B rules", () => {
     expect(num("0", 4, true)).toBe("0");
     expect(num("1.23456", 4)).toBeNull();
     expect(num("abc", 2)).toBeNull();
+    expect(num("50", 0)).toBe("50");
+    expect(num("2.5", 0)).toBeNull();
   });
   it("B2B totals match the database (prices include VAT, per line)", () => {
     // 2 × 115 with 10% off = 207.00 → 180.00 + 27.00 VAT
