@@ -4,13 +4,16 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { PageHeader } from "@/components/PageHeader";
 import { PO_STATUSES, type PoStatus } from "@/lib/purchasing";
+import { FX_CURRENCIES, readRates } from "@/lib/fx";
+import { saveRatesAction } from "@/app/actions/purchasing";
+import { PendingButton } from "@/components/PendingButton";
 
 export const dynamic = "force-dynamic";
 
 const TONE: Record<PoStatus, string> = { draft: "badge-gray", ordered: "badge-blue", partial: "badge bg-amber-50 text-amber-800", received: "badge-green", cancelled: "badge bg-red-50 text-red-700" };
 
 /** Purchases: every purchase order, by status, with what is still to arrive. */
-export default async function PurchasesPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string }> }) {
+export default async function PurchasesPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string; ok?: string; err?: string }> }) {
   const me = await requirePermission("purchasing.view");
   const { t, locale } = await getDict();
   const P = t.purchasing;
@@ -22,6 +25,8 @@ export default async function PurchasesPage({ searchParams }: { searchParams: Pr
     db().from("suppliers").select("id, name"),
     db().from("locations").select("id, name_en, name_ar"),
   ]);
+  const { data: fx } = await db().from("settings").select("value").eq("key", "fx_rates").maybeSingle();
+  const rates = readRates(fx?.value);
   const supName = new Map((sups ?? []).map((s) => [s.id, s.name]));
   const locName = new Map((locs ?? []).map((l) => [l.id, (locale === "ar" && l.name_ar) || l.name_en]));
   const counts = Object.fromEntries(PO_STATUSES.map((s) => [s, (orders ?? []).filter((o) => o.status === s).length]));
@@ -35,6 +40,19 @@ export default async function PurchasesPage({ searchParams }: { searchParams: Pr
           {me.perms.has("purchasing.edit") && <Link href="/purchasing/new" className="btn-primary" data-testid="new-po">+ {P.newOrder}</Link>}
         </div>
       </PageHeader>
+      {sp.ok === "fx" && <p className="alert-ok mb-4">{t.saved}</p>}
+      {sp.err === "bad_rate" && <p className="alert-err mb-4">{P.errors.bad_rate}</p>}
+      <details className="card no-print mb-4" data-testid="fx-rates">
+        <summary className="cursor-pointer font-semibold">{P.fxTitle}</summary>
+        <p className="mt-1 text-xs text-gray-500">{P.fxHint}</p>
+        <form action={saveRatesAction} className="mt-3 flex flex-wrap items-end gap-3">
+          {FX_CURRENCIES.map((c) => (
+            <div key={c}><label className="label" htmlFor={`fx-${c}`} dir="ltr">1 {c} =</label>
+              <input id={`fx-${c}`} name={`fx:${c}`} className="input w-24" dir="ltr" inputMode="decimal" defaultValue={rates[c] !== undefined ? String(rates[c]) : ""} disabled={!me.perms.has("purchasing.edit")} /> <span className="text-xs text-gray-500">SAR</span></div>
+          ))}
+          {me.perms.has("purchasing.edit") && <PendingButton label={P.save} pendingLabel={P.saving} />}
+        </form>
+      </details>
       <div className="no-print mb-4 flex flex-wrap items-center gap-2">
         <Link href={href(null)} className={!status ? "btn-primary" : "btn-ghost"}>{P.all} ({(orders ?? []).length})</Link>
         {PO_STATUSES.map((s) => <Link key={s} href={href(s)} className={status === s ? "btn-primary" : "btn-ghost"}>{P.statuses[s]} ({counts[s]})</Link>)}

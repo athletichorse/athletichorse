@@ -1,5 +1,6 @@
 "use server";
 
+import { decimal } from "@/lib/logistics";
 import { saleWindow, type PriceRow } from "@/lib/product-prices";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -30,6 +31,22 @@ function friendly(msg: string): string {
   return msg;
 }
 
+/** Storage place, carton and China price fields; `error` when a number is wrong. China price only for people who may see costs. */
+function readLogistics(form: FormData, canCost: boolean): { error: string } | { row: Record<string, unknown> } {
+  if (!form.has("units_per_carton")) return { row: {} };
+  const upc = decimal(form.get("units_per_carton"), 0), cbm = decimal(form.get("carton_cbm"), 4);
+  if (Number.isNaN(upc) || (upc !== null && (upc < 1 || upc > 100000)) || Number.isNaN(cbm) || (cbm !== null && (cbm <= 0 || cbm >= 100))) return { error: "logistics" };
+  const row: Record<string, unknown> = { bin_location: String(form.get("bin_location") ?? "").trim().replace(/\s+/g, " ").slice(0, 60) || null, units_per_carton: upc, carton_cbm: cbm };
+  if (canCost && form.has("china_price")) {
+    const cp = decimal(form.get("china_price"), 2);
+    if (Number.isNaN(cp)) return { error: "logistics" };
+    const cur = String(form.get("china_currency") ?? "CNY").toUpperCase();
+    row.china_price = cp;
+    row.china_currency = /^[A-Z]{3}$/.test(cur) ? cur : "CNY";
+  }
+  return { row };
+}
+
 function readProduct(form: FormData) {
   const unit = String(form.get("unit") ?? "piece");
   return {
@@ -55,7 +72,9 @@ export async function saveProductAction(form: FormData) {
   const fromWebsite = product.shopify_product_id !== null;
 
   const p = readProduct(form);
-  const update: Record<string, unknown> = { name_ar: p.name_ar, group_id: p.group_id, subgroup_id: p.subgroup_id, unit: p.unit, is_service: p.is_service, active: form.get("active") === "on",
+  const lg = readLogistics(form, canCost);
+  if ("error" in lg) return back(lg.error);
+  const update: Record<string, unknown> = { ...lg.row, name_ar: p.name_ar, group_id: p.group_id, subgroup_id: p.subgroup_id, unit: p.unit, is_service: p.is_service, active: form.get("active") === "on",
     ...(form.has("supplier_name") ? { supplier_name: p.supplier_name } : {}), ...(form.has("factory_name") ? { factory_name: p.factory_name } : {}) };
   if (!fromWebsite) {
     if (!p.name_en) return back("name");
@@ -155,6 +174,8 @@ export async function createProductAction(form: FormData) {
   const back = (err: string) => redirect(`/products/new?err=${encodeURIComponent(err)}`);
   const p = readProduct(form);
   if (!p.name_en && !p.name_ar) return back("name");
+  const lg = readLogistics(form, staff.perms.has("products.view_cost"));
+  if ("error" in lg) return back(lg.error);
   const sku = String(form.get("sku") ?? "").trim() || null;
   if (sku && !CODE.test(sku)) return back("sku");
   let price: string | null, cost: string | null, wholesale: string | null, salePrice: string | null;
@@ -200,7 +221,7 @@ export async function createProductAction(form: FormData) {
 
   const { data: created, error } = await db()
     .from("products")
-    .insert({ ...p, subgroup_id: subgroupId, name_en: p.name_en || p.name_ar, options, active: form.get("active") === "on" })
+    .insert({ ...p, ...lg.row, subgroup_id: subgroupId, name_en: p.name_en || p.name_ar, options, active: form.get("active") === "on" })
     .select("id")
     .single();
   if (error || !created) return back(error?.message ?? "error");

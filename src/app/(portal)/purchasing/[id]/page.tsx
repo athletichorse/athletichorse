@@ -8,6 +8,7 @@ import { PendingButton } from "@/components/PendingButton";
 import { ReceivePurchase } from "@/components/ReceivePurchase";
 import { setPurchaseStatusAction } from "@/app/actions/purchasing";
 import type { PoStatus } from "@/lib/purchasing";
+import { cartons, fill } from "@/lib/logistics";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,12 @@ export default async function PurchasePage({ params, searchParams }: { params: P
     docIds.length ? db().from("stock_docs").select("id, doc_no").in("id", docIds) : Promise.resolve({ data: [] as { id: string; doc_no: number }[] }),
   ]);
   const v = (vid: string) => vs?.find((x) => x.variant_id === vid);
+  const pids = [...new Set((vs ?? []).map((x) => x.product_id))];
+  const { data: packs } = pids.length ? await db().from("products").select("id, units_per_carton, carton_cbm, bin_location").in("id", pids) : { data: [] as { id: string; units_per_carton: number | null; carton_cbm: number | null; bin_location: string | null }[] };
+  const packOf = (vid: string) => packs?.find((x) => x.id === v(vid)?.product_id);
+  const lineCbm = (ls ?? []).map((l) => cartons(Number(l.qty), packOf(l.variant_id)));
+  const totCartons = lineCbm.reduce((a, x) => a + (x.cartons ?? 0), 0);
+  const totCbm = Math.round(lineCbm.reduce((a, x) => a + (x.cbm ?? 0), 0) * 1000) / 1000;
   const nameOf = (vid: string) => { const x = v(vid); return `${String((locale === "ar" && x?.name_ar) || x?.name_en || "")}${[x?.option1, x?.option2, x?.option3].filter(Boolean).length ? " · " + [x?.option1, x?.option2, x?.option3].filter(Boolean).join(" / ") : ""}`; };
   const status = o.status as PoStatus;
   const hasReceipts = (rcs ?? []).length > 0;
@@ -83,7 +90,7 @@ export default async function PurchasePage({ params, searchParams }: { params: P
       <section className="card mb-4 overflow-hidden p-0">
         <h2 className="card-title px-5 pt-5">{P.items} ({(ls ?? []).length})</h2>
         <div className="overflow-x-auto"><table className="table table-compact" data-export data-testid="po-lines">
-          <thead><tr><th>{P.item}</th><th>SKU</th><th>{P.qty}</th><th>{P.received}</th><th>{P.unitCost}</th><th>{P.lineTotal}</th></tr></thead>
+          <thead><tr><th>{P.item}</th><th>SKU</th><th>{P.qty}</th><th>{P.received}</th><th>{P.unitCost}</th><th>{P.lineTotal}</th><th>{P.cartonsTotal}</th><th>CBM</th></tr></thead>
           <tbody>
             {(ls ?? []).map((l) => (
               <tr key={l.line_no}>
@@ -93,11 +100,14 @@ export default async function PurchasePage({ params, searchParams }: { params: P
                 <td data-label={P.received} dir="ltr">{Number(l.received_qty)}</td>
                 <td data-label={P.unitCost} dir="ltr">{Number(l.unit_cost).toFixed(2)}</td>
                 <td data-label={P.lineTotal} dir="ltr" className="font-semibold">{(Number(l.qty) * Number(l.unit_cost)).toFixed(2)}</td>
+                <td data-label={P.cartonsTotal} dir="ltr">{lineCbm[(ls ?? []).indexOf(l)].cartons ?? "—"}</td>
+                <td data-label="CBM" dir="ltr">{lineCbm[(ls ?? []).indexOf(l)].cbm ?? "—"}</td>
               </tr>
             ))}
           </tbody>
         </table></div>
       </section>
+      <p className="mb-4 text-sm" data-testid="po-cbm-total">{P.cartonsTotal}: <b dir="ltr">{totCartons}</b> · {P.cbmTotal}: <b dir="ltr">{totCbm} CBM</b>{totCbm > 0 && <> · {fill(totCbm).map((c) => `${P.containers[c.key]} ${c.pct}%`).join(" · ")}</>}</p>
       {canReceive && left.length > 0 && <div className="no-print mb-4"><ReceivePurchase t={t} orderId={o.id} lines={left} /></div>}
       <section className="card overflow-hidden p-0">
         <h2 className="card-title px-5 pt-5">{P.receipts}</h2>

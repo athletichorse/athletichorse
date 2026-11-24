@@ -44,7 +44,7 @@ const has = (s: Staff, ...k: Parameters<Staff["perms"]["has"]>[0][]) => k.some((
 /** SQL errors that carry a code ("not_enough_stock: 2 available") come back as just the code. */
 const sqlError = (m: string) => {
   const msg = m.replace(/^.*?ERROR:\s*/, "");
-  const code = msg.match(/^(not_enough_stock|credit_limit|quote_not_found|expense_type_required|customer_required|bad_amount)\b/);
+  const code = msg.match(/^(not_enough_stock|credit_limit|quote_not_found|expense_type_required|customer_required|supplier_required|bad_amount)\b/);
   return code ? code[1] : msg;
 };
 
@@ -84,7 +84,7 @@ export async function closeShiftAction(input: { shiftId: string; counted: string
 
 export type DrawerKind = "cash_out" | "cash_in" | "expense" | "customer_payment";
 /** Drawer movements: cash out/in, expenses (with a type) and payments received from customers. */
-export async function cashMovementAction(input: { clientId: string; shiftId: string; kind: DrawerKind; amount: string; reason: string; expenseTypeId?: string; customerId?: string; method?: string; approverUsername?: string; approverPin?: string }): Promise<PosResult> {
+export async function cashMovementAction(input: { clientId: string; shiftId: string; kind: DrawerKind; amount: string; reason: string; expenseTypeId?: string; customerId?: string; supplierId?: string; method?: string; approverUsername?: string; approverPin?: string }): Promise<PosResult> {
   const s = await requireStaff();
   const kinds: DrawerKind[] = ["cash_out", "cash_in", "expense", "customer_payment"];
   if (!kinds.includes(input.kind)) return { ok: false, error: "bad_request" };
@@ -107,11 +107,12 @@ export async function cashMovementAction(input: { clientId: string; shiftId: str
   const { data, error } = await db().rpc("post_cash_movement2", {
     p: { client_id: input.clientId, shift_id: input.shiftId, kind: input.kind, amount, reason: String(input.reason ?? "").slice(0, 300), user_id: s.id,
          approved_by: approver, expense_type_id: input.kind === "expense" ? input.expenseTypeId : null,
-         customer_id: input.kind === "customer_payment" ? input.customerId : null, method: input.kind === "customer_payment" ? String(input.method ?? "cash") : null },
+         customer_id: input.kind === "customer_payment" ? input.customerId : null, supplier_id: input.kind === "expense" && isId(input.supplierId) ? input.supplierId : null, method: input.kind === "customer_payment" ? String(input.method ?? "cash") : null },
   });
   if (error) return { ok: false, error: sqlError(error.message) };
-  if (!data.duplicate) await audit(s.id, `pos.${input.kind}`, "shift", input.shiftId, { amount, approved_by: approver, customer: input.customerId ?? null });
+  if (!data.duplicate) await audit(s.id, `pos.${input.kind}`, "shift", input.shiftId, { amount, approved_by: approver, customer: input.customerId ?? null, supplier: input.supplierId ?? null });
   revalidatePath("/customers");
+  if (input.supplierId) revalidatePath(`/purchasing/suppliers/${input.supplierId}`);
   return { ok: true };
 }
 
@@ -614,10 +615,12 @@ export async function shiftExpensesAction(shiftId: string, locale: "ar" | "en"):
   if (!isId(shiftId)) return { ok: false, error: "bad_request" };
   const { data: shift } = await db().from("pos_shifts").select("location_id").eq("id", shiftId).maybeSingle();
   if (!shift || !canUseLocation(s, shift.location_id)) return { ok: false, error: "location_not_allowed" };
-  const { data: rows } = await db().from("drawer_entries").select("id, created_at, amount, reason, expense_type_id, created_by")
+  const { data: rows } = await db().from("drawer_entries").select("id, created_at, amount, reason, expense_type_id, created_by, supplier_id")
     .eq("shift_id", shiftId).eq("kind", "expense").order("created_at", { ascending: false }).limit(200);
   const typeIds = [...new Set((rows ?? []).map((r) => r.expense_type_id).filter(Boolean))] as string[];
   const userIds = [...new Set((rows ?? []).map((r) => r.created_by))];
+  const supIds = [...new Set((rows ?? []).map((r) => r.supplier_id).filter(Boolean))] as string[];
+  const { data: sups } = supIds.length ? await db().from("suppliers").select("id, name").in("id", supIds) : { data: [] as { id: string; name: string }[] };
   const [{ data: types }, { data: people }] = await Promise.all([
     typeIds.length ? db().from("expense_types").select("id, name_en, name_ar").in("id", typeIds) : Promise.resolve({ data: [] as { id: string; name_en: string; name_ar: string }[] }),
     userIds.length ? db().from("profiles").select("id, full_name").in("id", userIds) : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
@@ -626,7 +629,8 @@ export async function shiftExpensesAction(shiftId: string, locale: "ar" | "en"):
   const items = (rows ?? []).map((r) => {
     total += toHalalas(String(r.amount));
     const ty = types?.find((x) => x.id === r.expense_type_id);
-    return { id: r.id, at: r.created_at, type: ty ? (locale === "ar" && ty.name_ar) || ty.name_en : "", amount: fmt(r.amount), reason: r.reason ?? "", by: people?.find((x) => x.id === r.created_by)?.full_name ?? "" };
+    const sup = sups?.find((x) => x.id === r.supplier_id)?.name;
+    return { id: r.id, at: r.created_at, type: `${ty ? (locale === "ar" && ty.name_ar) || ty.name_en : ""}${sup ? ` · ${sup}` : ""}`, amount: fmt(r.amount), reason: r.reason ?? "", by: people?.find((x) => x.id === r.created_by)?.full_name ?? "" };
   });
   return { ok: true, items, total: formatDecimal(total) };
 }

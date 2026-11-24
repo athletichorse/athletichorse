@@ -213,10 +213,16 @@ await page.fill('input[name="name_ar"]', "منتج تجريبي");
 const firstSku = page.locator('input[name^="sku:"]').first();
 await firstSku.fill("E2E-SKU-001");
 await page.locator('input[name^="cost:"]').first().fill("12.5");
+// storage & buying: place in the store, pieces per carton, carton CBM, China price
+await page.fill("#lg-bin", "A-03-2");
+await page.fill("#lg-upc", "10");
+await page.fill("#lg-cbm", "0.05");
+await page.fill("#lg-cp", "18");
 await Promise.all([page.waitForURL(/ok=1|err=/, { waitUntil: "commit", timeout: 30000 }), page.click("text=Save changes")]);
 if (page.url().includes("err=")) fail("product edit", decodeURIComponent(page.url().split("err=")[1]));
 else if ((await page.locator('input[name^="sku:"]').first().inputValue()) !== "E2E-SKU-001") fail("product edit", "SKU not saved");
-else ok("edit a website product: Arabic name, SKU, cost");
+else if ((await page.inputValue("#lg-bin")) !== "A-03-2" || (await page.inputValue("#lg-upc")) !== "10" || (await page.inputValue("#lg-cbm")) !== "0.05" || (await page.inputValue("#lg-cp")) !== "18") fail("product edit", "storage & buying fields not saved");
+else ok("edit a website product: Arabic name, SKU, cost, shelf A-03-2, 10 per carton, 0.05 CBM, China price 18");
 
 // new product + groups
 where = "new product";
@@ -628,6 +634,12 @@ await page.goto(BASE + "/company/backup", { waitUntil: "networkidle" });
 
 // purchasing: supplier (EGP) → purchase order → receive part of it → stock doc, average cost, owed → pay
 where = "purchasing";
+// exchange rate for the expected purchase price (China price × rate)
+await page.goto(BASE + "/purchasing", { waitUntil: "networkidle" });
+await page.evaluate(() => document.querySelector("[data-testid=fx-rates]")?.setAttribute("open", ""));
+await page.fill("#fx-CNY", "0.52");
+await Promise.all([page.waitForURL(/ok=fx|err=/, { timeout: 20000 }), page.locator('[data-testid=fx-rates] button:text-is("Save")').click()]);
+if (!page.url().includes("ok=fx")) fail("purchasing", "exchange rates not saved");
 await page.goto(BASE + "/purchasing/suppliers", { waitUntil: "networkidle" });
 {
   await page.evaluate(() => document.querySelector("details:has([data-testid=new-supplier])")?.setAttribute("open", ""));
@@ -645,6 +657,15 @@ await page.goto(BASE + "/purchasing/suppliers", { waitUntil: "networkidle" });
   await box.fill("E2E-SKU-001"); await box.press("Enter");
   await page.locator('input[aria-label="Qty E2E-SKU-001"]').fill("5");
   await page.locator('input[aria-label="Unit cost (EGP) E2E-SKU-001"]').fill("500");
+  await page.waitForFunction(() => /Cartons: 1/.test(document.querySelector("[data-testid=po-cbm]")?.textContent ?? ""), null, { timeout: 10000 }).catch(() => {});
+  const cbmTxt = (await page.locator("[data-testid=po-cbm]").innerText().catch(() => "")).replace(/\s+/g, " ");
+  if (!/Cartons: 1/.test(cbmTxt) || !/0\.05 CBM/.test(cbmTxt) || !/20 ft container \(33 CBM\) 0\.2%/.test(cbmTxt)) fail("purchasing", `cartons / CBM / container: ${cbmTxt}`);
+  else ok("purchase order: 5 pieces = 1 carton, 0.05 CBM, 0.2% of a 20 ft container");
+  await page.waitForFunction(() => /46\.80 SAR/.test(document.querySelector("[data-testid=po-cbm]")?.textContent ?? ""), null, { timeout: 10000 }).catch(() => {});
+  const packTxt = await page.locator("[data-testid=line-pack]").first().innerText().catch(() => "");
+  const cbm2 = (await page.locator("[data-testid=po-cbm]").innerText().catch(() => "")).replace(/\s+/g, " ");
+  if (!/Expected purchase price: 9\.36 SAR/.test(packTxt) || !/Expected \(China price × rate\): 46\.80 SAR/.test(cbm2)) fail("purchasing", `expected price (18 CNY × 0.52): ${packTxt} | ${cbm2}`);
+  else ok("expected purchase price: 18 CNY × 0.52 = 9.36 SAR per piece, 46.80 for 5 (a guide, not the cost)");
   const poTot = await page.locator("[data-testid=po-total]").innerText().catch(() => "");
   if (!/2500\.00 EGP/.test(poTot) || !/200\.00 SAR/.test(poTot)) fail("purchasing", `order total preview: ${poTot}`);
   await Promise.all([page.waitForURL(/\/purchasing\/[0-9a-f-]{36}\?ok=1/, { timeout: 20000 }), page.click("[data-testid=po-save-ordered]")]);
@@ -947,6 +968,16 @@ await page.waitForFunction(() => /taxi e2e/.test(document.querySelector("[data-t
 const exTxt = await exv.innerText();
 if (!/taxi e2e/.test(exTxt) || !/Total:\s*5\.00/.test(exTxt)) fail("pos", `expenses: ${exTxt.replace(/\s+/g, " ").slice(0, 200)}`);
 else ok("expense recorded from the Expenses screen; listed with this shift's total 5.00");
+// pay a supplier from the drawer: type "Supplier payment" → choose the supplier → it is on their account too
+await exv.locator("select").first().selectOption({ label: "Supplier payment" });
+await exv.locator("[data-testid=expense-supplier]").selectOption({ label: "Nile Supplies E2E" });
+await exv.locator("input[inputmode=decimal]").fill("50");
+await exv.locator("input:not([inputmode])").first().fill("cash to driver e2e");
+await exv.locator('button:text-is("Save expense")').click();
+await page.waitForFunction(() => /Total:\s*55\.00/.test(document.querySelector("[data-testid=expenses]")?.textContent ?? ""), null, { timeout: 15000 }).catch(() => {});
+const supTxt = await exv.innerText();
+if (!/Supplier payment · Nile Supplies E2E/.test(supTxt) || !/Total:\s*55\.00/.test(supTxt)) fail("pos", `supplier payment from the drawer: ${supTxt.replace(/\s+/g, " ").slice(0, 220)}`);
+else ok("cashier pays a supplier from the drawer: listed with the supplier, drawer total 55.00");
 
 // cash out, close shift
 await page.click('button:text-is("Drawer")'); // drawer panel: Cash out is the first choice
@@ -956,12 +987,12 @@ await page.click('section >> button:text-is("Save")');
 await page.waitForSelector(".alert-ok, .alert-err", { timeout: 15000 });
 ok("cash out recorded");
 await page.click('button:text-is("Close shift")');
-// expected: 100 + 70 + 90 (VIP) + 35 (quotation, paid cash) − 35 (refund) − 5 (expense) − 10 (cash out) = 245
-await page.locator('input[placeholder*="Counted cash"]').fill("245");
+// expected: 100 + 70 + 90 (VIP) + 35 (quotation, paid cash) − 35 (refund) − 5 (expense) − 50 (paid to a supplier) − 10 (cash out) = 195
+await page.locator('input[placeholder*="Counted cash"]').fill("195");
 await page.locator('section >> button:text-is("Close shift")').click();
 await page.waitForSelector("text=Shift closed", { timeout: 15000 });
 const closeTxt = await page.locator(".alert-ok").first().innerText();
-if (!/Expected cash 245\.00/.test(closeTxt) || !/Difference 0\.00/.test(closeTxt)) fail("pos", `close: ${closeTxt}`); else ok("close shift: expected 245.00 (after the expense) = counted, difference 0.00");
+if (!/Expected cash 195\.00/.test(closeTxt) || !/Difference 0\.00/.test(closeTxt)) fail("pos", `close: ${closeTxt}`); else ok("close shift: expected 195.00 (after the expense and the supplier payment) = counted, difference 0.00");
 
 // sales list
 await page.goto(BASE + "/sales", { waitUntil: "networkidle" });
@@ -1041,8 +1072,8 @@ await page.goto(BASE + "/sales/reports", { waitUntil: "networkidle" });
   else ok("B2B report: the delivered order still owes 210.50");
   await page.goto(BASE + "/sales/reports/purchases", { waitUntil: "networkidle" });
   const pr = (await page.locator("[data-testid=purchases-by-supplier]").innerText().catch(() => "")).replace(/\s+/g, " ");
-  if (!/Nile Supplies E2E/.test(pr) || !/120\.00/.test(pr) || !/80\.00/.test(pr)) fail("reports", `purchases report: ${pr.slice(0, 200)}`);
-  else ok("purchases report: Nile Supplies — 120.00 received, 80.00 still owed");
+  if (!/Nile Supplies E2E/.test(pr) || !/120\.00/.test(pr) || !/30\.00/.test(pr)) fail("reports", `purchases report: ${pr.slice(0, 200)}`);
+  else ok("purchases report: Nile Supplies — 120.00 received, 40 + 50 (paid at the till) paid, 30.00 still owed");
 }
 
 // ---------------------------------------------------------------- 2. every page × desktop/phone × en/ar

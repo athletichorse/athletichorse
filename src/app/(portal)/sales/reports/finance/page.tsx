@@ -28,7 +28,8 @@ export default async function FinanceReport({ searchParams }: { searchParams: Pr
     allRows<{ received_on: string; amount_sar: string }>((a, b) => db().from("purchase_receipts").select("received_on, amount_sar").gte("received_on", `${year}-01-01`).lte("received_on", `${year}-12-31`).range(a, b)),
     allRows<{ month: string; net: string }>((a, b) => db().from("payroll_lines").select("month, net").gte("month", `${year}-01-01`).lte("month", `${year}-12-01`).range(a, b)),
     allRows<{ paid_on: string; amount: string; expense_type_id: string | null }>((a, b) => db().from("expense_payments").select("paid_on, amount, expense_type_id").gte("paid_on", `${year}-01-01`).lte("paid_on", `${year}-12-31`).range(a, b)),
-    allRows<{ created_at: string; amount: string; expense_type_id: string | null }>((a, b) => db().from("drawer_entries").select("created_at, amount, expense_type_id").eq("kind", "expense").gte("created_at", fromIso).lt("created_at", toIso).range(a, b)),
+    // supplier payments from the drawer are not a cost here (the goods received already are)
+    allRows<{ created_at: string; amount: string; expense_type_id: string | null }>((a, b) => db().from("drawer_entries").select("created_at, amount, expense_type_id").eq("kind", "expense").is("supplier_id", null).gte("created_at", fromIso).lt("created_at", toIso).range(a, b)),
     db().from("expense_types").select("id, name_en, name_ar"),
     db().from("recurring_expenses").select("id, frequency, due_day, start_on, end_on, active, amount"),
   ]);

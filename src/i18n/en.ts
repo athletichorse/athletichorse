@@ -137,6 +137,7 @@ const en: Dict = {
     marketing: "Marketing",
   },
   products: {
+    logistics: { expected: "Expected purchase price", expectedHint: "China price × exchange rate; shipping, customs and other fees are not included, so it is not the real cost.", noRate: "Add the exchange rate in Purchases → Exchange rates to see the expected price.", expectedTotal: "Expected (China price × rate)", title: "Storage & buying", bin: "Place in the store (shelf / bin)", perCarton: "Pieces per carton", cbm: "Carton size (CBM)", cbmHint: "Length × width × height in metres, e.g. 0.6 × 0.4 × 0.35 = 0.084", chinaPrice: "China price (per piece)", currency: "Currency", bad: "Check pieces per carton (whole number), CBM (more than 0) and the China price." },
     newForm: {
       supplier: "Supplier name", factory: "Factory name", listHint: "Choose from the list or type a new name.",
       nameRequired: "Type the item's name (Arabic or English).",
@@ -437,6 +438,8 @@ const en: Dict = {
     duplicate: "A price level with this name already exists.",
   },
   purchasing: {
+    fxTitle: "Exchange rates to SAR", fxHint: "Used for the expected purchase price (China price × rate). Update them when the rate changes.",
+    cartons: "cartons", cartonsTotal: "Cartons", cbmTotal: "Total size", containers: { "20ft": "20 ft container (33 CBM)", "40ft": "40 ft container (67 CBM)", "40hq": "40 ft high cube (76 CBM)" }, missingPack: "{n} item(s) have no pieces-per-carton or CBM yet: add them on the product page.",
     find: "Search", title: "Purchases", subtitle: "Purchase orders to suppliers, receiving into the stores, and what you owe",
     suppliers: "Suppliers", newOrder: "New purchase order", editOrder: "Change purchase order", order: "Purchase order",
     supplier: "Supplier", factory: "Factory", store: "Receive into", currency: "Currency", rate: "Rate to SAR", rateHint: "1 {cur} = ? SAR",
@@ -616,7 +619,7 @@ const en: Dict = {
     none: "Nothing recorded yet.",
   },
   pos: {
-    expenses: { tile: "Expenses", title: "Expenses", type: "Expense type", amount: "Amount (SAR)", note: "Note (what was bought, receipt no.)", save: "Save expense", saved: "Expense saved", thisShift: "This shift's expenses", total: "Total", none: "No expenses in this shift yet.", by: "By", time: "Time", waiting: "Saved on this device, waiting for internet", manageTypes: "Expense types", typesTitle: "Expense types", typesSubtitle: "The list the cashier chooses from when recording an expense.", addType: "Add an expense type", nameEn: "Name (English)", nameAr: "Name (Arabic)", sort: "Order", duplicate: "An expense type with this name already exists.", nameRequired: "Type a name." },
+    expenses: { supplier: "Supplier", pickSupplier: "Choose the supplier", noSuppliers: "No suppliers yet — add them in Purchases → Suppliers.", supplierPaid: "paid on the account of",  tile: "Expenses", title: "Expenses", type: "Expense type", amount: "Amount (SAR)", note: "Note (what was bought, receipt no.)", save: "Save expense", saved: "Expense saved", thisShift: "This shift's expenses", total: "Total", none: "No expenses in this shift yet.", by: "By", time: "Time", waiting: "Saved on this device, waiting for internet", manageTypes: "Expense types", typesTitle: "Expense types", typesSubtitle: "The list the cashier chooses from when recording an expense.", addType: "Add an expense type", nameEn: "Name (English)", nameAr: "Name (Arabic)", sort: "Order", duplicate: "An expense type with this name already exists.", nameRequired: "Type a name." },
     colSearch: { supplier: "Supplier", factory: "Factory", thisPage: "Filters the rows on this page; use the search box above for the whole log.", showing: "Showing {n} of {total} rows", open: "Search by columns", title: "Item finder", code: "Code", name: "Item name", options: "Colour / size", group: "Group", price: "Sale price", cost: "Cost", stock: "Stock here", showNoStock: "Show items with no stock", askQty: "Ask the quantity after each item", firstOf: "First {n} of {total} items", narrow: "add a filter to narrow them down", none: "No items match.", close: "Close the finder", offline: "No internet: searching the price list on this device (code, name, colour/size, price).", add: "Add", qty: "Quantity", match: "Match", ops: { starts: "Starts with (a*)", ends: "Ends with (*a)", contains: "Contains (*a*)", eq: "Equals (=)", gt: "Greater than (>)", gte: "Greater or equal (≥)", lt: "Less than (<)", lte: "Less or equal (≤)" } },
     tiles: { sell: "Point of sale", desk: "Quotation", collect: "Collect payment", returns: "Return", cash: "Drawer", close: "Close shift", expenses: "Expenses", back: "All", choose: "Choose" },
     extra: {
@@ -732,6 +735,7 @@ const en: Dict = {
     errors: {
       credit_limit: "More than the customer's credit limit allows (or no credit limit is set for this customer).",
       expense_type_required: "Choose the expense type.",
+      supplier_required: "Choose the supplier.",
       forbidden: "You don't have permission for this.",
       location_not_allowed: "You can't use this branch.",
       bad_amount: "Check the amount.",

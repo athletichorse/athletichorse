@@ -11,9 +11,11 @@ export type EditLine = { variantId: string; name: string; options: string; sku: 
  * Item lines for purchase orders (qty × unit cost) and B2B orders (qty × price, discount %).
  * Scan / type a code or name, or use the item finder; quantities and prices are typed in the table.
  */
-export function LinesEditor({ t, locale, mode, lines, setLines, locationId, priceFor, labels }: {
+export function LinesEditor({ t, locale, mode, lines, setLines, locationId, priceFor, labels, extra }: {
   t: Dict; locale: Locale; mode: "po" | "b2b"; lines: EditLine[]; setLines: (f: (l: EditLine[]) => EditLine[]) => void;
   locationId: string | null; priceFor?: (h: VariantHit) => string;
+  /** small note under an item's name (e.g. cartons and CBM) */
+  extra?: (l: EditLine) => React.ReactNode;
   labels: { item: string; qty: string; price: string; discount?: string; lineTotal: string };
 }) {
   const [term, setTerm] = useState("");
@@ -72,7 +74,7 @@ export function LinesEditor({ t, locale, mode, lines, setLines, locationId, pric
           <tbody>
             {lines.map((l, i) => (
               <tr key={l.variantId}>
-                <td className="cell-title">{l.name}{l.options && <span className="text-xs text-gray-500"> · {l.options}</span>}<div className="font-mono text-xs text-gray-400" dir="ltr">{l.sku ?? ""}</div></td>
+                <td className="cell-title">{l.name}{l.options && <span className="text-xs text-gray-500"> · {l.options}</span>}<div className="font-mono text-xs text-gray-400" dir="ltr">{l.sku ?? ""}</div>{extra?.(l)}</td>
                 <td data-label={labels.qty}><input className="input w-24" dir="ltr" inputMode="decimal" value={l.qty} aria-label={`${labels.qty} ${l.sku ?? l.name}`} onChange={(e) => set(i, { qty: e.target.value })} /></td>
                 <td data-label={labels.price}><input className="input w-28" dir="ltr" inputMode="decimal" value={l.price} aria-label={`${labels.price} ${l.sku ?? l.name}`} onChange={(e) => set(i, { price: e.target.value })} /></td>
                 {mode === "b2b" && <td data-label={labels.discount}><input className="input w-20" dir="ltr" inputMode="decimal" value={l.discount} placeholder="0" aria-label={`${labels.discount} ${l.sku ?? l.name}`} onChange={(e) => set(i, { discount: e.target.value })} /></td>}

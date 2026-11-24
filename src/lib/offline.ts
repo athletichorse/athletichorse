@@ -208,7 +208,7 @@ export function searchCustomersLocal(items: CustomerItem[], term: string, normal
 
 // ------------------------------------------------------------ other offline work (drawer entries, desk quotations)
 export type QueuedOp =
-  | { kind: "drawer"; clientId: string; shiftId: string; createdAt: string; label: string; payload: { kind: "cash_out" | "cash_in" | "expense" | "customer_payment"; amount: string; reason: string; expenseTypeId?: string; customerId?: string; method?: string }; error?: string }
+  | { kind: "drawer"; clientId: string; shiftId: string; createdAt: string; label: string; payload: { kind: "cash_out" | "cash_in" | "expense" | "customer_payment"; amount: string; reason: string; expenseTypeId?: string; customerId?: string; supplierId?: string; method?: string }; error?: string }
   | { kind: "quote"; clientId: string; shiftId: string; createdAt: string; label: string; tempNo: string; payload: { locationId: string; salespersonId?: string; customerId?: string; lines: { variantId: string; qty: string; unitPrice: string; discount: string }[] }; error?: string }
   | { kind: "return"; clientId: string; shiftId: string; createdAt: string; label: string; tempNo: string; total: string;
       payload: { locationId: string; originalInvoiceId?: string; customerId?: string; reason: string; refundMethod: string; lines: { lineNo?: number; variantId?: string; qty: string }[] };

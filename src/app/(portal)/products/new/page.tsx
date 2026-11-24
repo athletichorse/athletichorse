@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { PageHeader } from "@/components/PageHeader";
-import { productError, SupplierFields, UNITS, UNIT_AR, type Group } from "@/components/ProductFields";
+import { LogisticsFields, productError, SupplierFields, UNITS, UNIT_AR, type Group } from "@/components/ProductFields";
 import { supplierNames } from "@/lib/supplier-names";
 import { createProductAction } from "@/app/actions/products";
 
@@ -52,6 +52,7 @@ export default async function NewProductPage({ searchParams }: { searchParams: P
               {UNITS.map((u) => <option key={u} value={u}>{locale === "ar" ? UNIT_AR[u] : u}</option>)}
             </select></div>
           <SupplierFields t={t} suppliers={names.suppliers} factories={names.factories} />
+          <LogisticsFields t={t} seeCost={me.perms.has("products.view_cost")} />
           <div className="flex flex-wrap gap-6 sm:col-span-3">
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="active" defaultChecked className="h-4 w-4 accent-[var(--brand)]" />{N.active}</label>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_service" className="h-4 w-4 accent-[var(--brand)]" />{N.service}</label>
