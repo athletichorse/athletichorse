@@ -10,7 +10,7 @@ import { PendingButton } from "@/components/PendingButton";
 
 export const dynamic = "force-dynamic";
 
-const TONE: Record<PoStatus, string> = { draft: "badge-gray", ordered: "badge-blue", partial: "badge bg-amber-50 text-amber-800", received: "badge-green", cancelled: "badge bg-red-50 text-red-700" };
+const TONE: Record<PoStatus, string> = { draft: "badge-gray", ordered: "badge-blue", shipped: "badge bg-indigo-50 text-indigo-800", partial: "badge bg-amber-50 text-amber-800", received: "badge-green", cancelled: "badge bg-red-50 text-red-700" };
 
 /** Purchases: every purchase order, by status, with what is still to arrive. */
 export default async function PurchasesPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string; ok?: string; err?: string }> }) {
@@ -21,7 +21,7 @@ export default async function PurchasesPage({ searchParams }: { searchParams: Pr
   const status = (PO_STATUSES as readonly string[]).includes(sp.status ?? "") ? (sp.status as PoStatus) : null;
   const q = String(sp.q ?? "").trim().slice(0, 60);
   const [{ data: orders }, { data: sups }, { data: locs }] = await Promise.all([
-    db().from("purchase_orders").select("id, po_no, supplier_id, location_id, currency, rate, status, expected_on, supplier_ref, total, created_at").order("po_no", { ascending: false }).limit(1000),
+    db().from("purchase_orders").select("id, po_no, kind, title, supplier_id, location_id, currency, rate, status, expected_on, supplier_ref, total, created_at").order("po_no", { ascending: false }).limit(1000),
     db().from("suppliers").select("id, name"),
     db().from("locations").select("id, name_en, name_ar"),
   ]);
@@ -69,7 +69,7 @@ export default async function PurchasesPage({ searchParams }: { searchParams: Pr
             <tbody>
               {rows.map((o) => (
                 <tr key={o.id} data-po={o.po_no}>
-                  <td className="cell-title"><Link href={`/purchasing/${o.id}`} className="font-medium underline" dir="ltr" data-testid="po-link">PO-{o.po_no}</Link><div className="text-xs text-gray-400">{new Date(o.created_at).toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" })}</div></td>
+                  <td className="cell-title"><Link href={`/purchasing/${o.id}`} className="font-medium underline" dir="ltr" data-testid="po-link">PO-{o.po_no}</Link>{o.kind === "china" && <span className="badge bg-red-50 text-red-800 ms-1">{t.cn.title}</span>}{o.title && <div className="text-xs">{o.title}</div>}<div className="text-xs text-gray-400">{new Date(o.created_at).toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" })}</div></td>
                   <td data-label={P.supplier}>{supName.get(o.supplier_id) ?? "—"}{o.supplier_ref && <div className="text-xs text-gray-400" dir="ltr">{o.supplier_ref}</div>}</td>
                   <td data-label={P.store}>{locName.get(o.location_id) ?? "—"}</td>
                   <td data-label={P.status}><span className={TONE[o.status as PoStatus]}>{P.statuses[o.status as PoStatus]}</span></td>

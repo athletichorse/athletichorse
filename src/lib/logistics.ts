@@ -1,8 +1,8 @@
-/** Cartons, CBM and container fill for purchase orders. */
+/** Cartons, CBM and container fill for purchase orders (usable CBM per container, as the owner counts them). */
 export const CONTAINERS = [
-  { key: "20ft", cbm: 33 },
-  { key: "40ft", cbm: 67 },
-  { key: "40hq", cbm: 76 },
+  { key: "20ft", cbm: 28 },
+  { key: "40ft", cbm: 58 },
+  { key: "40hq", cbm: 68 },
 ] as const;
 
 export type Pack = { units_per_carton: number | null; carton_cbm: number | string | null };

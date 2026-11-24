@@ -44,8 +44,9 @@ export default async function PurchasePage({ params, searchParams }: { params: P
   const nameOf = (vid: string) => { const x = v(vid); return `${String((locale === "ar" && x?.name_ar) || x?.name_en || "")}${[x?.option1, x?.option2, x?.option3].filter(Boolean).length ? " · " + [x?.option1, x?.option2, x?.option3].filter(Boolean).join(" / ") : ""}`; };
   const status = o.status as PoStatus;
   const hasReceipts = (rcs ?? []).length > 0;
-  const canEdit = me.perms.has("purchasing.edit") && ["draft", "ordered"].includes(status) && !hasReceipts;
-  const canReceive = me.perms.has("purchasing.receive") && ["draft", "ordered", "partial"].includes(status) && (me.locations === "all" || me.locations.includes(o.location_id));
+  const china = o.kind === "china";
+  const canEdit = me.perms.has("purchasing.edit") && ["draft", "ordered"].includes(status) && !hasReceipts && !china;
+  const canReceive = me.perms.has("purchasing.receive") && ["draft", "ordered", "shipped", "partial"].includes(status) && (me.locations === "all" || me.locations.includes(o.location_id));
   const left = (ls ?? []).map((l) => ({ lineNo: l.line_no, name: nameOf(l.variant_id), sku: v(l.variant_id)?.sku ?? null, left: Number(l.qty) - Number(l.received_qty) })).filter((l) => l.left > 0);
   const err = sp.err ? (P.errors as Record<string, string>)[sp.err] ?? sp.err : null;
   const row = (label: string, value: React.ReactNode) => (
@@ -53,9 +54,10 @@ export default async function PurchasePage({ params, searchParams }: { params: P
   );
   return (
     <>
-      <PageHeader title={`${P.order} PO-${o.po_no}`} subtitle={`${sup?.name ?? ""} · ${P.statuses[status]}`} t={t} filename={`po-${o.po_no}`}>
+      <PageHeader title={`${P.order} PO-${o.po_no}${o.title ? ` · ${o.title}` : ""}`} subtitle={`${sup?.name ?? ""} · ${P.statuses[status]}`} t={t} filename={`po-${o.po_no}`}>
         <div className="no-print flex flex-wrap gap-2">
           <Link href="/purchasing" className="btn-ghost">← {P.back}</Link>
+          {china && <Link href={`/purchasing/china/${o.id}`} className="btn-ghost" data-testid="po-open-china">{t.cn.title}{o.title ? ` · ${o.title}` : ""}</Link>}
           {canEdit && <Link href={`/purchasing/new?id=${o.id}`} className="btn-ghost">{P.edit}</Link>}
           {canEdit && status === "draft" && (
             <form action={setPurchaseStatusAction}><input type="hidden" name="id" value={o.id} /><input type="hidden" name="status" value="ordered" /><PendingButton label={P.markOrdered} pendingLabel={P.saving} /></form>

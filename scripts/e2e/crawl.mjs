@@ -45,7 +45,7 @@ async function checkPage(page, path, label) {
 }
 
 const browser = await chromium.launch();
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/reports/sales", "/sales/reports/analysis", "/sales/reports/invoices", "/sales/reports/treasury", "/sales/reports/b2b", "/sales/reports/purchases", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/purchasing/expenses", "/purchasing/expenses/plan", "/sales/reports/finance", "/marketing", "/marketing/campaigns", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/reports/sales", "/sales/reports/analysis", "/sales/reports/invoices", "/sales/reports/treasury", "/sales/reports/b2b", "/sales/reports/purchases", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/purchasing/china", "/purchasing/china/new", "/purchasing/expenses", "/purchasing/expenses/plan", "/sales/reports/finance", "/marketing", "/marketing/campaigns", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
 
 // ---------------------------------------------------------------- 1. setup + flows (desktop, English)
 console.log("\n== Setup and main flows (desktop, English)");
@@ -659,7 +659,7 @@ await page.goto(BASE + "/purchasing/suppliers", { waitUntil: "networkidle" });
   await page.locator('input[aria-label="Unit cost (EGP) E2E-SKU-001"]').fill("500");
   await page.waitForFunction(() => /Cartons: 1/.test(document.querySelector("[data-testid=po-cbm]")?.textContent ?? ""), null, { timeout: 10000 }).catch(() => {});
   const cbmTxt = (await page.locator("[data-testid=po-cbm]").innerText().catch(() => "")).replace(/\s+/g, " ");
-  if (!/Cartons: 1/.test(cbmTxt) || !/0\.05 CBM/.test(cbmTxt) || !/20 ft container \(33 CBM\) 0\.2%/.test(cbmTxt)) fail("purchasing", `cartons / CBM / container: ${cbmTxt}`);
+  if (!/Cartons: 1/.test(cbmTxt) || !/0\.05 CBM/.test(cbmTxt) || !/20 ft container \(28 CBM\) 0\.2%/.test(cbmTxt)) fail("purchasing", `cartons / CBM / container: ${cbmTxt}`);
   else ok("purchase order: 5 pieces = 1 carton, 0.05 CBM, 0.2% of a 20 ft container");
   await page.waitForFunction(() => /46\.80 SAR/.test(document.querySelector("[data-testid=po-cbm]")?.textContent ?? ""), null, { timeout: 10000 }).catch(() => {});
   const packTxt = await page.locator("[data-testid=line-pack]").first().innerText().catch(() => "");
@@ -692,6 +692,36 @@ await page.goto(BASE + "/purchasing/suppliers", { waitUntil: "networkidle" });
   const after = await page.locator("main").innerText();
   if (!/We owe: 1000\.00 EGP/.test(after) || !/We owe \(SAR\): 80\.00/.test(after)) fail("purchasing", `after paying 500 EGP: ${after.slice(0, 200)}`);
   else ok("pay the supplier 500 EGP: statement shows the payment, 1000 EGP (80 SAR) still owed");
+}
+
+// China (container) order: supplier sheet → auto-linked line + unlinked line → fees spread → landed cost → purchase order
+where = "china";
+await page.goto(BASE + "/purchasing/china/new", { waitUntil: "networkidle" });
+{
+  const csv = `${OUT}/china-sheet.csv`;
+  fs.writeFileSync(csv, "PROFORMA INVOICE\nItem No,Description,CTNS,PCS/CTN,Unit Price,CBM\nE2E-SKU-001,Rope test,2,10,18,0.05\nJC-9,涤纶排网 白色,3,50,10,0.2\nTOTAL,,5,,,\n");
+  await page.fill("#cn-title", "Dec container E2E");
+  await page.locator("[data-testid=cn-sheet]").setInputFiles(csv);
+  await page.waitForSelector("text=/2 lines added from the sheet \\(1 linked to items\\)/", { timeout: 15000 }).catch(() => fail("china", "sheet upload message missing"));
+  if ((await page.inputValue("#cn-rate")) !== "0.52") fail("china", `order rate should start from the CNY exchange rate (0.52), is ${await page.inputValue("#cn-rate")}`);
+  await page.fill("#cn-ship", "100");
+  await page.fill("#cn-cust", "30");
+  await page.click("[data-testid=cn-s-shipped]");
+  const sum = (await page.locator("[data-testid=cn-summary]").innerText()).replace(/\s+/g, " ");
+  const row1 = (await page.locator('[data-testid=cn-lines] tr[data-code="E2E-SKU-001"]').innerText()).replace(/\s+/g, " ");
+  if (!/1,097\.2 SAR/.test(sum) || !/0\.7 \/ 58 CBM/.test(sum)) fail("china", `summary: ${sum}`);
+  else if (!/10\.36/.test(row1) || !/✓ E2E-SKU-001/.test(row1)) fail("china", `landed cost of the linked line: ${row1}`);
+  else ok("China order: sheet read, code linked to our item, 0.7 / 58 CBM, fees spread → landed 10.36 SAR per piece, total 1,097.2 SAR");
+  await Promise.all([page.waitForURL(/\/purchasing\/china\/[0-9a-f-]{36}\?ok=1/, { timeout: 20000 }), page.click("[data-testid=cn-save]")]);
+  const back = (await page.locator('[data-testid=cn-lines] tr[data-code="JC-9"]').count()) === 1 && /1,097\.2 SAR/.test(await page.locator("[data-testid=cn-total]").innerText());
+  if (!back) fail("china", "saved order doesn't show its lines / total again");
+  await page.click("[data-testid=cn-open-po]");
+  await page.waitForURL(/\/purchasing\/[0-9a-f-]{36}$/, { timeout: 20000 });
+  const po = (await page.locator("main").innerText()).replace(/\s+/g, " ");
+  if (!/Dec container E2E/.test(po) || !/Shipped/.test(po) || !(await page.locator("[data-testid=receive]").count())) fail("china", `purchase order of the China order: ${po.slice(0, 200)}`);
+  else ok("the China order is a purchase order: shipped, ready to receive (landed cost becomes the item cost)");
+  await page.goto(BASE + "/purchasing/china", { waitUntil: "networkidle" });
+  if (!/Dec container E2E/.test(await page.locator("[data-testid=cn-table]").innerText().catch(() => ""))) fail("china", "China orders list doesn't show the order");
 }
 
 // B2B: business order → deliver (out of stock, on the customer's account) → payment → invoiced

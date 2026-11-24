@@ -3,7 +3,7 @@
  * The database recomputes every total; these only check input and show previews.
  */
 
-export const PO_STATUSES = ["draft", "ordered", "partial", "received", "cancelled"] as const;
+export const PO_STATUSES = ["draft", "ordered", "shipped", "partial", "received", "cancelled"] as const;
 export type PoStatus = (typeof PO_STATUSES)[number];
 export const B2B_STATUSES = ["new", "in_production", "ready", "delivered", "invoiced", "cancelled"] as const;
 export type B2bStatus = (typeof B2B_STATUSES)[number];

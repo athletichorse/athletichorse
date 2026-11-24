@@ -45,7 +45,7 @@ export function buildSections(t: Dict, perms: Perms, role?: Role): Section[] {
       key: "purchasing", label: t.menu.purchasing, href: "/purchasing", icon: "purchasing", match: ["/purchasing"],
       show: !till && any(perms, "purchasing.view", "purchasing.expenses"),
       tabs: [
-        ...(perms.has("purchasing.view") ? [{ label: t.purchasing.title, href: "/purchasing" }, { label: t.purchasing.suppliers, href: "/purchasing/suppliers" }] : []),
+        ...(perms.has("purchasing.view") ? [{ label: t.purchasing.title, href: "/purchasing" }, { label: t.cn.title, href: "/purchasing/china" }, { label: t.purchasing.suppliers, href: "/purchasing/suppliers" }] : []),
         ...(perms.has("purchasing.expenses") ? [{ label: t.expenses.title, href: "/purchasing/expenses" }] : []),
       ],
     },
