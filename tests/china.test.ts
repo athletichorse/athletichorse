@@ -34,4 +34,22 @@ describe("China orders", () => {
   it("reads CSV text", () => {
     expect(parseCsvRows('Code,Description\n"A,1","Net ""big"""\n')).toEqual([["Code", "Description"], ["A,1", 'Net "big"']]);
   });
+  it("reads a real proforma: untitled code column, two description columns, merged cells, ¥ prices", () => {
+    const H = ["货物描述 DESCRION OF GOODS", "", "图片 PIC", "货物描述 DESCRION OF GOODS", "箱数 CTNS", "每箱数量 QTY/CTN", "总数量 T.T.QTY.", "单位 UNIT", "单价 UNITPRICE", "金额（元） T.T.AMT.", "每件体积 MEASURE/CTN", "总体积 bulk volume", "毛重KG"];
+    const sheet = [["PROFORMA INVOICE"], H,
+      ["金城体育25853", "JC-1", "", "涤纶排网 白色", 4, 50, 200, "pcs", "￥18.00", "￥3,600.00", 0.18, 0.72],
+      ["", "JC-2", "", "粗涤纶排网 黑色", 6, 50, 300, "pcs", 33, 9900, 0.2, 1.2],
+      ["", "JC-3", "", "4KG粗编织绳排网", 4, 13, 52, "pcs", 98, 5096, 0.15, 0.6],
+      ["", "", "", "", 4, 12, 48, "pcs", 98, 4704, 0.18, 0.7],
+      ["亿翔", "YX-1", "", "篮球", 5, 1, 5, "pcs", 720, 3600, 0.23, 1.15],
+      ["合计", "", "", "", 23, "", 605, "", "", 26900, "", 4.27]];
+    const r = readChinaSheet(sheet);
+    expect(r.lines.map((l) => `${l.supplier_code}|${l.description}|${l.cartons}x${l.per_carton}|${l.unit_price}|${l.carton_cbm}`)).toEqual([
+      "JC-1|涤纶排网 白色|4x50|18|0.18",
+      "JC-2|粗涤纶排网 黑色|6x50|33|0.2",
+      "JC-3|4KG粗编织绳排网|4x13|98|0.15",
+      "JC-3|4KG粗编织绳排网|4x12|98|0.18",
+      "YX-1|篮球|5x1|720|0.23",
+    ]);
+  });
 });
