@@ -24,6 +24,7 @@ export default async function NewPurchasePage({ searchParams }: { searchParams: 
   if (sp.id && /^[0-9a-f-]{36}$/i.test(sp.id)) {
     const { data: o } = await db().from("purchase_orders").select("*").eq("id", sp.id).maybeSingle();
     const { count } = await db().from("purchase_receipts").select("id", { count: "exact", head: true }).eq("order_id", sp.id);
+    if (o?.kind === "china") redirect(`/purchasing/china/${sp.id}`);
     if (!o || !["draft", "ordered"].includes(o.status) || (count ?? 0) > 0) redirect(`/purchasing/${sp.id}?err=locked`);
     const { data: ls } = await db().from("purchase_order_lines").select("line_no, variant_id, qty, unit_cost").eq("order_id", o.id).order("line_no");
     const ids = (ls ?? []).map((l) => l.variant_id);

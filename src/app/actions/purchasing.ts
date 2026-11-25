@@ -206,3 +206,83 @@ export async function saveRatesAction(form: FormData) {
   revalidatePath("/purchasing");
   redirect("/purchasing?ok=fx");
 }
+
+// ---------------------------------------------------------------- China (container) orders
+export type CnInput = {
+  id?: string; clientId: string; supplierId: string; locationId: string; title: string; container: string; status: "draft" | "ordered" | "shipped";
+  rate: string; ratePaid: string; feeShipping: string; feeCustoms: string; feeOther: string; notes: string;
+  lines: { supplier_code: string; description: string; variant_id: string | null; cartons: string; per_carton: string; unit_price: string; carton_cbm: string; image_url?: string | null }[];
+};
+
+export async function saveChinaOrderAction(input: CnInput): Promise<R<{ id: string; poNo: number; linked: number }>> {
+  const s = await staffWith("purchasing.edit");
+  if (!s) return { ok: false, error: "forbidden" };
+  if (!isId(input.clientId) || (input.id && !isId(input.id))) return { ok: false, error: "bad_status" };
+  if (!isId(input.locationId)) return { ok: false, error: "bad_store" };
+  if (input.supplierId && !isId(input.supplierId)) return { ok: false, error: "bad_supplier" };
+  if (!["draft", "ordered", "shipped"].includes(input.status)) return { ok: false, error: "bad_status" };
+  if (!["", "20ft", "40ft", "40hc"].includes(input.container ?? "")) return { ok: false, error: "bad_status" };
+  const rate = num(input.rate, 6);
+  if (!rate) return { ok: false, error: "bad_rate" };
+  const paid = latin(input.ratePaid) ? num(input.ratePaid, 6) : "";
+  if (paid === null) return { ok: false, error: "bad_rate" };
+  const fee = (v: string) => (latin(v) ? num(v, 2, true) : "0");
+  const [ship, cust, other] = [fee(input.feeShipping), fee(input.feeCustoms), fee(input.feeOther)];
+  if (ship === null || cust === null || other === null) return { ok: false, error: "bad_cost" };
+  const lines = (input.lines ?? []).filter((l) => (l.supplier_code ?? "").trim() || (l.description ?? "").trim() || l.variant_id);
+  if (!lines.length || lines.length > 1000) return { ok: false, error: "no_lines" };
+  const clean = [];
+  for (const l of lines) {
+    const cartons = latin(l.cartons) ? num(l.cartons, 2, true) : "0", per = latin(l.per_carton) ? num(l.per_carton, 0) : "1";
+    const price = latin(l.unit_price) ? num(l.unit_price, 4, true) : "0", cbm = latin(l.carton_cbm) ? num(l.carton_cbm, 4, true) : "0";
+    if (cartons === null || per === null || Number(per) > 100000) return { ok: false, error: "bad_qty" };
+    if (price === null || cbm === null) return { ok: false, error: "bad_cost" };
+    if (l.variant_id && !isId(l.variant_id)) return { ok: false, error: "bad_item" };
+    const img = typeof l.image_url === "string" && /^https:\/\//.test(l.image_url) ? l.image_url.slice(0, 500) : null;
+    clean.push({ supplier_code: txt(l.supplier_code, 60), description: String(l.description ?? "").trim().slice(0, 300), variant_id: l.variant_id || null, cartons, per_carton: per, unit_price: price, carton_cbm: cbm, image_url: img });
+  }
+  const { data, error } = await db().rpc("save_china_order", {
+    p: { id: input.id ?? null, client_id: input.clientId, supplier_id: input.supplierId || null, location_id: input.locationId, title: txt(input.title, 120),
+         container: input.container || null, status: input.status, rate, rate_paid: paid || null, fee_shipping: ship, fee_customs: cust, fee_other: other,
+         notes: String(input.notes ?? "").slice(0, 1000), user_id: s.id, lines: clean },
+  });
+  if (error || !data) return { ok: false, error: errCode(error?.message, PO_ERRORS) };
+  const r = data as { id: string; po_no: number; duplicate: boolean; linked?: number };
+  if (!r.duplicate) await audit(s.id, input.id ? "china.update" : "china.create", "purchase_order", r.id, { po_no: r.po_no, lines: clean.length });
+  revalidatePath("/purchasing/china");
+  revalidatePath("/purchasing");
+  return { ok: true, id: r.id, poNo: r.po_no, linked: r.linked ?? 0 };
+}
+
+export type CodeMatch = { variant_id: string; sku: string | null; name: string; image_url: string | null; per_carton: number | null; carton_cbm: number | null };
+/** Supplier codes that are also a portal item's SKU or extra code: linked by themselves. */
+export async function matchCodesAction(codes: string[], locale: "ar" | "en" = "en"): Promise<Record<string, CodeMatch>> {
+  const s = await staffWith("purchasing.edit");
+  if (!s) return {};
+  const list = [...new Set((codes ?? []).map((c) => String(c ?? "").trim()).filter((c) => c && c.length <= 60))].slice(0, 1000);
+  if (!list.length) return {};
+  const byCode = new Map<string, string>();
+  for (let i = 0; i < list.length; i += 200) {
+    const part = list.slice(i, i + 200);
+    const [{ data: vs }, { data: pc }] = await Promise.all([
+      db().from("product_variants").select("id, sku").in("sku", part),
+      db().from("product_codes").select("variant_id, code").in("code", part),
+    ]);
+    for (const v of vs ?? []) if (v.sku) byCode.set(v.sku, v.id);
+    for (const c of pc ?? []) if (!byCode.has(c.code)) byCode.set(c.code, c.variant_id);
+  }
+  const ids = [...new Set(byCode.values())];
+  if (!ids.length) return {};
+  const { data: info } = await db().from("variant_search").select("variant_id, product_id, sku, name_en, name_ar, option1, option2, image_url").in("variant_id", ids);
+  const pids = [...new Set((info ?? []).map((x) => x.product_id))];
+  const { data: ps } = pids.length ? await db().from("products").select("id, units_per_carton, carton_cbm").in("id", pids) : { data: [] };
+  const out: Record<string, CodeMatch> = {};
+  for (const [code, vid] of byCode) {
+    const v = info?.find((x) => x.variant_id === vid);
+    if (!v) continue;
+    const p = ps?.find((x) => x.id === v.product_id);
+    out[code] = { variant_id: vid, sku: v.sku, name: `${(locale === "ar" && v.name_ar) || v.name_en}${[v.option1, v.option2].filter(Boolean).length ? " · " + [v.option1, v.option2].filter(Boolean).join(" / ") : ""}`,
+      image_url: v.image_url, per_carton: p?.units_per_carton ?? null, carton_cbm: p?.carton_cbm === null || p?.carton_cbm === undefined ? null : Number(p.carton_cbm) };
+  }
+  return out;
+}

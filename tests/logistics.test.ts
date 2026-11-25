@@ -8,7 +8,7 @@ describe("logistics", () => {
     expect(cartons(10, { units_per_carton: null, carton_cbm: 1 })).toEqual({ cartons: null, cbm: null });
   });
   it("container fill", () => {
-    expect(fill(33).map((c) => c.pct)).toEqual([100, 49.3, 43.4]);
+    expect(fill(28).map((c) => c.pct)).toEqual([100, 48.3, 41.2]);
   });
   it("reads numbers (Arabic digits too)", () => {
     expect(decimal("٠٫٠٨٥", 4)).toBe(0.085);
