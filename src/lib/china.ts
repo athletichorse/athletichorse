@@ -12,7 +12,7 @@ export type ContainerKey = (typeof CN_CONTAINERS)[number]["key"];
 export type CnLine = { supplier_code: string; description: string; variant_id: string | null; cartons: string; per_carton: string; unit_price: string; carton_cbm: string; image_url?: string | null; sku?: string | null };
 export type CnFees = { rate: string; rate_paid: string; fee_shipping: string; fee_customs: string; fee_other: string };
 
-const num = (v: unknown) => { const n = Number(String(v ?? "").replace(/[,\s]/g, "")); return Number.isFinite(n) ? n : 0; };
+const num = (v: unknown) => { const n = Number(String(v ?? "").replace(/[,\s¥￥$]|RMB|CNY|元/gi, "")); return Number.isFinite(n) ? n : 0; };
 
 /** Per line: pieces, CNY value, CBM, landed cost per piece and per line (SAR); and the order totals. */
 export function landed(lines: CnLine[], f: CnFees) {
@@ -55,9 +55,17 @@ const H = {
 type Col = keyof typeof H;
 const norm = (v: unknown) => String(v ?? "").toLowerCase().replace(/\s+/g, " ").trim();
 
-/** Reads the supplier's sheet: finds the header row, then one line per row with a code or description. */
+/**
+ * Reads the supplier's sheet: finds the header row (Chinese / English / Arabic titles), then one line per item row.
+ * Real proforma sheets are messy, so the columns are also judged by what is in them:
+ *  - the code column is the one whose cells look like codes (JC-1, A12…), even without a title;
+ *  - when two columns are called "description", the one that changes row by row wins (the other is
+ *    usually the supplier's name, written once over several rows);
+ *  - merged cells (code / description written once for several rows) are filled down;
+ *  - prices like "¥18.00" are read as 18.
+ */
 export function readChinaSheet(rows: unknown[][]): { lines: CnLine[]; found: Partial<Record<Col, boolean>>; totalCbm: boolean } {
-  let head = -1; let map: Partial<Record<Col, number>> = {}; let totalCbm = false;
+  let head = -1; let map: Partial<Record<Col, number>> = {}; let totalCbm = false; let headCells: string[] = [];
   for (let i = 0; i < Math.min(rows.length, 20) && head < 0; i++) {
     const cells = (rows[i] ?? []).map(norm);
     const m: Partial<Record<Col, number>> = {};
@@ -67,22 +75,63 @@ export function readChinaSheet(rows: unknown[][]): { lines: CnLine[]; found: Par
       if (j >= 0) { m[col] = j; used.add(j); }
     }
     if (Object.keys(m).length >= 3 && (m.price !== undefined || m.cartons !== undefined)) {
-      head = i; map = m;
+      head = i; map = m; headCells = cells;
       totalCbm = m.cbm !== undefined && /total|总/.test(cells[m.cbm]);
     }
   }
   if (head < 0) return { lines: [], found: {}, totalCbm: false };
-  const at = (r: unknown[], c: Col) => (map[c] === undefined ? "" : String(r[map[c]!] ?? "").trim());
+  const data = rows.slice(head + 1).map((r) => (r ?? []).map((c) => String(c ?? "").trim()));
+  const numCols = new Set([map.per, map.cartons, map.qty, map.price, map.cbm].filter((x) => x !== undefined) as number[]);
+  // item rows = rows with a quantity / cartons / price number
+  const isItem = (r: string[]) => [map.cartons, map.qty, map.price].some((c) => c !== undefined && num(r[c]) > 0);
+  const items = data.filter(isItem);
+  const width = Math.max(0, ...data.map((r) => r.length));
+
+  // code column: the one that looks like codes in most item rows (header or not)
+  const CODE = /^[A-Za-z]{1,8}[-_ .]?\d{1,8}[A-Za-z0-9-]*$/;
+  let bestCode = -1, bestCount = 0;
+  for (let c = 0; c < width; c++) {
+    if (numCols.has(c)) continue;
+    const n = items.filter((r) => CODE.test(r[c] ?? "")).length;
+    if (n > bestCount) { bestCount = n; bestCode = c; }
+  }
+  if (bestCode >= 0 && bestCount >= Math.max(1, Math.ceil(items.length * 0.3))) map.code = bestCode;
+
+  // description column: among the columns titled "description", the one with the most different values
+  const descCands = headCells.map((c, k) => (c && H.desc.some((h) => c === h || c.includes(h)) && k !== map.code && !numCols.has(k) ? k : -1)).filter((k) => k >= 0);
+  const distinct = (c: number) => new Set(items.map((r) => r[c]).filter(Boolean)).size;
+  if (descCands.length) map.desc = descCands.sort((a, b) => distinct(b) - distinct(a) || b - a)[0];
+  else if (map.desc === undefined) {
+    // no title at all: the text column (not the code) with the most different values
+    let best = -1, bestN = 0;
+    for (let c = 0; c < width; c++) {
+      if (c === map.code || numCols.has(c)) continue;
+      const n = new Set(items.map((r) => r[c]).filter((v) => v && !/^[\d.,\s¥￥$]+$/.test(v))).size;
+      if (n > bestN) { bestN = n; best = c; }
+    }
+    if (best >= 0) map.desc = best;
+  }
+
   const lines: CnLine[] = [];
-  for (const r of rows.slice(head + 1)) {
-    const code = at(r, "code"), desc = at(r, "desc");
-    if (!code && !desc) continue;
-    if (/^(total|合计|总计|الإجمالي)/i.test(code || desc)) continue;
-    let cartons = num(at(r, "cartons")); const per = num(at(r, "per")) || 0; const qty = num(at(r, "qty"));
+  let lastCode = "", lastDesc = "";
+  for (const r of data) {
+    const cell = (c: Col) => (map[c] === undefined ? "" : r[map[c]!] ?? "");
+    let code = cell("code"), desc = cell("desc");
+    const item = isItem(r);
+    if (/^(total|合计|总计|小计|الإجمالي)/i.test(code || desc || r.find(Boolean) || "")) continue;
+    // merged cells: an item row with no code / description takes the ones above it
+    if (item && !code) code = lastCode;
+    if (item && !desc) desc = lastDesc;
+    if (code) lastCode = code;
+    if (desc) lastDesc = desc;
+    if (!item || (!code && !desc)) continue;
+    let cartons = num(cell("cartons")); const per = num(cell("per")) || 0; const qty = num(cell("qty"));
     if (!cartons && qty && per) cartons = Math.ceil(qty / per);
-    let cbm = num(at(r, "cbm"));
+    let cbm = num(cell("cbm"));
     if (totalCbm && cartons > 0) cbm = Math.round((cbm / cartons) * 10000) / 10000;
-    lines.push({ supplier_code: code.slice(0, 60), description: desc.slice(0, 300), variant_id: null, cartons: cartons ? String(cartons) : "", per_carton: per ? String(per) : (qty && !cartons ? String(qty) : "1"), unit_price: at(r, "price") ? String(num(at(r, "price"))) : "", carton_cbm: cbm ? String(cbm) : "" });
+    const price = num(cell("price"));
+    lines.push({ supplier_code: code.slice(0, 60), description: desc.replace(/\s+/g, " ").slice(0, 300), variant_id: null, cartons: cartons ? String(cartons) : "",
+      per_carton: per ? String(per) : (qty && !cartons ? String(qty) : "1"), unit_price: price ? String(price) : "", carton_cbm: cbm ? String(cbm) : "" });
   }
   return { lines, found: Object.fromEntries(Object.keys(map).map((k) => [k, true])), totalCbm };
 }
