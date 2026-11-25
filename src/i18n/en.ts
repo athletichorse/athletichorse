@@ -550,6 +550,7 @@ const en: Dict = {
     errors: { name: "Type the campaign name.", channel: "Choose a channel.", start: "Choose the start date.", end: "The end date is before the start.", amount: "Check the amounts.", forbidden: "You don't have permission." },
   },
   cn: {
+    reorder: "Reorder", remembered: "Linked items keep their China price, CBM and pieces per carton (and the supplier code), so the next sheet links by itself and a reorder brings them back.", 
     title: "China orders", subtitle: "Container orders: the supplier's sheet, cartons, CBM, fees and landed cost per piece (SAR)", newOrder: "New China order", none: "No China orders yet.",
     details: "Order details", name: "Order name", namePh: "e.g. December container", supplier: "Supplier (optional)", store: "Receive into", container: "Container", status: "Status",
     statuses: { draft: "Draft", ordered: "Ordered", shipped: "Shipped", partial: "Partly arrived", received: "Arrived", cancelled: "Cancelled" },

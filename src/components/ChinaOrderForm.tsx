@@ -71,12 +71,19 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
   async function addItem(h: VariantHit) {
     const m = h.sku ? (await matchCodesAction([h.sku], locale).catch(() => ({} as Record<string, CodeMatch>)))[h.sku] : undefined;
     setLines((ls) => [...ls, { key: newKey(), supplier_code: h.sku ?? "", description: h.name, variant_id: h.variantId, sku: h.sku, name: `${h.name}${h.options ? ` · ${h.options}` : ""}`, image_url: h.image,
-      cartons: "", per_carton: m?.per_carton ? String(m.per_carton) : "1", unit_price: "", carton_cbm: m?.carton_cbm ? String(m.carton_cbm) : "" }]);
+      cartons: "", per_carton: m?.per_carton ? String(m.per_carton) : "1", unit_price: m?.china_price !== null && m?.china_price !== undefined && (m.china_currency ?? "CNY") === "CNY" ? String(m.china_price) : "", carton_cbm: m?.carton_cbm ? String(m.carton_cbm) : "" }]);
     setTerm(""); setHits(null);
   }
-  function link(key: string, h: VariantHit) {
-    setLine(key, { variant_id: h.variantId, sku: h.sku, name: `${h.name}${h.options ? ` · ${h.options}` : ""}`, image_url: h.image });
+  async function link(key: string, h: VariantHit) {
     setLinking(null); setLinkTerm(""); setLinkHits(null);
+    const m = h.sku ? (await matchCodesAction([h.sku], locale).catch(() => ({} as Record<string, CodeMatch>)))[h.sku] : undefined;
+    // the sheet's numbers win; the item's saved numbers only fill what is empty
+    setLines((ls) => ls.map((l) => (l.key !== key ? l : {
+      ...l, variant_id: h.variantId, sku: h.sku, name: `${h.name}${h.options ? ` · ${h.options}` : ""}`, image_url: l.image_url || h.image,
+      per_carton: l.per_carton && l.per_carton !== "1" ? l.per_carton : m?.per_carton ? String(m.per_carton) : l.per_carton,
+      carton_cbm: l.carton_cbm || (m?.carton_cbm ? String(m.carton_cbm) : ""),
+      unit_price: l.unit_price || (m?.china_price !== null && m?.china_price !== undefined && (m.china_currency ?? "CNY") === "CNY" ? String(m.china_price) : ""),
+    })));
   }
   async function save() {
     setBusy(true); setMsg(null);
@@ -133,7 +140,7 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
               {initial && ["partial", "received"].includes(initial.status) && <span className="badge-green">{C.statuses[initial.status as "partial" | "received"]}</span>}
             </div></div>
         </div>
-        {editable && <p className="mt-3 text-xs text-gray-500">{C.uploadHint}</p>}
+        {editable && <p className="mt-3 text-xs text-gray-500">{C.uploadHint} {C.remembered}</p>}
       </section>
 
       <section className="card sticky top-2 z-10 flex flex-wrap items-center gap-6 shadow-md" data-testid="cn-summary">
@@ -216,7 +223,7 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
                                   <input autoFocus className="input w-44 px-2 py-1 text-xs" placeholder={C.search} value={linkTerm} aria-label={C.link} onChange={(e) => setLinkTerm(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void search(linkTerm, setLinkHits); } }} />
                                   {linkHits && <span className="absolute top-full z-20 mt-1 max-h-56 w-72 overflow-y-auto rounded-lg border border-[var(--line)] bg-white shadow-lg">
                                     {linkHits.length === 0 && <span className="block px-3 py-2 text-gray-500">{t.stock.notFound}</span>}
-                                    {linkHits.map((h) => <button key={h.variantId} type="button" className="block w-full px-3 py-1.5 text-start hover:bg-gray-50" onClick={() => link(l.key, h)}>{h.name}{h.options ? ` · ${h.options}` : ""} <span className="font-mono" dir="ltr">{h.sku}</span></button>)}
+                                    {linkHits.map((h) => <button key={h.variantId} type="button" className="block w-full px-3 py-1.5 text-start hover:bg-gray-50" onClick={() => void link(l.key, h)}>{h.name}{h.options ? ` · ${h.options}` : ""} <span className="font-mono" dir="ltr">{h.sku}</span></button>)}
                                   </span>}
                                 </span>
                               : <button type="button" className="text-[var(--brand)] underline" onClick={() => { setLinking(l.key); setLinkTerm(l.supplier_code); setLinkHits(null); }}>🔗 {C.link}</button>)}

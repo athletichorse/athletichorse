@@ -36,6 +36,7 @@ export default async function ChinaOrderPage({ params, searchParams }: { params:
         <div className="no-print flex flex-wrap gap-2">
           <Link href="/purchasing/china" className="btn-ghost">← {C.title}</Link>
           <Link href={`/purchasing/${o.id}`} className="btn-ghost" data-testid="cn-open-po">{C.openPo}</Link>
+          {me.perms.has("purchasing.edit") && <Link href={`/purchasing/china/new?from=${o.id}`} className="btn-ghost" data-testid="cn-reorder">↻ {C.reorder}</Link>}
         </div>
       </PageHeader>
       {sp.ok && <p className="alert-ok mb-4">{t.saved}</p>}
