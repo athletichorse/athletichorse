@@ -249,12 +249,13 @@ export async function saveChinaOrderAction(input: CnInput): Promise<R<{ id: stri
   if (error || !data) return { ok: false, error: errCode(error?.message, PO_ERRORS) };
   const r = data as { id: string; po_no: number; duplicate: boolean; linked?: number };
   if (!r.duplicate) await audit(s.id, input.id ? "china.update" : "china.create", "purchase_order", r.id, { po_no: r.po_no, lines: clean.length });
+  if (!r.duplicate) await rememberOnProducts(clean);
   revalidatePath("/purchasing/china");
   revalidatePath("/purchasing");
   return { ok: true, id: r.id, poNo: r.po_no, linked: r.linked ?? 0 };
 }
 
-export type CodeMatch = { variant_id: string; sku: string | null; name: string; image_url: string | null; per_carton: number | null; carton_cbm: number | null };
+export type CodeMatch = { variant_id: string; sku: string | null; name: string; image_url: string | null; per_carton: number | null; carton_cbm: number | null; china_price: number | null; china_currency: string | null };
 /** Supplier codes that are also a portal item's SKU or extra code: linked by themselves. */
 export async function matchCodesAction(codes: string[], locale: "ar" | "en" = "en"): Promise<Record<string, CodeMatch>> {
   const s = await staffWith("purchasing.edit");
@@ -275,14 +276,46 @@ export async function matchCodesAction(codes: string[], locale: "ar" | "en" = "e
   if (!ids.length) return {};
   const { data: info } = await db().from("variant_search").select("variant_id, product_id, sku, name_en, name_ar, option1, option2, image_url").in("variant_id", ids);
   const pids = [...new Set((info ?? []).map((x) => x.product_id))];
-  const { data: ps } = pids.length ? await db().from("products").select("id, units_per_carton, carton_cbm").in("id", pids) : { data: [] };
+  const { data: ps } = pids.length ? await db().from("products").select("id, units_per_carton, carton_cbm, china_price, china_currency").in("id", pids) : { data: [] };
   const out: Record<string, CodeMatch> = {};
   for (const [code, vid] of byCode) {
     const v = info?.find((x) => x.variant_id === vid);
     if (!v) continue;
     const p = ps?.find((x) => x.id === v.product_id);
     out[code] = { variant_id: vid, sku: v.sku, name: `${(locale === "ar" && v.name_ar) || v.name_en}${[v.option1, v.option2].filter(Boolean).length ? " · " + [v.option1, v.option2].filter(Boolean).join(" / ") : ""}`,
-      image_url: v.image_url, per_carton: p?.units_per_carton ?? null, carton_cbm: p?.carton_cbm === null || p?.carton_cbm === undefined ? null : Number(p.carton_cbm) };
+      image_url: v.image_url, per_carton: p?.units_per_carton ?? null, carton_cbm: p?.carton_cbm === null || p?.carton_cbm === undefined ? null : Number(p.carton_cbm),
+      china_price: p?.china_price === null || p?.china_price === undefined ? null : Number(p.china_price), china_currency: p?.china_currency ?? null };
   }
   return out;
+}
+
+/**
+ * A China order line linked to one of our items teaches that item: its China price (CNY), carton CBM and pieces per
+ * carton are saved on the product, and the supplier's code becomes an extra code of the item, so the next sheet
+ * links by itself and a reorder brings these numbers back.
+ */
+async function rememberOnProducts(lines: { supplier_code: string; variant_id: string | null; per_carton: string; unit_price: string; carton_cbm: string }[]) {
+  const linked = lines.filter((l) => l.variant_id);
+  if (!linked.length) return;
+  const { data: vs } = await db().from("product_variants").select("id, product_id, sku").in("id", [...new Set(linked.map((l) => l.variant_id as string))]);
+  const prodOf = new Map((vs ?? []).map((v) => [v.id, v]));
+  const done = new Set<string>();
+  for (const l of linked) {
+    const v = prodOf.get(l.variant_id as string);
+    if (!v) continue;
+    if (!done.has(v.product_id)) {
+      done.add(v.product_id);
+      const row: Record<string, unknown> = { china_currency: "CNY" };
+      if (Number(l.unit_price) > 0) row.china_price = Number(l.unit_price);
+      if (Number(l.carton_cbm) > 0 && Number(l.carton_cbm) < 100) row.carton_cbm = Number(l.carton_cbm);
+      if (Number(l.per_carton) >= 1) row.units_per_carton = Math.round(Number(l.per_carton));
+      await db().from("products").update(row).eq("id", v.product_id);
+    }
+    const code = l.supplier_code.trim();
+    if (code && code !== v.sku && /^[\w./-]{1,60}$/u.test(code)) {
+      const { data: has } = await db().from("product_codes").select("variant_id").eq("code", code).maybeSingle();
+      // only when the code is free (not another item's code or SKU — the database refuses those)
+      if (!has) await db().from("product_codes").insert({ code, variant_id: v.id }).then(() => undefined, () => undefined);
+    }
+  }
 }
