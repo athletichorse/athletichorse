@@ -1,5 +1,5 @@
 /** Marketing plan: channels, and turning campaigns + Meta days into spend per channel per month. */
-export const CHANNELS = ["meta", "instagram", "snapchat", "tiktok", "google", "influencer", "event", "whatsapp_sms", "print", "other"] as const;
+export const CHANNELS = ["meta", "instagram", "snapchat", "tiktok", "google", "influencer", "event", "whatsapp_sms", "print", "higgsfield", "claude", "other"] as const;
 export type Channel = (typeof CHANNELS)[number];
 export const CAMPAIGN_STATUSES = ["planned", "active", "done", "cancelled"] as const;
 

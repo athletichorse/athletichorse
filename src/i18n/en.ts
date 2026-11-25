@@ -541,7 +541,7 @@ const en: Dict = {
     title: "Marketing plan", subtitle: "Budget by month and channel, what was spent, and what it brought",
     campaigns: "Campaigns", year: "Year", channel: "Channel", budget: "Budget", spent: "Spent", left: "Left", total: "Total", sales: "Sales", share: "Marketing % of sales",
     saveBudget: "Save budget", saving: "Saving…", planHint: "Type the planned budget per channel per month. Spent = Meta (read from your ad account) + money typed on campaigns.",
-    channels: { meta: "Meta ads (Facebook/Instagram)", instagram: "Instagram (posts/collabs)", snapchat: "Snapchat", tiktok: "TikTok", google: "Google", influencer: "Influencers", event: "Events & sponsorship", whatsapp_sms: "WhatsApp / SMS", print: "Print & signs", other: "Other" },
+    channels: { meta: "Meta ads (Facebook/Instagram)", instagram: "Instagram (posts/collabs)", snapchat: "Snapchat", tiktok: "TikTok", google: "Google", influencer: "Influencers", event: "Events & sponsorship", whatsapp_sms: "WhatsApp / SMS", print: "Print & signs", higgsfield: "Higgsfield (AI videos)", claude: "Claude (AI)", other: "Other" },
     statuses: { planned: "Planned", active: "Running", done: "Finished", cancelled: "Cancelled" },
     newCampaign: "New campaign", name: "Campaign", startOn: "From", endOn: "Until", spendManual: "Money spent (typed)", discountCode: "Discount code", goal: "Goal", notes: "Notes", status: "Status", save: "Save", edit: "Change",
     none: "No campaigns yet.", all: "All", impressions: "Seen", reach: "People reached", clicks: "Clicks", purchases: "Purchases", value: "Purchase value", roas: "Return", salesInPeriod: "Sales in its dates",

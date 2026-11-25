@@ -539,7 +539,7 @@ const ar = {
     title: "خطة التسويق", subtitle: "الميزانية بالشهر والقناة، والمصروف، والعائد",
     campaigns: "الحملات", year: "السنة", channel: "القناة", budget: "الميزانية", spent: "المصروف", left: "المتبقي", total: "الإجمالي", sales: "المبيعات", share: "التسويق % من المبيعات",
     saveBudget: "حفظ الميزانية", saving: "جاري الحفظ…", planHint: "اكتب الميزانية المخططة لكل قناة في كل شهر. المصروف = إعلانات ميتا (من حسابك الإعلاني) + المبالغ المكتوبة على الحملات.",
-    channels: { meta: "إعلانات ميتا (فيسبوك/إنستغرام)", instagram: "إنستغرام (منشورات/تعاون)", snapchat: "سناب شات", tiktok: "تيك توك", google: "جوجل", influencer: "المؤثرين", event: "فعاليات ورعايات", whatsapp_sms: "واتساب / رسائل", print: "مطبوعات ولوحات", other: "أخرى" },
+    channels: { meta: "إعلانات ميتا (فيسبوك/إنستغرام)", instagram: "إنستغرام (منشورات/تعاون)", snapchat: "سناب شات", tiktok: "تيك توك", google: "جوجل", influencer: "المؤثرين", event: "فعاليات ورعايات", whatsapp_sms: "واتساب / رسائل", print: "مطبوعات ولوحات", higgsfield: "Higgsfield (فيديوهات بالذكاء الاصطناعي)", claude: "Claude (ذكاء اصطناعي)", other: "أخرى" },
     statuses: { planned: "مخططة", active: "شغالة", done: "انتهت", cancelled: "ملغية" },
     newCampaign: "حملة جديدة", name: "الحملة", startOn: "من", endOn: "إلى", spendManual: "المبلغ المصروف (يدوي)", discountCode: "كود الخصم", goal: "الهدف", notes: "ملاحظات", status: "الحالة", save: "حفظ", edit: "تعديل",
     none: "لا توجد حملات بعد.", all: "الكل", impressions: "مرات الظهور", reach: "الوصول", clicks: "النقرات", purchases: "المشتريات", value: "قيمة المشتريات", roas: "العائد", salesInPeriod: "المبيعات في تواريخها",
