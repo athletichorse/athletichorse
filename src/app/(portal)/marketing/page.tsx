@@ -63,16 +63,16 @@ export default async function MarketingPlan({ searchParams }: { searchParams: Pr
       <form action={saveBudgetAction} className="card overflow-hidden p-0">
         <input type="hidden" name="year" value={year} />
         <div className="overflow-x-auto"><table className="table table-compact text-xs" data-export data-testid="mkt-plan">
-          <thead><tr><th>{M.channel}</th>{Array.from({ length: 12 }, (_, i) => <th key={i}>{monthName(i)}</th>)}<th>{M.total}</th></tr></thead>
+          <thead><tr><th>{M.channel}</th>{Array.from({ length: 12 }, (_, i) => <th key={i} className="!px-1">{monthName(i)}</th>)}<th>{M.total}</th></tr></thead>
           <tbody>
             {CHANNELS.map((ch) => {
               const p = plan.get(ch) ?? z(), s = spent.get(ch) ?? z();
               return (
                 <tr key={ch} data-channel={ch}>
-                  <td className="cell-title">{M.channels[ch]}</td>
+                  <td className="cell-title w-28 text-xs">{M.channels[ch]}</td>
                   {p.map((v, i) => (
-                    <td key={i} data-label={monthName(i)}>
-                      {canEdit ? <input name={`b:${ch}:${i + 1}`} defaultValue={v ? String(v) : ""} className="input w-20 px-1.5 py-1 text-xs" dir="ltr" inputMode="decimal" aria-label={`${M.budget} ${M.channels[ch]} ${monthName(i)}`} /> : <span dir="ltr">{f0(v)}</span>}
+                    <td key={i} data-label={monthName(i)} className="!px-1">
+                      {canEdit ? <input name={`b:${ch}:${i + 1}`} defaultValue={v ? String(v) : ""} className="input w-14 px-1 py-1 text-xs" dir="ltr" inputMode="decimal" aria-label={`${M.budget} ${M.channels[ch]} ${monthName(i)}`} /> : <span dir="ltr">{f0(v)}</span>}
                       <div className={`mt-0.5 ${s[i] > v && v ? "text-red-700" : "text-gray-500"}`} dir="ltr">{s[i] ? s[i].toFixed(0) : ""}</div>
                     </td>
                   ))}
