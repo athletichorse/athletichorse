@@ -9,7 +9,7 @@ export const CN_CONTAINERS = [
 ] as const;
 export type ContainerKey = (typeof CN_CONTAINERS)[number]["key"];
 
-export type CnLine = { supplier_code: string; description: string; variant_id: string | null; cartons: string; per_carton: string; unit_price: string; carton_cbm: string; image_url?: string | null; sku?: string | null };
+export type CnLine = { supplier_code: string; description: string; variant_id: string | null; cartons: string; per_carton: string; unit_price: string; carton_cbm: string; image_url?: string | null; sku?: string | null; src_row?: number };
 export type CnFees = { rate: string; rate_paid: string; fee_shipping: string; fee_customs: string; fee_other: string };
 
 const num = (v: unknown) => { const n = Number(String(v ?? "").replace(/[,\s¥￥$]|RMB|CNY|元/gi, "")); return Number.isFinite(n) ? n : 0; };
@@ -114,7 +114,7 @@ export function readChinaSheet(rows: unknown[][]): { lines: CnLine[]; found: Par
 
   const lines: CnLine[] = [];
   let lastCode = "", lastDesc = "";
-  for (const r of data) {
+  for (const [j, r] of data.entries()) {
     const cell = (c: Col) => (map[c] === undefined ? "" : r[map[c]!] ?? "");
     let code = cell("code"), desc = cell("desc");
     const item = isItem(r);
@@ -131,7 +131,7 @@ export function readChinaSheet(rows: unknown[][]): { lines: CnLine[]; found: Par
     if (totalCbm && cartons > 0) cbm = Math.round((cbm / cartons) * 10000) / 10000;
     const price = num(cell("price"));
     lines.push({ supplier_code: code.slice(0, 60), description: desc.replace(/\s+/g, " ").slice(0, 300), variant_id: null, cartons: cartons ? String(cartons) : "",
-      per_carton: per ? String(per) : (qty && !cartons ? String(qty) : "1"), unit_price: price ? String(price) : "", carton_cbm: cbm ? String(cbm) : "" });
+      per_carton: per ? String(per) : (qty && !cartons ? String(qty) : "1"), unit_price: price ? String(price) : "", carton_cbm: cbm ? String(cbm) : "", src_row: head + 1 + j });
   }
   return { lines, found: Object.fromEntries(Object.keys(map).map((k) => [k, true])), totalCbm };
 }
@@ -149,5 +149,16 @@ export function parseCsvRows(text: string): string[][] {
     }
     out.push(cur);
     return out.map((c) => c.trim());
+  });
+}
+
+/** Picture of each line: the one on its sheet row; a line without one (second row of a merged item) takes the previous line's when the code is the same. */
+export function picturesForLines<T extends { src_row?: number; supplier_code: string }>(lines: T[], byRow: Map<number, string>): (string | null)[] {
+  let prev: { code: string; pic: string | null } = { code: "", pic: null };
+  return lines.map((l) => {
+    let pic = l.src_row !== undefined ? byRow.get(l.src_row) ?? null : null;
+    if (!pic && l.supplier_code && l.supplier_code === prev.code) pic = prev.pic;
+    prev = { code: l.supplier_code, pic };
+    return pic;
   });
 }

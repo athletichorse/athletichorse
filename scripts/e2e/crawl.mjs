@@ -694,6 +694,24 @@ await page.goto(BASE + "/purchasing/suppliers", { waitUntil: "networkidle" });
   else ok("pay the supplier 500 EGP: statement shows the payment, 1000 EGP (80 SAR) still owed");
 }
 
+// China order from a real .xlsx with item pictures: each line shows its picture; nothing scrolls sideways
+where = "china pictures";
+await page.goto(BASE + "/purchasing/china/new", { waitUntil: "networkidle" });
+{
+  await page.locator("[data-testid=cn-sheet]").setInputFiles("tests/fixtures/proforma-pictures.xlsx");
+  await page.waitForSelector("text=/2 lines added from the sheet/", { timeout: 15000 }).catch(() => fail("china pictures", "xlsx with pictures: lines not added"));
+  await page.waitForFunction(() => document.querySelectorAll("[data-testid=cn-pic]").length >= 2, null, { timeout: 10000 }).catch(() => {});
+  const pics = await page.$$eval("[data-testid=cn-pic]", (els) => els.map((e) => [e.getAttribute("src")?.slice(0, 15), e.naturalWidth]));
+  if (pics.length < 2 || pics.some(([src, w]) => !String(src).startsWith("data:image/") || !w)) fail("china pictures", `pictures from the sheet: ${JSON.stringify(pics)}`);
+  else ok("China order: the small picture of each item in the Excel file shows next to its line");
+  const fits = await page.evaluate(() => {
+    const t = document.querySelector("[data-testid=cn-lines]");
+    return document.documentElement.scrollWidth <= window.innerWidth + 1 && !!t && t.scrollWidth <= (t.parentElement?.clientWidth ?? 0) + 2;
+  });
+  if (!fits) fail("china pictures", "the China order page scrolls sideways");
+  else ok("China order page fits the screen: no sideways scrolling");
+}
+
 // China (container) order: supplier sheet → auto-linked line + unlinked line → fees spread → landed cost → purchase order
 where = "china";
 await page.goto(BASE + "/purchasing/china/new", { waitUntil: "networkidle" });

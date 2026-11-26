@@ -319,3 +319,26 @@ async function rememberOnProducts(lines: { supplier_code: string; variant_id: st
     }
   }
 }
+
+const IMG_BUCKET = "item-pictures";
+/** Small item pictures from a supplier sheet (JPEG thumbnails) → public links. Same order; "" where one failed. */
+export async function uploadChinaImagesAction(form: FormData): Promise<string[]> {
+  const s = await staffWith("purchasing.edit");
+  if (!s) return [];
+  const files = form.getAll("f").slice(0, 20);
+  const storage = db().storage;
+  try {
+    const { data: bucket } = await storage.getBucket(IMG_BUCKET);
+    if (!bucket) await storage.createBucket(IMG_BUCKET, { public: true });
+  } catch { /* no storage (tests): pictures stay on the screen only */ }
+  const out: string[] = [];
+  for (const f of files) {
+    if (!(f instanceof Blob) || f.size === 0 || f.size > 300_000 || !/^image\/(jpeg|png|webp)$/.test(f.type)) { out.push(""); continue; }
+    const path = `china/${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.jpg`;
+    try {
+      const { error } = await storage.from(IMG_BUCKET).upload(path, f, { contentType: f.type, upsert: false });
+      out.push(error ? "" : storage.from(IMG_BUCKET).getPublicUrl(path).data.publicUrl);
+    } catch { out.push(""); }
+  }
+  return out;
+}
