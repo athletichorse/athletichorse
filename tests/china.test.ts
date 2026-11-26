@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { landed, parseCsvRows, readChinaSheet, type CnLine } from "@/lib/china";
+import { landed, parseCsvRows, picturesForLines, readChinaSheet, type CnLine } from "@/lib/china";
 
 const L = (o: Partial<CnLine>): CnLine => ({ supplier_code: "", description: "", variant_id: null, cartons: "", per_carton: "1", unit_price: "", carton_cbm: "", ...o });
 
@@ -51,5 +51,13 @@ describe("China orders", () => {
       "JC-3|4KG粗编织绳排网|4x12|98|0.18",
       "YX-1|篮球|5x1|720|0.23",
     ]);
+  });
+  it("pictures go to their lines; the second row of a merged item reuses the first's", () => {
+    const lines = [{ src_row: 3, supplier_code: "JC-1" }, { src_row: 5, supplier_code: "JC-3" }, { src_row: 6, supplier_code: "JC-3" }, { src_row: 7, supplier_code: "X" }];
+    expect(picturesForLines(lines, new Map([[3, "a"], [5, "c"]]))).toEqual(["a", "c", "c", null]);
+  });
+  it("lines remember their sheet row", () => {
+    const r = readChinaSheet([[], ["Item No", "Description", "CTNS", "PCS/CTN", "Unit Price"], ["A-1", "Net", 2, 10, 5]]);
+    expect(r.lines[0].src_row).toBe(2);
   });
 });

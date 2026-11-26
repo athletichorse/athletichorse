@@ -4,9 +4,10 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { readSheet } from "read-excel-file/browser";
 import type { Dict, Locale } from "@/i18n";
-import { matchCodesAction, saveChinaOrderAction, type CodeMatch } from "@/app/actions/purchasing";
+import { matchCodesAction, saveChinaOrderAction, uploadChinaImagesAction, type CodeMatch } from "@/app/actions/purchasing";
 import { searchVariantsAction, type VariantHit } from "@/app/actions/stock";
-import { CN_CONTAINERS, landed, parseCsvRows, readChinaSheet, type CnLine } from "@/lib/china";
+import { CN_CONTAINERS, landed, parseCsvRows, picturesForLines, readChinaSheet, type CnLine } from "@/lib/china";
+import { sheetImages, thumbnail } from "@/lib/xlsx-images";
 
 export type CnInitial = {
   id: string; poId: string; status: string; supplierId: string; locationId: string; title: string; container: string;
@@ -53,10 +54,21 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
       const rows = /\.(csv|txt|tsv)$/i.test(file.name) ? parseCsvRows(await file.text()) : ((await readSheet(file)) as unknown[][]);
       const r = readChinaSheet(rows);
       if (!r.lines.length) return setMsg({ ok: false, text: C.noHeader });
+      // the small picture of each item in the sheet (the first picture on its row)
+      const byRow = new Map<number, string>();
+      if (/\.xlsx$/i.test(file.name)) {
+        const imgs = await sheetImages(await file.arrayBuffer()).catch(() => []);
+        for (const img of imgs) {
+          if (byRow.has(img.row)) continue;
+          const th = await thumbnail(img);
+          if (th) byRow.set(img.row, th);
+        }
+      }
+      const pics = picturesForLines(r.lines, byRow);
       const match = await matchCodesAction(r.lines.map((l) => l.supplier_code), locale).catch(() => ({} as Record<string, CodeMatch>));
-      const add: Line[] = r.lines.map((l) => {
+      const add: Line[] = r.lines.map((l, i) => {
         const m = match[l.supplier_code];
-        return { ...l, key: newKey(), variant_id: m?.variant_id ?? null, sku: m?.sku ?? null, name: m?.name ?? null, image_url: m?.image_url ?? null };
+        return { ...l, key: newKey(), variant_id: m?.variant_id ?? null, sku: m?.sku ?? null, name: m?.name ?? null, image_url: pics[i] ?? m?.image_url ?? null };
       });
       setLines((ls) => [...ls.filter((x) => x.supplier_code || x.description || x.variant_id), ...add]);
       setMsg({ ok: true, text: C.uploaded.replace("{n}", String(add.length)).replace("{m}", String(add.filter((x) => x.variant_id).length)) });
@@ -85,12 +97,27 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
       unit_price: l.unit_price || (m?.china_price !== null && m?.china_price !== undefined && (m.china_currency ?? "CNY") === "CNY" ? String(m.china_price) : ""),
     })));
   }
+  /** Pictures read from the sheet are only on this screen until saved: store them (small JPEGs), keep their links. */
+  async function storePictures(ls: Line[]): Promise<Line[]> {
+    const todo = ls.filter((l) => l.image_url?.startsWith("data:"));
+    const links = new Map<string, string>();
+    for (let i = 0; i < todo.length; i += 10) {
+      const part = todo.slice(i, i + 10);
+      const fd = new FormData();
+      for (const l of part) fd.append("f", await (await fetch(l.image_url!)).blob(), "p.jpg");
+      const urls = await uploadChinaImagesAction(fd).catch(() => [] as string[]);
+      part.forEach((l, k) => { if (urls[k]) links.set(l.key, urls[k]); });
+    }
+    return ls.map((l) => (links.has(l.key) ? { ...l, image_url: links.get(l.key)! } : l));
+  }
   async function save() {
     setBusy(true); setMsg(null);
+    const withPics = await storePictures(lines);
+    setLinesRaw(withPics);
     const r = await saveChinaOrderAction({
       id: initial?.poId, clientId: clientId.current, supplierId, locationId, title, container, status, rate: fees.rate, ratePaid: fees.rate_paid,
       feeShipping: fees.fee_shipping, feeCustoms: fees.fee_customs, feeOther: fees.fee_other, notes: initial?.notes ?? "",
-      lines: lines.map(({ supplier_code, description, variant_id, cartons, per_carton, unit_price, carton_cbm, image_url }) => ({ supplier_code, description, variant_id, cartons, per_carton, unit_price, carton_cbm, image_url })),
+      lines: withPics.map(({ supplier_code, description, variant_id, cartons, per_carton, unit_price, carton_cbm, image_url }) => ({ supplier_code, description, variant_id, cartons, per_carton, unit_price, carton_cbm, image_url: image_url?.startsWith("https://") ? image_url : null })),
     }).catch(() => ({ ok: false as const, error: "network" }));
     setBusy(false);
     if (!r.ok) return setMsg({ ok: false, text: (t.purchasing.errors as Record<string, string>)[r.error] ?? r.error });
@@ -99,7 +126,7 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
     router.refresh();
   }
 
-  const input = (value: string, on: (v: string) => void, label: string, cls = "w-20", mode: "decimal" | "numeric" = "decimal") => (
+  const input = (value: string, on: (v: string) => void, label: string, cls = "w-full", mode: "decimal" | "numeric" = "decimal") => (
     <input className={`input px-2 py-1.5 ${cls}`} dir="ltr" inputMode={mode} value={value} disabled={ro} aria-label={label} onChange={(e) => on(e.target.value)} />
   );
 
@@ -199,7 +226,8 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
           </div>
         )}
         {lines.length - linked > 0 && <p className="mx-5 mt-2 text-xs text-amber-700">{C.notLinked.replace("{n}", String(lines.length - linked))}</p>}
-        <div className="mt-3 overflow-x-auto"><table className="table table-compact" data-testid="cn-lines">
+        <div className="mt-3"><table className="table table-compact w-full sm:table-fixed" data-testid="cn-lines">
+          <colgroup><col className="sm:w-[38%]" /><col className="sm:w-[17%]" /><col className="sm:w-[13%]" /><col className="sm:w-[11%]" /><col className="sm:w-[16%]" /><col className="sm:w-[5%]" /></colgroup>
           <thead><tr><th>{C.code} · {C.desc}</th><th>{C.cartons}</th><th>{C.price}</th><th>{C.cbm}</th><th>{C.landed}</th><th></th></tr></thead>
           <tbody>
             {lines.map((l, i) => {
@@ -209,19 +237,19 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
                   <td className="cell-title">
                     <div className="flex gap-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {l.image_url ? <img src={l.image_url} alt="" className="h-12 w-12 shrink-0 rounded border border-[var(--line)] object-cover" /> : <div className="h-12 w-12 shrink-0 rounded border border-dashed border-[var(--line)]" />}
+                      {l.image_url ? <img src={l.image_url} alt={l.description || l.supplier_code} data-testid="cn-pic" className="h-14 w-14 shrink-0 rounded border border-[var(--line)] bg-white object-contain" /> : <div className="h-14 w-14 shrink-0 rounded border border-dashed border-[var(--line)]" />}
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex gap-1">
-                          <input className="input w-24 px-2 py-1.5 font-mono text-xs" dir="ltr" value={l.supplier_code} disabled={ro} aria-label={`${C.code} ${i + 1}`} onChange={(e) => setLine(l.key, { supplier_code: e.target.value })} />
+                          <input className="input w-20 shrink-0 px-2 py-1.5 font-mono text-xs" dir="ltr" value={l.supplier_code} disabled={ro} aria-label={`${C.code} ${i + 1}`} onChange={(e) => setLine(l.key, { supplier_code: e.target.value })} />
                           <input className="input min-w-0 flex-1 px-2 py-1.5 text-sm" value={l.description} disabled={ro} aria-label={`${C.desc} ${i + 1}`} onChange={(e) => setLine(l.key, { description: e.target.value })} />
                         </div>
-                        <div className="text-xs">
+                        <div className="truncate text-xs">
                           {l.variant_id
                             ? <><span className="text-emerald-700" dir="ltr">✓ {l.sku ?? ""}</span>{l.name && <span className="text-gray-500"> {l.name}</span>}{editable && <button type="button" className="ms-2 text-gray-500 underline" onClick={() => setLine(l.key, { variant_id: null, sku: null, name: null })}>{C.unlink}</button>}</>
                             : editable && (linking === l.key
                               ? <span className="relative inline-flex gap-1">
-                                  <input autoFocus className="input w-44 px-2 py-1 text-xs" placeholder={C.search} value={linkTerm} aria-label={C.link} onChange={(e) => setLinkTerm(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void search(linkTerm, setLinkHits); } }} />
-                                  {linkHits && <span className="absolute top-full z-20 mt-1 max-h-56 w-72 overflow-y-auto rounded-lg border border-[var(--line)] bg-white shadow-lg">
+                                  <input autoFocus className="input w-36 px-2 py-1 text-xs" placeholder={C.search} value={linkTerm} aria-label={C.link} onChange={(e) => setLinkTerm(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void search(linkTerm, setLinkHits); } }} />
+                                  {linkHits && <span className="absolute top-full z-20 mt-1 max-h-56 w-64 overflow-y-auto rounded-lg border border-[var(--line)] bg-white shadow-lg">
                                     {linkHits.length === 0 && <span className="block px-3 py-2 text-gray-500">{t.stock.notFound}</span>}
                                     {linkHits.map((h) => <button key={h.variantId} type="button" className="block w-full px-3 py-1.5 text-start hover:bg-gray-50" onClick={() => void link(l.key, h)}>{h.name}{h.options ? ` · ${h.options}` : ""} <span className="font-mono" dir="ltr">{h.sku}</span></button>)}
                                   </span>}
@@ -232,10 +260,10 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
                     </div>
                   </td>
                   <td data-label={C.cartons}>
-                    <div className="flex items-center gap-1">{input(l.cartons, (v) => setLine(l.key, { cartons: v }), `${C.cartons} ${i + 1}`, "w-16")}<span>×</span>{input(l.per_carton, (v) => setLine(l.key, { per_carton: v }), `pcs/ctn ${i + 1}`, "w-16", "numeric")}</div>
+                    <div className="flex items-center gap-1">{input(l.cartons, (v) => setLine(l.key, { cartons: v }), `${C.cartons} ${i + 1}`, "min-w-0 flex-1")}<span>×</span>{input(l.per_carton, (v) => setLine(l.key, { per_carton: v }), `pcs/ctn ${i + 1}`, "min-w-0 flex-1", "numeric")}</div>
                     <div className="text-xs text-gray-500" dir="ltr">= {f0(r.qty)} {C.pieces}</div>
                   </td>
-                  <td data-label={C.price}>{input(l.unit_price, (v) => setLine(l.key, { unit_price: v }), `${C.price} ${i + 1}`)} <span className="text-xs">¥</span><div className="text-xs text-gray-500" dir="ltr">= ¥{f2(r.cny)}</div></td>
+                  <td data-label={C.price}><div className="flex items-center gap-1"><span className="text-xs">¥</span>{input(l.unit_price, (v) => setLine(l.key, { unit_price: v }), `${C.price} ${i + 1}`, "min-w-0 flex-1")}</div><div className="text-xs text-gray-500" dir="ltr">= ¥{f2(r.cny)}</div></td>
                   <td data-label={C.cbm}>{input(l.carton_cbm, (v) => setLine(l.key, { carton_cbm: v }), `${C.cbm} ${i + 1}`)}<div className="text-xs text-gray-500" dir="ltr">= {Math.round(r.cbm * 1000) / 1000} CBM</div></td>
                   <td data-label={C.landed} dir="ltr"><div>{f2(r.line)}</div><div className="text-lg font-bold">{r.unit === null ? "—" : f2(r.unit)}</div><div className="text-xs text-gray-400">+ {f2(r.feesShare)}</div></td>
                   <td>{editable && <button type="button" className="text-gray-400 hover:text-red-600" aria-label={C.remove} onClick={() => setLines((ls) => ls.filter((x) => x.key !== l.key))}>×</button>}</td>
