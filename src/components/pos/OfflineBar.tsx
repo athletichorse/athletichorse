@@ -107,20 +107,20 @@ export function printTempReceipt(sale: QueuedSale, ctx: { t: Dict; locale: Local
 }
 
 /** Prints the desk slip of a quotation made offline; its QR carries the items so the cashier can scan it offline too. */
-export async function printTempQuote(q: { tempNo: string; total: string; createdAt: string; cart: QrLine[]; lines: { name: string; qty: string; price: string; discount: string }[] }, ctx: { t: Dict; locale: Locale; company: string; branch: string }) {
+export async function printTempQuote(q: { tempNo: string; total: string; createdAt: string; cart: QrLine[]; lines: { name: string; qty: string; price: string; discount: string; image?: string | null }[] }, ctx: { t: Dict; locale: Locale; company: string; branch: string }) {
   const o = ctx.t.pos.offline;
   const w = window.open("", "_blank", "width=420,height=720");
   if (!w) return;
   let qr = "";
   try { qr = await QRCode.toDataURL(encodeQuoteQr(q.tempNo, q.cart), { margin: 1, width: 220, errorCorrectionLevel: "L" }); } catch { /* too many lines for one QR: the number still works online */ }
   const dir = ctx.locale === "ar" ? "rtl" : "ltr";
-  const rows = q.lines.map((l) => `<tr><td>${esc(l.name)}</td><td class="n">${esc(l.qty)}</td><td class="n">${esc(l.price)}</td></tr>${Number(l.discount) > 0 ? `<tr><td colspan="3" class="d">− ${esc(l.discount)}</td></tr>` : ""}`).join("");
+  const rows = q.lines.map((l) => `<tr><td>${/^https:\/\//.test(l.image ?? "") ? `<img src="${esc(l.image ?? "")}" alt="" class="p">` : ""}${esc(l.name)}</td><td class="n">${esc(l.qty)}</td><td class="n">${esc(l.price)}</td></tr>${Number(l.discount) > 0 ? `<tr><td colspan="3" class="d">− ${esc(l.discount)}</td></tr>` : ""}`).join("");
   w.document.open();
   w.document.write(`<!doctype html><html lang="${ctx.locale}" dir="${dir}"><head><meta charset="utf-8"><title>${esc(q.tempNo)}</title>
 <style>@page{margin:4mm}body{font:12px system-ui,sans-serif;width:72mm;margin:0 auto}h1{font-size:14px;text-align:center;margin:4px 0}
 .c{text-align:center}table{width:100%;border-collapse:collapse}td{padding:2px 0;vertical-align:top}.n{text-align:end;white-space:nowrap;padding-inline-start:6px}
 .d{color:#555;font-size:11px}.t{border-top:1px dashed #000;margin-top:6px;padding-top:6px;font-weight:700;display:flex;justify-content:space-between}
-.note{border:1px solid #000;padding:4px;margin-top:8px;font-size:11px}</style></head><body>
+.note{border:1px solid #000;padding:4px;margin-top:8px;font-size:11px}.p{width:12mm;height:12mm;object-fit:contain;display:block;margin-bottom:2px}</style></head><body>
 <div class="c"><img src="${location.origin}/brand/logo.png" alt="" style="height:40px"></div><h1>${esc(ctx.company)}</h1><div class="c">${esc(ctx.branch)}</div>
 <div class="c" style="margin:6px 0;font-weight:700">${esc(o.quoteSlip)}</div>
 <div class="c" dir="ltr">${esc(q.tempNo)}</div><div class="c">${esc(formatDateTime(new Date(q.createdAt), ctx.locale))}</div>

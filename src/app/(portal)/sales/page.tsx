@@ -17,7 +17,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   const me = await requirePermission("sales.view");
   const { t, locale } = await getDict();
   const sp = await searchParams;
-  const tab = sp.tab === "returns" || sp.tab === "website" ? sp.tab : "invoices";
+  const tab = sp.tab === "returns" || sp.tab === "website" || sp.tab === "quotes" ? sp.tab : "invoices";
   const page = Math.max(1, Number(sp.page) || 1);
   const allBranches = me.perms.has("sales.view_all_branches");
   const sar = (v: string | number) => formatSAR(toHalalas(String(Number(v).toFixed(2))), locale);
@@ -37,7 +37,43 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   let body: React.ReactNode;
   let count = 0;
   let running = false;
-  if (tab === "website") {
+  if (tab === "quotes") {
+    let q = db().from("quotations").select("id, quote_no, created_at, location_id, customer_id, status, gross_total", { count: "exact" });
+    if (!allBranches && me.locations !== "all") q = q.in("location_id", me.locations);
+    const { data, count: c } = await q.order("created_at", { ascending: false }).range((page - 1) * 50, page * 50 - 1);
+    count = c ?? 0;
+    const custIds = [...new Set((data ?? []).map((r) => r.customer_id).filter(Boolean))] as string[];
+    const locIds = [...new Set((data ?? []).map((r) => r.location_id))];
+    const [{ data: custs }, { data: locs }] = await Promise.all([
+      custIds.length ? db().from("customers").select("id, name, phone").in("id", custIds) : Promise.resolve({ data: [] as { id: string; name: string; phone: string }[] }),
+      locIds.length ? db().from("locations").select("id, name_en, name_ar").in("id", locIds) : Promise.resolve({ data: [] as { id: string; name_en: string; name_ar: string }[] }),
+    ]);
+    const Q = t.sales.quote;
+    body = (
+      <div className="card overflow-hidden p-0"><div className="overflow-x-auto">
+        <table className="table" data-export data-testid="quotes-list">
+          <thead><tr><th>{t.sales.number}</th><th>{t.sales.date}</th><th>{t.sales.branch}</th><th>{t.sales.customer}</th><th>{t.sales.status}</th><th>{t.sales.total}</th><th></th></tr></thead>
+          <tbody>
+            {(data ?? []).length === 0 && <tr><td colSpan={7} className="py-10 text-center text-gray-500">{t.sales.none}</td></tr>}
+            {(data ?? []).map((r) => {
+              const cu = custs?.find((x) => x.id === r.customer_id), lo = locs?.find((x) => x.id === r.location_id);
+              return (
+                <tr key={r.id}>
+                  <td className="cell-title font-mono" dir="ltr">#{r.quote_no}</td>
+                  <td data-label={t.sales.date} className="text-xs text-gray-500">{formatDateTime(new Date(r.created_at), locale)}</td>
+                  <td data-label={t.sales.branch}>{(locale === "ar" && lo?.name_ar) || lo?.name_en || "—"}</td>
+                  <td data-label={t.sales.customer}>{cu?.name || cu?.phone || "—"}</td>
+                  <td data-label={t.sales.status}><span className={r.status === "open" ? "badge-blue" : r.status === "collected" ? "badge-green" : "badge-gray"}>{Q.statuses[r.status as keyof typeof Q.statuses] ?? r.status}</span></td>
+                  <td data-label={t.sales.total} className="font-semibold">{sar(r.gross_total)}</td>
+                  <td><Link href={`/sales/quotes/${r.id}`} className="text-sm text-[var(--brand)] underline">{Q.open}</Link></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div></div>
+    );
+  } else if (tab === "website") {
     const [{ data, count: c }, { data: lastRun }] = await Promise.all([
       db().from("web_orders").select("id, name, created_at, customer_name, city, financial_status, fulfillment_status, cancelled_at, total", { count: "exact" }).order("created_at", { ascending: false }).range((page - 1) * 50, page * 50 - 1),
       db().from("sync_runs").select("started_at, status, counts, error").eq("source", "shopify_orders").order("started_at", { ascending: false }).limit(1).maybeSingle(),
@@ -121,7 +157,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
         <div className="card p-4"><div className="text-sm text-gray-500">{t.sales.today} · {t.sales.creditNotes}</div><div className="text-2xl font-semibold">{sar(todayReturns)}</div></div>
       </div>
       <div className="no-print mb-4 flex flex-wrap gap-2 pb-1">
-        {tabLink("invoices", t.sales.invoices)}{tabLink("returns", t.sales.creditNotes)}{tabLink("website", t.sales.website)}
+        {tabLink("invoices", t.sales.invoices)}{tabLink("returns", t.sales.creditNotes)}{tabLink("website", t.sales.website)}{tabLink("quotes", t.sales.quotes)}
       </div>
       {body}
       <div className="no-print mt-4 flex items-center justify-end gap-2 text-sm text-gray-600">

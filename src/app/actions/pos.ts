@@ -214,7 +214,7 @@ async function priceLines(s: Staff, lines: CartLine[], approver: { u?: string; p
 }
 
 // ---------------------------------------------------------------- quotation (desk)
-export async function saveQuotationAction(input: { clientId: string; locationId: string; salespersonId?: string; customerId?: string; lines: CartLine[]; approverUsername?: string; approverPin?: string; offlineTempNo?: string }): Promise<PosResult<{ quoteNo: number }>> {
+export async function saveQuotationAction(input: { clientId: string; locationId: string; salespersonId?: string; customerId?: string; lines: CartLine[]; approverUsername?: string; approverPin?: string; offlineTempNo?: string }): Promise<PosResult<{ quoteNo: number; quotationId: string }>> {
   const s = await requireStaff();
   if (!has(s, "pos.desk")) return { ok: false, error: "forbidden" };
   if (!isId(input.clientId) || !(await posLocationOk(s, input.locationId))) return { ok: false, error: "location_not_allowed" };
@@ -232,7 +232,7 @@ export async function saveQuotationAction(input: { clientId: string; locationId:
   if (/^OFF-[A-Za-z0-9]{1,12}-[A-Z0-9]{4}-Q\d{4,6}$/.test(temp)) await db().from("quotations").update({ offline_temp_no: temp }).eq("id", data.quotation_id).is("offline_temp_no", null);
   if (!data.duplicate) await audit(s.id, "pos.quotation", "quotation", data.quotation_id, { quote_no: data.quote_no, total: data.gross_total, offline: temp || null });
   revalidatePath("/pos");
-  return { ok: true, quoteNo: Number(data.quote_no) };
+  return { ok: true, quoteNo: Number(data.quote_no), quotationId: String(data.quotation_id) };
 }
 
 /** A desk slip made offline: its temporary number → the real quotation number (once sent). */

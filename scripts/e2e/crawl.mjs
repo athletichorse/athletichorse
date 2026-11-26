@@ -45,7 +45,7 @@ async function checkPage(page, path, label) {
 }
 
 const browser = await chromium.launch();
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/reports/sales", "/sales/reports/analysis", "/sales/reports/invoices", "/sales/reports/treasury", "/sales/reports/b2b", "/sales/reports/purchases", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/purchasing/china", "/purchasing/china/new", "/purchasing/expenses", "/purchasing/expenses/plan", "/sales/reports/finance", "/marketing", "/marketing/campaigns", "/sales?tab=returns", "/sales?tab=website", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/reports/sales", "/sales/reports/analysis", "/sales/reports/invoices", "/sales/reports/treasury", "/sales/reports/b2b", "/sales/reports/purchases", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/purchasing/china", "/purchasing/china/new", "/purchasing/expenses", "/purchasing/expenses/plan", "/sales/reports/finance", "/marketing", "/marketing/campaigns", "/sales?tab=returns", "/sales?tab=website", "/sales?tab=quotes", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
 
 // ---------------------------------------------------------------- 1. setup + flows (desktop, English)
 console.log("\n== Setup and main flows (desktop, English)");
@@ -1001,6 +1001,11 @@ await page.click('button:text-is("Find")');
 await page.waitForSelector("[data-testid=customer-level]", { timeout: 10000 }).catch(() => fail("pos", "customer's price level not shown"));
 await page.waitForFunction(() => /90\.00/.test(document.querySelector("main aside")?.textContent ?? ""), null, { timeout: 10000 })
   .then(() => ok("customer on VIP level: 3 × 30.00 = 90.00 at the till")).catch(async () => fail("pos", `VIP total: ${(await page.locator("main aside").innerText()).replace(/\s+/g, " ").slice(0, 160)}`));
+{
+  const bp = await page.locator("[data-testid=base-price]").first().innerText().catch(() => "");
+  if (!/Normal price: 35\.00/.test(bp)) fail("pos", `the normal price should show under the VIP price: "${bp}"`);
+  else ok("the till shows the normal price (35.00, crossed out) under the customer's price");
+}
 await page.locator('label:has-text("Cash given") + input').fill("90");
 await page.click('button:has-text("Pay SAR")');
 await page.waitForSelector(".alert-ok, .alert-err", { timeout: 20000 });
@@ -1015,6 +1020,24 @@ await page.waitForSelector(".alert-ok, .alert-err", { timeout: 20000 });
 const qMsg = await page.locator(".alert-ok, .alert-err").first().innerText();
 const qNo = qMsg.match(/number (\d+)/)?.[1];
 if (!qNo) fail("pos", `quotation: ${qMsg}`); else ok(`desk quotation saved (#${qNo})`);
+{
+  const href = await page.locator("[data-testid=msg-link]").first().getAttribute("href").catch(() => null);
+  if (!href || !/^\/sales\/quotes\/[0-9a-f-]{36}\?print=1$/.test(href)) fail("pos", `quotation: no print link (${href})`);
+  else {
+    const qp = await ctx.newPage();
+    await qp.addInitScript(() => { window.print = () => { window.__printed = true; }; });
+    await qp.goto(BASE + href, { waitUntil: "networkidle" });
+    await qp.waitForTimeout(800);
+    const txt = await qp.locator("[data-testid=quote-lines]").innerText().catch(() => "");
+    const pics = await qp.locator("[data-testid=quote-lines] tbody td.cell-media").count();
+    const printed = await qp.evaluate(() => Boolean(window.__printed));
+    if (!/E2E-ROPE-1/.test(txt) || pics < 1 || !/Picture/i.test(txt) || !printed) fail("pos", `quotation page: ${txt.replace(/\s+/g, " ").slice(0, 200)} pics=${pics} printed=${printed}`);
+    else ok("quotation opens on the website with a picture column and prints (A4 / PDF / Excel from the Print menu)");
+    await qp.goto(BASE + "/sales?tab=quotes", { waitUntil: "networkidle" });
+    if (!(await qp.locator("[data-testid=quotes-list]").innerText()).includes(`#${qNo}`)) fail("sales", "quotation not in Sales → Quotations"); else ok("Sales → Quotations lists it");
+    await qp.close();
+  }
+}
 await page.click('button:text-is("Collect")');
 await page.locator('input[placeholder="Quotation #"]').fill(qNo ?? "0");
 await page.click('button:text-is("Load")');
