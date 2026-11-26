@@ -210,7 +210,7 @@ export async function saveRatesAction(form: FormData) {
 // ---------------------------------------------------------------- China (container) orders
 export type CnInput = {
   id?: string; clientId: string; supplierId: string; locationId: string; title: string; container: string; status: "draft" | "ordered" | "shipped";
-  rate: string; ratePaid: string; feeShipping: string; feeCustoms: string; feeOther: string; notes: string;
+  rate: string; ratePaid: string; feeShipping: string; feeCustoms: string; feeOther: string; feeCurrency?: string; notes: string;
   lines: { supplier_code: string; description: string; variant_id: string | null; cartons: string; per_carton: string; unit_price: string; carton_cbm: string; image_url?: string | null }[];
 };
 
@@ -244,6 +244,7 @@ export async function saveChinaOrderAction(input: CnInput): Promise<R<{ id: stri
   const { data, error } = await db().rpc("save_china_order", {
     p: { id: input.id ?? null, client_id: input.clientId, supplier_id: input.supplierId || null, location_id: input.locationId, title: txt(input.title, 120),
          container: input.container || null, status: input.status, rate, rate_paid: paid || null, fee_shipping: ship, fee_customs: cust, fee_other: other,
+         fee_currency: ["SAR", "USD", "CNY"].includes(String(input.feeCurrency ?? "SAR").toUpperCase()) ? String(input.feeCurrency ?? "SAR").toUpperCase() : "SAR",
          notes: String(input.notes ?? "").slice(0, 1000), user_id: s.id, lines: clean },
   });
   if (error || !data) return { ok: false, error: errCode(error?.message, PO_ERRORS) };

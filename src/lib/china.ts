@@ -10,31 +10,43 @@ export const CN_CONTAINERS = [
 export type ContainerKey = (typeof CN_CONTAINERS)[number]["key"];
 
 export type CnLine = { supplier_code: string; description: string; variant_id: string | null; cartons: string; per_carton: string; unit_price: string; carton_cbm: string; image_url?: string | null; sku?: string | null; src_row?: number };
-export type CnFees = { rate: string; rate_paid: string; fee_shipping: string; fee_customs: string; fee_other: string };
+export type CnFees = { rate: string; rate_paid: string; fee_shipping: string; fee_customs: string; fee_other: string; fee_currency?: string };
+export const FEE_CURRENCIES = ["SAR", "USD", "CNY"] as const;
 
 const num = (v: unknown) => { const n = Number(String(v ?? "").replace(/[,\s¥￥$]|RMB|CNY|元/gi, "")); return Number.isFinite(n) ? n : 0; };
 
-/** Per line: pieces, CNY value, CBM, landed cost per piece and per line (SAR); and the order totals. */
-export function landed(lines: CnLine[], f: CnFees) {
+/**
+ * The owner's landed rate (سعر التضريب), one rate for every item:
+ *   ratio  = (container in yuan + fees in yuan) ÷ container in yuan      (fees typed in SAR / USD / CNY, turned into yuan)
+ *   factor = ratio × rate (SAR per 1 yuan; the rate actually paid when typed)
+ *   price in SAR = price in yuan × factor
+ * Per line: pieces, CNY value, CBM, landed cost per piece and per line (SAR); and the order totals.
+ */
+export function landed(lines: CnLine[], f: CnFees, usdRate = 3.75) {
   const rate = num(f.rate), paid = num(f.rate_paid), eff = paid > 0 ? paid : rate;
-  const ship = num(f.fee_shipping), cust = num(f.fee_customs), other = num(f.fee_other);
+  // fees as typed (SAR / USD / CNY) → SAR
+  const typed = num(f.fee_shipping) + num(f.fee_customs) + num(f.fee_other);
+  const cur = (f.fee_currency ?? "SAR").toUpperCase();
+  const fees = Math.round(typed * (cur === "USD" ? usdRate : cur === "CNY" ? eff : 1) * 100) / 100;
   const rows = lines.map((l) => {
     const cartons = num(l.cartons), per = Math.max(1, num(l.per_carton) || 1);
     const qty = cartons * per, cny = qty * num(l.unit_price), cbm = cartons * num(l.carton_cbm);
     return { qty, cny, cbm };
   });
   const totCny = rows.reduce((a, r) => a + r.cny, 0), totCbm = rows.reduce((a, r) => a + r.cbm, 0);
+  const feesCny = eff > 0 ? fees / eff : 0;
+  const ratio = totCny > 0 ? (totCny + feesCny) / totCny : 1;
+  const factor = eff * ratio;
   const out = rows.map((r) => {
     if (r.qty <= 0) return { ...r, unit: null as number | null, line: 0, feesShare: 0 };
-    const shipShare = totCbm > 0 ? (ship * r.cbm) / totCbm : totCny > 0 ? (ship * r.cny) / totCny : 0;
-    const restShare = totCny > 0 ? ((cust + other) * r.cny) / totCny : 0;
-    const line = r.cny * eff + shipShare + restShare;
-    return { ...r, unit: Math.round((line / r.qty) * 10000) / 10000, line: Math.round(line * 100) / 100, feesShare: Math.round((shipShare + restShare) * 100) / 100 };
+    const line = r.cny * factor;
+    return { ...r, unit: Math.round((line / r.qty) * 10000) / 10000, line: Math.round(line * 100) / 100, feesShare: Math.round((line - r.cny * eff) * 100) / 100 };
   });
-  const goodsSar = Math.round(totCny * eff * 100) / 100, fees = Math.round((ship + cust + other) * 100) / 100;
+  const goodsSar = Math.round(totCny * eff * 100) / 100;
   const pieces = rows.reduce((a, r) => a + r.qty, 0);
   return {
     rows: out, totCny: Math.round(totCny * 100) / 100, totCbm: Math.round(totCbm * 1000) / 1000, goodsSar, fees,
+    feesCny: Math.round(feesCny * 100) / 100, ratio: Math.round(ratio * 10000) / 10000, factor: Math.round(factor * 10000) / 10000,
     feePct: goodsSar > 0 ? Math.round((fees / goodsSar) * 1000) / 10 : 0,
     // what changes because the rate actually paid differs from the order rate
     rateDiff: paid > 0 && rate > 0 ? Math.round(totCny * (paid - rate) * 100) / 100 : null,

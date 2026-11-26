@@ -5,6 +5,7 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { PageHeader } from "@/components/PageHeader";
 import { ChinaOrderForm } from "@/components/ChinaOrderForm";
+import { readRates } from "@/lib/fx";
 
 export const dynamic = "force-dynamic";
 
@@ -18,11 +19,12 @@ export default async function ChinaOrderPage({ params, searchParams }: { params:
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const { data: o } = await db().from("purchase_orders").select("*").eq("id", id).eq("kind", "china").maybeSingle();
   if (!o) notFound();
-  const [{ data: ls }, { data: sups }, { data: locs }, { count }] = await Promise.all([
+  const [{ data: ls }, { data: sups }, { data: locs }, { count }, { data: fx }] = await Promise.all([
     db().from("china_order_lines").select("*").eq("order_id", id).order("line_no"),
     db().from("suppliers").select("id, name").order("name"),
     db().from("locations").select("id, name_en, name_ar").eq("active", true).order("code"),
     db().from("purchase_receipts").select("id", { count: "exact", head: true }).eq("order_id", id),
+    db().from("settings").select("value").eq("key", "fx_rates").maybeSingle(),
   ]);
   const vids = (ls ?? []).map((l) => l.variant_id).filter(Boolean) as string[];
   const { data: vs } = vids.length ? await db().from("variant_search").select("variant_id, sku, name_en, name_ar, option1, option2, image_url").in("variant_id", vids) : { data: [] };
@@ -41,10 +43,10 @@ export default async function ChinaOrderPage({ params, searchParams }: { params:
       </PageHeader>
       {sp.ok && <p className="alert-ok mb-4">{t.saved}</p>}
       <p className="mb-4 text-sm text-gray-500">{C.receiveHint}</p>
-      <ChinaOrderForm t={t} locale={locale} suppliers={sups ?? []} locations={locations} editable={editable}
+      <ChinaOrderForm t={t} locale={locale} suppliers={sups ?? []} locations={locations} editable={editable} usdRate={readRates(fx?.value).USD ?? 3.75}
         initial={{
           id: o.id, poId: o.id, status: o.status, supplierId: o.supplier_id ?? "", locationId: o.location_id, title: o.title ?? "", container: o.container ?? "",
-          rate: n(o.rate), ratePaid: n(o.rate_paid), feeShipping: n(o.fee_shipping), feeCustoms: n(o.fee_customs), feeOther: n(o.fee_other), notes: o.notes ?? "",
+          rate: n(o.rate), ratePaid: n(o.rate_paid), feeShipping: n(o.fee_shipping), feeCustoms: n(o.fee_customs), feeOther: n(o.fee_other), feeCurrency: o.fee_currency ?? "SAR", notes: o.notes ?? "",
           lines: (ls ?? []).map((l) => {
             const x = v(l.variant_id);
             return { supplier_code: l.supplier_code ?? "", description: l.description ?? "", variant_id: l.variant_id, sku: x?.sku ?? null,

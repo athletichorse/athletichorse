@@ -6,12 +6,12 @@ import { readSheet } from "read-excel-file/browser";
 import type { Dict, Locale } from "@/i18n";
 import { matchCodesAction, saveChinaOrderAction, uploadChinaImagesAction, type CodeMatch } from "@/app/actions/purchasing";
 import { searchVariantsAction, type VariantHit } from "@/app/actions/stock";
-import { CN_CONTAINERS, landed, parseCsvRows, picturesForLines, readChinaSheet, type CnLine } from "@/lib/china";
+import { CN_CONTAINERS, FEE_CURRENCIES, landed, parseCsvRows, picturesForLines, readChinaSheet, type CnLine } from "@/lib/china";
 import { sheetImages, thumbnail } from "@/lib/xlsx-images";
 
 export type CnInitial = {
   id: string; poId: string; status: string; supplierId: string; locationId: string; title: string; container: string;
-  rate: string; ratePaid: string; feeShipping: string; feeCustoms: string; feeOther: string; notes: string; lines: (CnLine & { name?: string | null })[];
+  rate: string; ratePaid: string; feeShipping: string; feeCustoms: string; feeOther: string; feeCurrency?: string; notes: string; lines: (CnLine & { name?: string | null })[];
 };
 type Line = CnLine & { key: string; name?: string | null };
 const newKey = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()));
@@ -19,8 +19,8 @@ const f0 = (x: number) => Math.round(x).toLocaleString("en-US");
 const f2 = (x: number) => x.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
 /** China (container) order: supplier sheet → lines; container fill; rate; fees spread on the items → landed cost per piece (SAR). */
-export function ChinaOrderForm({ t, locale, suppliers, locations, initial, editable }: {
-  t: Dict; locale: Locale; suppliers: { id: string; name: string }[]; locations: { id: string; name: string }[]; initial?: CnInitial; editable: boolean;
+export function ChinaOrderForm({ t, locale, suppliers, locations, initial, editable, usdRate = 3.75 }: {
+  t: Dict; locale: Locale; suppliers: { id: string; name: string }[]; locations: { id: string; name: string }[]; initial?: CnInitial; editable: boolean; usdRate?: number;
 }) {
   const C = t.cn;
   const router = useRouter();
@@ -29,7 +29,7 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
   const [locationId, setLocationId] = useState(initial?.locationId ?? locations[0]?.id ?? "");
   const [container, setContainer] = useState(initial?.container || "40ft");
   const [status, setStatus] = useState<"draft" | "ordered" | "shipped">((["draft", "ordered", "shipped"].includes(initial?.status ?? "") ? initial!.status : "draft") as "draft" | "ordered" | "shipped");
-  const [fees, setFees] = useState({ rate: initial?.rate ?? "", rate_paid: initial?.ratePaid ?? "", fee_shipping: initial?.feeShipping ?? "", fee_customs: initial?.feeCustoms ?? "", fee_other: initial?.feeOther ?? "" });
+  const [fees, setFees] = useState({ rate: initial?.rate ?? "", rate_paid: initial?.ratePaid ?? "", fee_shipping: initial?.feeShipping ?? "", fee_customs: initial?.feeCustoms ?? "", fee_other: initial?.feeOther ?? "", fee_currency: initial?.feeCurrency ?? "SAR" });
   const [lines, setLinesRaw] = useState<Line[]>((initial?.lines ?? []).map((l) => ({ ...l, key: newKey() })));
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -42,7 +42,7 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
   const clientId = useRef(crypto.randomUUID());
   const setLines = (f: (l: Line[]) => Line[]) => { setLinesRaw(f); setDirty(true); };
   const setLine = (key: string, patch: Partial<Line>) => setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
-  const calc = useMemo(() => landed(lines, fees), [lines, fees]);
+  const calc = useMemo(() => landed(lines, fees, usdRate), [lines, fees, usdRate]);
   const cap = CN_CONTAINERS.find((c) => c.key === container)?.cbm ?? 58;
   const pct = cap ? Math.round((calc.totCbm / cap) * 1000) / 10 : 0;
   const linked = lines.filter((l) => l.variant_id).length;
@@ -116,7 +116,7 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
     setLinesRaw(withPics);
     const r = await saveChinaOrderAction({
       id: initial?.poId, clientId: clientId.current, supplierId, locationId, title, container, status, rate: fees.rate, ratePaid: fees.rate_paid,
-      feeShipping: fees.fee_shipping, feeCustoms: fees.fee_customs, feeOther: fees.fee_other, notes: initial?.notes ?? "",
+      feeShipping: fees.fee_shipping, feeCustoms: fees.fee_customs, feeOther: fees.fee_other, feeCurrency: fees.fee_currency, notes: initial?.notes ?? "",
       lines: withPics.map(({ supplier_code, description, variant_id, cartons, per_carton, unit_price, carton_cbm, image_url }) => ({ supplier_code, description, variant_id, cartons, per_carton, unit_price, carton_cbm, image_url: image_url?.startsWith("https://") ? image_url : null })),
     }).catch(() => ({ ok: false as const, error: "network" }));
     setBusy(false);
@@ -177,6 +177,7 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
         </div>
         <div><div className="text-xs text-gray-500">{C.goods}</div><div className="text-xl font-semibold" dir="ltr">{f2(calc.goodsSar)}</div></div>
         <div><div className="text-xs text-gray-500">{C.fees}</div><div className="text-xl font-semibold" dir="ltr">{f2(calc.fees)} <span className="text-xs font-normal text-gray-500">· {calc.feePct}%</span></div></div>
+        <div><div className="text-xs text-gray-500">{C.factor}</div><div className="text-xl font-semibold text-[var(--brand)]" dir="ltr" data-testid="cn-factor">{calc.factor ? calc.factor.toFixed(4) : "—"}</div></div>
         <div><div className="text-xs text-gray-500">{C.rateDiff}</div><div className="text-xl font-semibold" dir="ltr">{calc.rateDiff === null ? "—" : f2(calc.rateDiff)}</div></div>
         <div><div className="text-xs text-gray-500">{C.total}</div><div className="text-2xl font-bold" dir="ltr" data-testid="cn-total">{f2(calc.total)} SAR</div></div>
         <div className="ms-auto text-end">
@@ -195,13 +196,33 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
           <div className="mt-3 flex items-start justify-between rounded-lg bg-gray-50 p-3"><div><div className="font-medium">{C.rateDiffTitle}</div><p className="text-xs text-gray-500">{C.rateDiffHint}</p></div><b dir="ltr">{calc.rateDiff === null ? "—" : f2(calc.rateDiff)}</b></div>
         </section>
         <section className="card">
-          <h2 className="card-title">{C.feesTitle}</h2>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <h2 className="card-title mb-0 flex-1">{C.feesTitle}</h2>
+            <div className="flex gap-1" role="radiogroup" aria-label={C.feeCurrency}>
+              {FEE_CURRENCIES.map((c) => (
+                <button key={c} type="button" role="radio" aria-checked={fees.fee_currency === c} disabled={ro} data-testid={`cn-fee-${c}`}
+                  onClick={() => { setFees({ ...fees, fee_currency: c }); setDirty(true); }}
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${fees.fee_currency === c ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)]"}`}>
+                  {C.currencies[c]}
+                </button>
+              ))}
+            </div>
+          </div>
+          {fees.fee_currency !== "SAR" && <p className="mb-2 text-xs text-gray-500" dir="ltr">{fees.fee_currency === "USD" ? `1 USD = ${usdRate} SAR` : `1 ¥ = ${Number(fees.rate_paid) > 0 ? fees.rate_paid : fees.rate || "—"} SAR`} · {C.feesInSar}: {f2(calc.fees)} SAR</p>}
           <div className="grid gap-3 sm:grid-cols-3">
             <div><label className="label" htmlFor="cn-ship">{C.shipping}</label><input id="cn-ship" className="input" dir="ltr" inputMode="decimal" value={fees.fee_shipping} disabled={ro} onChange={(e) => { setFees({ ...fees, fee_shipping: e.target.value }); setDirty(true); }} /></div>
             <div><label className="label" htmlFor="cn-cust">{C.customs}</label><input id="cn-cust" className="input" dir="ltr" inputMode="decimal" value={fees.fee_customs} disabled={ro} onChange={(e) => { setFees({ ...fees, fee_customs: e.target.value }); setDirty(true); }} /></div>
             <div><label className="label" htmlFor="cn-other">{C.other}</label><input id="cn-other" className="input" dir="ltr" inputMode="decimal" value={fees.fee_other} disabled={ro} onChange={(e) => { setFees({ ...fees, fee_other: e.target.value }); setDirty(true); }} /></div>
           </div>
           <div className="mt-3 flex items-center justify-between rounded-lg bg-gray-50 p-3"><span className="font-medium">{C.feeLoad}</span><b className="text-2xl" dir="ltr">{calc.feePct}%</b></div>
+          <div className="mt-3 rounded-lg border border-[var(--line)] p-3 text-sm" data-testid="cn-factor-steps">
+            <div className="mb-1 font-semibold">{C.factorTitle}</div>
+            <div className="space-y-0.5 text-xs text-gray-600" dir="ltr">
+              <div>(¥{f2(calc.totCny)} + ¥{f2(calc.feesCny)}) ÷ ¥{f2(calc.totCny)} = {calc.ratio.toFixed(4)}</div>
+              <div>{calc.ratio.toFixed(4)} × {f2(Number(fees.rate_paid) > 0 ? Number(fees.rate_paid) : Number(fees.rate) || 0)} = <b className="text-[var(--brand)]">{calc.factor.toFixed(4)}</b></div>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">{C.factorHint}</p>
+          </div>
           <p className="mt-2 text-xs text-gray-500">{C.feesHint.replace("{x}", calc.goodsSar > 0 ? f2((calc.fees / calc.goodsSar) * 100) : "0")}</p>
           <p className="mt-1 text-sm">{C.avgUnit}: <b dir="ltr">{calc.avgUnit === null ? "—" : `${f2(calc.avgUnit)} SAR`}</b></p>
         </section>

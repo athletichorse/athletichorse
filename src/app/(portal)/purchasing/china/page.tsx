@@ -4,6 +4,7 @@ import { getDict } from "@/lib/locale";
 import { db } from "@/lib/supabase/admin";
 import { PageHeader } from "@/components/PageHeader";
 import { CN_CONTAINERS } from "@/lib/china";
+import { readRates } from "@/lib/fx";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +14,11 @@ export default async function ChinaOrders() {
   const { t } = await getDict();
   const C = t.cn;
   const [{ data: orders }, { data: sups }] = await Promise.all([
-    db().from("purchase_orders").select("id, po_no, title, supplier_id, container, status, total, rate, rate_paid, fee_shipping, fee_customs, fee_other, created_at").eq("kind", "china").order("po_no", { ascending: false }).limit(500),
+    db().from("purchase_orders").select("id, po_no, title, supplier_id, container, status, total, rate, rate_paid, fee_shipping, fee_customs, fee_other, fee_currency, created_at").eq("kind", "china").order("po_no", { ascending: false }).limit(500),
     db().from("suppliers").select("id, name"),
   ]);
+  const { data: fx } = await db().from("settings").select("value").eq("key", "fx_rates").maybeSingle();
+  const usd = readRates(fx?.value).USD ?? 3.75;
   const ids = (orders ?? []).map((o) => o.id);
   const { data: ls } = ids.length ? await db().from("china_order_lines").select("order_id, cartons, carton_cbm").in("order_id", ids) : { data: [] };
   const cbm = (id: string) => Math.round((ls ?? []).filter((l) => l.order_id === id).reduce((a, l) => a + Number(l.cartons) * Number(l.carton_cbm), 0) * 100) / 100;
@@ -33,7 +36,9 @@ export default async function ChinaOrders() {
               {(orders ?? []).map((o) => {
                 const cap = CN_CONTAINERS.find((c) => c.key === o.container)?.cbm;
                 const c = cbm(o.id);
-                const total = Number(o.total) * Number(o.rate_paid ?? o.rate) + Number(o.fee_shipping) + Number(o.fee_customs) + Number(o.fee_other);
+                const eff = Number(o.rate_paid ?? o.rate);
+                const feeK = o.fee_currency === "USD" ? usd : o.fee_currency === "CNY" ? eff : 1;
+                const total = Number(o.total) * eff + (Number(o.fee_shipping) + Number(o.fee_customs) + Number(o.fee_other)) * feeK;
                 return (
                   <tr key={o.id} data-cn={o.title ?? ""}>
                     <td className="cell-title"><Link href={`/purchasing/china/${o.id}`} className="font-medium underline">{o.title || `PO-${o.po_no}`}</Link>

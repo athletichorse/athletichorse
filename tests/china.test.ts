@@ -4,11 +4,15 @@ import { landed, parseCsvRows, picturesForLines, readChinaSheet, type CnLine } f
 const L = (o: Partial<CnLine>): CnLine => ({ supplier_code: "", description: "", variant_id: null, cartons: "", per_carton: "1", unit_price: "", carton_cbm: "", ...o });
 
 describe("China orders", () => {
-  it("landed cost: same as the database (shipping by CBM, customs + other by value)", () => {
+  it("landed rate (سعر التضريب): (container ¥ + fees ¥) ÷ container ¥ × rate, the same for every item", () => {
     const r = landed([L({ cartons: "4", per_carton: "50", unit_price: "18", carton_cbm: "0.18" }), L({ cartons: "6", per_carton: "50", unit_price: "33", carton_cbm: "0.2" })],
       { rate: "0.52", rate_paid: "", fee_shipping: "1000", fee_customs: "300", fee_other: "100" });
-    expect(r.rows[0].unit).toBe(11.7683);
-    expect(r.rows[1].unit).toBe(20.2211);
+    // fees 1400 SAR = ¥2692.31; (13500 + 2692.31) ÷ 13500 = 1.1994; × 0.52 = 0.6237
+    expect(r.feesCny).toBe(2692.31);
+    expect(r.ratio).toBe(1.1994);
+    expect(r.factor).toBe(0.6237);
+    expect(r.rows[0].unit).toBe(11.2267);
+    expect(r.rows[1].unit).toBe(20.5822);
     expect(r.totCny).toBe(13500);
     expect(r.totCbm).toBe(1.92);
     expect(r.goodsSar).toBe(7020);
@@ -59,5 +63,13 @@ describe("China orders", () => {
   it("lines remember their sheet row", () => {
     const r = readChinaSheet([[], ["Item No", "Description", "CTNS", "PCS/CTN", "Unit Price"], ["A-1", "Net", 2, 10, 5]]);
     expect(r.lines[0].src_row).toBe(2);
+  });
+  it("fees can be typed in SAR, USD or CNY", () => {
+    const line = [L({ cartons: "1", per_carton: "10", unit_price: "100" })];
+    const base = { rate: "0.5", rate_paid: "", fee_shipping: "100", fee_customs: "", fee_other: "" };
+    expect(landed(line, { ...base, fee_currency: "SAR" }).rows[0].unit).toBe(60);
+    expect(landed(line, { ...base, fee_currency: "USD" }, 3.75).rows[0].unit).toBe(87.5);
+    expect(landed(line, { ...base, fee_currency: "CNY" }).rows[0].unit).toBe(55);
+    expect(landed(line, { ...base, fee_currency: "USD" }, 3.75).fees).toBe(375);
   });
 });
