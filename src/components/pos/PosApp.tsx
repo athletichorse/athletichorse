@@ -609,7 +609,12 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
                   <tr key={l.variantId}>
                     <td className="cell-title">{l.name}{(l.options || l.sku) && <div className="text-xs text-gray-500">{l.options} <span dir="ltr">{l.sku ?? ""}</span></div>}</td>
                     <td data-label={t.pos.qty}><input data-qty={l.variantId} className="input w-20" dir="ltr" inputMode="decimal" value={l.qty} disabled={locked} onChange={(e) => set(l.usual ? { qty: e.target.value, discount: usualDiscount(l.price, e.target.value, customer?.discountPct) } : { qty: e.target.value })} /></td>
-                    <td data-label={t.pos.price}><input className="input w-24" dir="ltr" inputMode="decimal" value={l.price} disabled={locked || !p.can.priceChange} onChange={(e) => set({ price: e.target.value })} /></td>
+                    <td data-label={t.pos.price}>
+                      <input className="input w-24" dir="ltr" inputMode="decimal" value={l.price} disabled={locked || !p.can.priceChange} onChange={(e) => set({ price: e.target.value })} />
+                      {/* the normal price, when this customer pays a different one; and the price per piece after the discount */}
+                      {l.base && Number(l.base) !== Number(l.price) && <div className="mt-0.5 text-xs text-gray-500" data-testid="base-price">{t.pos.basePrice}: <s dir="ltr">{Number(l.base).toFixed(2)}</s></div>}
+                      {Number(l.discount) > 0 && Number(l.qty) > 0 && <div className="mt-0.5 text-xs text-emerald-700" data-testid="after-discount">{t.pos.afterDiscount}: <span dir="ltr">{((Number(l.price) * Number(l.qty) - Number(l.discount)) / Number(l.qty)).toFixed(2)}</span></div>}
+                    </td>
                     {p.can.discount && <td data-label={t.pos.discount}><input className="input w-20" dir="ltr" inputMode="decimal" value={l.discount} disabled={locked} onChange={(e) => set({ discount: e.target.value, usual: false })} /></td>}
                     <td>{!locked && <button className="text-sm text-red-600 hover:underline" onClick={() => { setLines((ls) => ls.filter((_, j) => j !== i)); setPayments([]); }}>{t.stock.remove}</button>}</td>
                   </tr>

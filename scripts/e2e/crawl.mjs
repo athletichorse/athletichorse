@@ -1001,6 +1001,11 @@ await page.click('button:text-is("Find")');
 await page.waitForSelector("[data-testid=customer-level]", { timeout: 10000 }).catch(() => fail("pos", "customer's price level not shown"));
 await page.waitForFunction(() => /90\.00/.test(document.querySelector("main aside")?.textContent ?? ""), null, { timeout: 10000 })
   .then(() => ok("customer on VIP level: 3 × 30.00 = 90.00 at the till")).catch(async () => fail("pos", `VIP total: ${(await page.locator("main aside").innerText()).replace(/\s+/g, " ").slice(0, 160)}`));
+{
+  const bp = await page.locator("[data-testid=base-price]").first().innerText().catch(() => "");
+  if (!/Normal price: 35\.00/.test(bp)) fail("pos", `the normal price should show under the VIP price: "${bp}"`);
+  else ok("the till shows the normal price (35.00, crossed out) under the customer's price");
+}
 await page.locator('label:has-text("Cash given") + input').fill("90");
 await page.click('button:has-text("Pay SAR")');
 await page.waitForSelector(".alert-ok, .alert-err", { timeout: 20000 });
