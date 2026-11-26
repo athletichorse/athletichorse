@@ -243,9 +243,9 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
                           <input className="input w-20 shrink-0 px-2 py-1.5 font-mono text-xs" dir="ltr" value={l.supplier_code} disabled={ro} aria-label={`${C.code} ${i + 1}`} onChange={(e) => setLine(l.key, { supplier_code: e.target.value })} />
                           <input className="input min-w-0 flex-1 px-2 py-1.5 text-sm" value={l.description} disabled={ro} aria-label={`${C.desc} ${i + 1}`} onChange={(e) => setLine(l.key, { description: e.target.value })} />
                         </div>
-                        <div className="truncate text-xs">
+                        <div className="flex min-w-0 items-center gap-2 text-xs">
                           {l.variant_id
-                            ? <><span className="text-emerald-700" dir="ltr">✓ {l.sku ?? ""}</span>{l.name && <span className="text-gray-500"> {l.name}</span>}{editable && <button type="button" className="ms-2 text-gray-500 underline" onClick={() => setLine(l.key, { variant_id: null, sku: null, name: null })}>{C.unlink}</button>}</>
+                            ? <><span className="min-w-0 truncate"><span className="text-emerald-700" dir="ltr">✓ {l.sku ?? ""}</span>{l.name && <span className="text-gray-500"> {l.name}</span>}</span>{editable && <button type="button" className="shrink-0 text-gray-500 underline" onClick={() => setLine(l.key, { variant_id: null, sku: null, name: null })}>{C.unlink}</button>}</>
                             : editable && (linking === l.key
                               ? <span className="relative inline-flex gap-1">
                                   <input autoFocus className="input w-36 px-2 py-1 text-xs" placeholder={C.search} value={linkTerm} aria-label={C.link} onChange={(e) => setLinkTerm(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void search(linkTerm, setLinkHits); } }} />
