@@ -1123,6 +1123,7 @@ const ar = {
       "pos.return_no_receipt": "مرتجع بدون فاتورة",
       "pos.skip_customer": "البيع بدون رقم العميل",
       "pos.past_shifts": "الورديات المغلقة",
+      "pos.see_base_price": "إظهار السعر الأساسي في الكاشير (تحت سعر العميل / الخصم)",
       "sales.website_orders": "طلبات الموقع",
       "sales.website_orders_edit": "تعديل الطلب على الموقع (شحن، دفع، إلغاء)",
       "sales.b2b": "طلبات الشركات (B2B)",

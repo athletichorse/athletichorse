@@ -35,6 +35,7 @@ export const PERMISSION_KEYS = [
   "pos.return_no_receipt", // returns without a receipt
   "pos.skip_customer", // sell without the customer's mobile + name
   "pos.past_shifts", // closed shifts and their reports
+  "pos.see_base_price", // the normal price under a customer's special / discounted price
   // Sales / المبيعات
   "sales.view",
   "sales.view_all_branches",

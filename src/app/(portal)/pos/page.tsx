@@ -54,7 +54,7 @@ export default async function PosPage() {
         quotes={(quotes ?? []).map((q) => ({ no: q.quote_no, total: String(q.gross_total), at: q.created_at }))}
         can={{
           shift: p("pos.shift"), sell: p("pos.collect") || p("pos.quick_sale"), desk: p("pos.desk"), collect: p("pos.collect"),
-          ret: p("pos.return"), retNoReceipt: p("pos.return_no_receipt"), skipCustomer: p("pos.skip_customer"), discount: p("pos.discount"), priceChange: p("pos.price_change"), cashOut: p("pos.cash_out"),
+          ret: p("pos.return"), retNoReceipt: p("pos.return_no_receipt"), skipCustomer: p("pos.skip_customer"), discount: p("pos.discount"), priceChange: p("pos.price_change"), cashOut: p("pos.cash_out"), seeBasePrice: p("pos.see_base_price"),
           addCustomer: p("customers.edit") || p("pos.collect") || p("pos.desk") || p("pos.quick_sale"),
         }}
         approval={{ discount: needsApproval(me.perms, "approval.discount"), ret: needsApproval(me.perms, "approval.return"), cashOut: needsApproval(me.perms, "approval.cash_out") }}

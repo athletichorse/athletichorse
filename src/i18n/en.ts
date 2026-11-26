@@ -1125,6 +1125,7 @@ const en: Dict = {
       "pos.return_no_receipt": "Returns without a receipt",
       "pos.skip_customer": "Sell without the customer's mobile",
       "pos.past_shifts": "Closed shifts",
+      "pos.see_base_price": "Show the normal price at the till (under a customer's price / discount)",
       "sales.website_orders": "Website orders",
       "sales.website_orders_edit": "Change orders on the website (ship, paid, cancel)",
       "sales.b2b": "B2B orders",
