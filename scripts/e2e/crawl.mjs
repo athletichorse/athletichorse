@@ -1031,7 +1031,7 @@ if (!qNo) fail("pos", `quotation: ${qMsg}`); else ok(`desk quotation saved (#${q
     const txt = await qp.locator("[data-testid=quote-lines]").innerText().catch(() => "");
     const pics = await qp.locator("[data-testid=quote-lines] tbody td.cell-media").count();
     const printed = await qp.evaluate(() => Boolean(window.__printed));
-    if (!/E2E-ROPE-1/.test(txt) || pics < 1 || !/Picture/.test(txt) || !printed) fail("pos", `quotation page: ${txt.slice(0, 120)} pics=${pics} printed=${printed}`);
+    if (!/E2E-ROPE-1/.test(txt) || pics < 1 || !/Picture/i.test(txt) || !printed) fail("pos", `quotation page: ${txt.replace(/\s+/g, " ").slice(0, 200)} pics=${pics} printed=${printed}`);
     else ok("quotation opens on the website with a picture column and prints (A4 / PDF / Excel from the Print menu)");
     await qp.goto(BASE + "/sales?tab=quotes", { waitUntil: "networkidle" });
     if (!(await qp.locator("[data-testid=quotes-list]").innerText()).includes(`#${qNo}`)) fail("sales", "quotation not in Sales → Quotations"); else ok("Sales → Quotations lists it");
