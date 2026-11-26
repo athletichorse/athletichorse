@@ -19,7 +19,7 @@ import {
 } from "@/app/actions/pos";
 
 /** base = the normal price; listPrice = the price for this customer (their price level), price = what is charged */
-type Line = { variantId: string; name: string; options: string; sku: string | null; qty: string; price: string; listPrice: string; discount: string; usual?: boolean; base?: string };
+type Line = { variantId: string; name: string; options: string; sku: string | null; qty: string; price: string; listPrice: string; discount: string; usual?: boolean; base?: string; image?: string | null };
 
 /** The customer's usual discount for one line, same rounding as the server (down to the halala). */
 function usualDiscount(price: string, qty: string, pct: number | undefined): string {
@@ -52,7 +52,7 @@ export function PosApp(p: Props) {
   const router = useRouter();
   const tabs = ([["sell", p.can.sell], ["desk", p.can.desk], ["collect", p.can.collect], ["returns", p.can.ret]] as const).filter(([, ok]) => ok).map(([k]) => k);
   const [tab, setTab] = useState<(typeof tabs)[number]>(tabs[0] ?? "sell");
-  const [msg, setMsg] = useState<{ ok: boolean; text: string; href?: string } | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string; href?: string; hrefLabel?: string } | null>(null);
   const err = (code: string) => (t.pos.errors as Record<string, string>)[code] ?? code;
 
   // ------------------------------------------------ no shift yet
@@ -81,7 +81,7 @@ export function PosApp(p: Props) {
   return <ShiftView {...p} tab={tab} setTab={setTab} tabs={tabs} msg={msg} setMsg={setMsg} err={err} router={router} />;
 }
 
-function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "collect" | "returns") => void; tabs: readonly ("sell" | "desk" | "collect" | "returns")[]; msg: { ok: boolean; text: string; href?: string } | null; setMsg: (m: { ok: boolean; text: string; href?: string } | null) => void; err: (c: string) => string; router: ReturnType<typeof useRouter> }) {
+function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "collect" | "returns") => void; tabs: readonly ("sell" | "desk" | "collect" | "returns")[]; msg: { ok: boolean; text: string; href?: string; hrefLabel?: string } | null; setMsg: (m: { ok: boolean; text: string; href?: string; hrefLabel?: string } | null) => void; err: (c: string) => string; router: ReturnType<typeof useRouter> }) {
   const { t, locale, shift, router, err } = p;
   const s = shift!;
   const locName = p.locations.find((l) => l.id === s.locationId)?.name ?? "";
@@ -208,7 +208,7 @@ function ShiftView(p: Props & { tab: string; setTab: (t: "sell" | "desk" | "coll
 
       {p.msg && (
         <p className={p.msg.ok ? "alert-ok" : "alert-err"}>
-          {p.msg.text}{p.msg.href && <a href={p.msg.href} target="_blank" rel="noopener" className="ms-3 font-semibold underline">{t.pos.printReceipt}</a>}
+          {p.msg.text}{p.msg.href && <a href={p.msg.href} target="_blank" rel="noopener" className="ms-3 font-semibold underline" data-testid="msg-link">{p.msg.hrefLabel ?? t.pos.printReceipt}</a>}
         </p>
       )}
 
@@ -344,7 +344,7 @@ function ItemSearch({ t, locale, onPick, off, onSlip, locationId }: { t: Dict; l
   );
 }
 
-function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTill; setMsg: (m: { ok: boolean; text: string; href?: string } | null) => void; err: (c: string) => string; router: ReturnType<typeof useRouter> }) {
+function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTill; setMsg: (m: { ok: boolean; text: string; href?: string; hrefLabel?: string } | null) => void; err: (c: string) => string; router: ReturnType<typeof useRouter> }) {
   const { t, locale, mode, err } = p;
   const s = p.shift!;
   const [lines, setLines] = useState<Line[]>([]);
@@ -402,7 +402,7 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
       const i = ls.findIndex((l) => l.variantId === h.variantId);
       if (i >= 0) return ls.map((l, j) => (j === i ? withUsual({ ...l, qty: String(Number(l.qty) + Number(n)) }, customer) : l));
       const pr = priceFor(h.price, h.variantId, level);
-      return [...ls, withUsual({ variantId: h.variantId, name: h.name, options: h.options, sku: h.sku, qty: n, price: pr, listPrice: pr, base: h.price, discount: "0" }, customer)];
+      return [...ls, withUsual({ variantId: h.variantId, name: h.name, options: h.options, sku: h.sku, qty: n, price: pr, listPrice: pr, base: h.price, discount: "0", image: h.image }, customer)];
     });
     focusQty.current = h.variantId; // the quantity box gets the focus after picking an item
     setPayments([]);
@@ -496,7 +496,7 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
     const tempNo = p.off.saveQuote({ clientId: clientId.current, label: formatDecimal(totalH), payload: { locationId: s.locationId, salespersonId: salesperson, customerId: customer?.id, lines: cart } });
     const branch = p.locations.find((l) => l.id === s.locationId)?.name ?? "";
     void printTempQuote({ tempNo, total: formatDecimal(totalH), createdAt: new Date().toISOString(), cart,
-      lines: lines.map((l) => ({ name: l.options ? `${l.name} - ${l.options}` : l.name, qty: l.qty, price: l.price, discount: l.discount })) }, { t, locale, company: p.company, branch });
+      lines: lines.map((l) => ({ name: l.options ? `${l.name} - ${l.options}` : l.name, qty: l.qty, price: l.price, discount: l.discount, image: l.image ?? null })) }, { t, locale, company: p.company, branch });
     p.setMsg({ ok: true, text: `${o.quoteSavedOffline} ${tempNo}` });
     reset();
   }
@@ -540,13 +540,13 @@ function SaleView(p: Props & { mode: "sell" | "desk" | "collect"; off: OfflineTi
     if (mode === "desk" && editId) {
       const r = await updateQuotationAction({ quotationId: editId, customerId: customer?.id, salespersonId: salesperson, lines: cart, approverUsername: mgr.u, approverPin: mgr.p });
       setBusy(false);
-      if (r.ok) { p.setMsg({ ok: true, text: `${t.pos.extra.quoteUpdated} ${r.quoteNo}` }); reset(); p.router.refresh(); } else p.setMsg({ ok: false, text: err(r.error) });
+      if (r.ok) { p.setMsg({ ok: true, text: `${t.pos.extra.quoteUpdated} ${r.quoteNo}`, href: `/sales/quotes/${editId}?print=1`, hrefLabel: t.pos.printQuote }); reset(); p.router.refresh(); } else p.setMsg({ ok: false, text: err(r.error) });
       return;
     }
     if (mode === "desk") {
       const r = await saveQuotationAction({ clientId: clientId.current, locationId: s.locationId, salespersonId: salesperson, customerId: customer?.id, lines: cart, approverUsername: mgr.u, approverPin: mgr.p });
       setBusy(false);
-      if (r.ok) { p.setMsg({ ok: true, text: `${t.pos.quoteSaved} ${r.quoteNo}` }); reset(); p.router.refresh(); } else p.setMsg({ ok: false, text: err(r.error) });
+      if (r.ok) { p.setMsg({ ok: true, text: `${t.pos.quoteSaved} ${r.quoteNo}`, href: `/sales/quotes/${r.quotationId}?print=1`, hrefLabel: t.pos.printQuote }); reset(); p.router.refresh(); } else p.setMsg({ ok: false, text: err(r.error) });
       return;
     }
     const r = await postSaleAction({
@@ -836,7 +836,7 @@ function ReturnView(p: Props & { off: OfflineTill; setMsg: (m: { ok: boolean; te
 }
 
 /** Expenses paid from the drawer: record one (type, amount, note) and see this shift's list with its total. */
-function ExpensesView(p: Props & { off: OfflineTill; setMsg: (m: { ok: boolean; text: string; href?: string } | null) => void; err: (c: string) => string }) {
+function ExpensesView(p: Props & { off: OfflineTill; setMsg: (m: { ok: boolean; text: string; href?: string; hrefLabel?: string } | null) => void; err: (c: string) => string }) {
   const { t, locale, err, off } = p;
   const E = t.pos.expenses;
   const s = p.shift!;
