@@ -3,8 +3,18 @@
 --   ratio  = (container in yuan + fees in yuan) ÷ container in yuan   (fees typed in SAR ÷ rate)
 --   rate   = ratio × yuan→SAR rate (the rate actually paid when typed)
 --   landed price per piece (SAR) = price in yuan × rate — the same rate for every item
--- (before: shipping was spread by CBM). Only replaces save_china_order. Safe to run more than once.
+-- (before: shipping was spread by CBM). Fees can be typed in SAR, USD or CNY (fee_currency):
+-- turned into yuan with the yuan→SAR rate (USD via the saved USD rate, 3.75 if none).
+-- Adds fee_currency; replaces save_china_order. Safe to run more than once.
 -- =====================================================================
+
+alter table public.purchase_orders add column if not exists fee_currency text not null default 'SAR';
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'purchase_orders_fee_currency_check') then
+    alter table public.purchase_orders add constraint purchase_orders_fee_currency_check check (fee_currency in ('SAR', 'USD', 'CNY'));
+  end if;
+end $$;
 
 create or replace function public.save_china_order(p jsonb)
 returns jsonb
@@ -17,11 +27,14 @@ declare
   v_rate numeric := (p->>'rate')::numeric; v_paid numeric := nullif(p->>'rate_paid', '')::numeric; v_eff numeric;
   v_ship numeric := coalesce(nullif(p->>'fee_shipping', '')::numeric, 0); v_cust numeric := coalesce(nullif(p->>'fee_customs', '')::numeric, 0);
   v_other numeric := coalesce(nullif(p->>'fee_other', '')::numeric, 0);
-  l jsonb; n int := 0; m int := 0; v_qty numeric; v_goods numeric; v_cbm numeric; v_tot_goods numeric := 0; v_tot_cbm numeric := 0; v_landed numeric; v_ratio numeric;
+  l jsonb; n int := 0; m int := 0; v_qty numeric; v_goods numeric; v_cbm numeric; v_tot_goods numeric := 0; v_tot_cbm numeric := 0; v_landed numeric; v_ratio numeric; v_fees_cny numeric;
+  v_fee_cur text := coalesce(nullif(upper(p->>'fee_currency'), ''), 'SAR');
+  v_usd numeric := coalesce((select nullif(value->>'USD', '')::numeric from settings where key = 'fx_rates'), 3.75);
 begin
   if v_status not in ('draft', 'ordered', 'shipped') then raise exception 'bad_status'; end if;
   if v_rate is null or v_rate <= 0 or (v_paid is not null and v_paid <= 0) then raise exception 'bad_rate'; end if;
   if v_ship < 0 or v_cust < 0 or v_other < 0 then raise exception 'bad_cost'; end if;
+  if v_fee_cur not in ('SAR', 'USD', 'CNY') then raise exception 'bad_currency'; end if;
   if jsonb_typeof(p->'lines') <> 'array' or jsonb_array_length(p->'lines') = 0 then raise exception 'no_lines'; end if;
   if nullif(p->>'supplier_id', '') is not null and not exists (select 1 from suppliers where id = (p->>'supplier_id')::uuid) then raise exception 'bad_supplier'; end if;
   v_eff := coalesce(v_paid, v_rate);
@@ -29,9 +42,9 @@ begin
   if v_id is null then
     select id, po_no into v_id, v_no from purchase_orders where client_id = (p->>'client_id')::uuid;
     if found then return jsonb_build_object('id', v_id, 'po_no', v_no, 'duplicate', true); end if;
-    insert into purchase_orders (client_id, kind, supplier_id, location_id, currency, rate, rate_paid, status, title, container, fee_shipping, fee_customs, fee_other, notes, created_by)
+    insert into purchase_orders (client_id, kind, supplier_id, location_id, currency, rate, rate_paid, status, title, container, fee_shipping, fee_customs, fee_other, fee_currency, notes, created_by)
     values ((p->>'client_id')::uuid, 'china', nullif(p->>'supplier_id', '')::uuid, (p->>'location_id')::uuid, 'CNY', v_rate, v_paid, v_status,
-            nullif(btrim(p->>'title'), ''), nullif(p->>'container', ''), v_ship, v_cust, v_other, coalesce(p->>'notes', ''), nullif(p->>'user_id', '')::uuid)
+            nullif(btrim(p->>'title'), ''), nullif(p->>'container', ''), v_ship, v_cust, v_other, v_fee_cur, coalesce(p->>'notes', ''), nullif(p->>'user_id', '')::uuid)
     returning id, po_no into v_id, v_no;
   else
     select po_no into v_no from purchase_orders where id = v_id and kind = 'china' and status in ('draft', 'ordered', 'shipped') for update;
@@ -39,7 +52,7 @@ begin
     if exists (select 1 from purchase_receipts where order_id = v_id) then raise exception 'locked'; end if;
     update purchase_orders set supplier_id = nullif(p->>'supplier_id', '')::uuid, location_id = (p->>'location_id')::uuid, rate = v_rate, rate_paid = v_paid,
            status = v_status, title = nullif(btrim(p->>'title'), ''), container = nullif(p->>'container', ''),
-           fee_shipping = v_ship, fee_customs = v_cust, fee_other = v_other, notes = coalesce(p->>'notes', ''), updated_at = now()
+           fee_shipping = v_ship, fee_customs = v_cust, fee_other = v_other, fee_currency = v_fee_cur, notes = coalesce(p->>'notes', ''), updated_at = now()
      where id = v_id;
     delete from china_order_lines where order_id = v_id;
     delete from purchase_order_lines where order_id = v_id;
@@ -52,7 +65,9 @@ begin
     v_tot_cbm := v_tot_cbm + coalesce(nullif(l->>'cartons', '')::numeric, 0) * coalesce(nullif(l->>'carton_cbm', '')::numeric, 0);
   end loop;
 
-  v_ratio := case when v_tot_goods > 0 then (v_tot_goods + (v_ship + v_cust + v_other) / v_eff) / v_tot_goods else 1 end;
+  -- fees in yuan: SAR ÷ rate; USD × USD rate ÷ rate; CNY as they are
+  v_fees_cny := (v_ship + v_cust + v_other) * case v_fee_cur when 'CNY' then 1 when 'USD' then v_usd / v_eff else 1 / v_eff end;
+  v_ratio := case when v_tot_goods > 0 then (v_tot_goods + v_fees_cny) / v_tot_goods else 1 end;
 
   for l in select * from jsonb_array_elements(p->'lines') loop
     n := n + 1;

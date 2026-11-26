@@ -10,20 +10,24 @@ export const CN_CONTAINERS = [
 export type ContainerKey = (typeof CN_CONTAINERS)[number]["key"];
 
 export type CnLine = { supplier_code: string; description: string; variant_id: string | null; cartons: string; per_carton: string; unit_price: string; carton_cbm: string; image_url?: string | null; sku?: string | null; src_row?: number };
-export type CnFees = { rate: string; rate_paid: string; fee_shipping: string; fee_customs: string; fee_other: string };
+export type CnFees = { rate: string; rate_paid: string; fee_shipping: string; fee_customs: string; fee_other: string; fee_currency?: string };
+export const FEE_CURRENCIES = ["SAR", "USD", "CNY"] as const;
 
 const num = (v: unknown) => { const n = Number(String(v ?? "").replace(/[,\s¥￥$]|RMB|CNY|元/gi, "")); return Number.isFinite(n) ? n : 0; };
 
 /**
  * The owner's landed rate (سعر التضريب), one rate for every item:
- *   ratio  = (container in yuan + fees in yuan) ÷ container in yuan      (fees are typed in SAR → ÷ rate)
+ *   ratio  = (container in yuan + fees in yuan) ÷ container in yuan      (fees typed in SAR / USD / CNY, turned into yuan)
  *   factor = ratio × rate (SAR per 1 yuan; the rate actually paid when typed)
  *   price in SAR = price in yuan × factor
  * Per line: pieces, CNY value, CBM, landed cost per piece and per line (SAR); and the order totals.
  */
-export function landed(lines: CnLine[], f: CnFees) {
+export function landed(lines: CnLine[], f: CnFees, usdRate = 3.75) {
   const rate = num(f.rate), paid = num(f.rate_paid), eff = paid > 0 ? paid : rate;
-  const fees = Math.round((num(f.fee_shipping) + num(f.fee_customs) + num(f.fee_other)) * 100) / 100;
+  // fees as typed (SAR / USD / CNY) → SAR
+  const typed = num(f.fee_shipping) + num(f.fee_customs) + num(f.fee_other);
+  const cur = (f.fee_currency ?? "SAR").toUpperCase();
+  const fees = Math.round(typed * (cur === "USD" ? usdRate : cur === "CNY" ? eff : 1) * 100) / 100;
   const rows = lines.map((l) => {
     const cartons = num(l.cartons), per = Math.max(1, num(l.per_carton) || 1);
     const qty = cartons * per, cny = qty * num(l.unit_price), cbm = cartons * num(l.carton_cbm);

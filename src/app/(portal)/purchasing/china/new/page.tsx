@@ -53,9 +53,9 @@ export default async function NewChinaOrder({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader title={t.cn.newOrder} t={t}><Link href="/purchasing/china" className="btn-ghost no-print">← {t.cn.title}</Link></PageHeader>
-      <ChinaOrderForm t={t} locale={locale} suppliers={sups ?? []} locations={locations} editable
+      <ChinaOrderForm t={t} locale={locale} suppliers={sups ?? []} locations={locations} editable usdRate={readRates(fx?.value).USD ?? 3.75}
         initial={{ id: "", poId: "", status: "draft", supplierId: src?.supplier_id ?? "", locationId: locations.find((l) => l.id === src?.location_id)?.id ?? locations[0]?.id ?? "",
-          title: src?.title ? `${src.title} (${t.cn.reorder})` : "", container: src?.container ?? "40ft", rate: cny ? String(cny) : "", ratePaid: "", feeShipping: "", feeCustoms: "", feeOther: "", notes: "", lines }} />
+          title: src?.title ? `${src.title} (${t.cn.reorder})` : "", container: src?.container ?? "40ft", rate: cny ? String(cny) : "", ratePaid: "", feeShipping: "", feeCustoms: "", feeOther: "", feeCurrency: "SAR", notes: "", lines }} />
     </>
   );
 }

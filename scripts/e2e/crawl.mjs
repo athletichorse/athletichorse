@@ -730,6 +730,12 @@ await page.goto(BASE + "/purchasing/china/new", { waitUntil: "networkidle" });
   if (!/1,107\.6 SAR/.test(sum) || !/0\.7 \/ 58 CBM/.test(sum)) fail("china", `summary: ${sum}`);
   else if (!/11\.19/.test(row1) || !/✓ E2E-SKU-001/.test(row1) || !/0\.5891/.test(sum)) fail("china", `landed rate / cost of the linked line: ${row1} | ${sum}`);
   else ok("China order: sheet read, code linked to our item, 0.7 / 58 CBM, landed rate (1880 + 250) ÷ 1880 × 0.52 = 0.5891 → 19 ¥ = 11.19 SAR per piece, total 1,107.6 SAR");
+  // fees in dollars: 130 USD × 3.75 = 487.5 SAR → total 977.6 + 487.5; back to riyals before saving
+  await page.click("[data-testid=cn-fee-USD]");
+  const usdTot = await page.locator("[data-testid=cn-total]").innerText();
+  if (!/1,465\.1 SAR/.test(usdTot)) fail("china", `fees in USD should make the total 1,465.1 SAR: ${usdTot}`);
+  else ok("fees can be typed in dollars (or yuan): 130 USD = 487.5 SAR, total 1,465.1 SAR");
+  await page.click("[data-testid=cn-fee-SAR]");
   await Promise.all([page.waitForURL(/\/purchasing\/china\/[0-9a-f-]{36}\?ok=1/, { timeout: 20000 }), page.click("[data-testid=cn-save]")]);
   const back = (await page.locator('[data-testid=cn-lines] tr[data-code="JC-9"]').count()) === 1 && /1,107\.6 SAR/.test(await page.locator("[data-testid=cn-total]").innerText());
   if (!back) fail("china", "saved order doesn't show its lines / total again");

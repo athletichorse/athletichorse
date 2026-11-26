@@ -64,4 +64,12 @@ describe("China orders", () => {
     const r = readChinaSheet([[], ["Item No", "Description", "CTNS", "PCS/CTN", "Unit Price"], ["A-1", "Net", 2, 10, 5]]);
     expect(r.lines[0].src_row).toBe(2);
   });
+  it("fees can be typed in SAR, USD or CNY", () => {
+    const line = [L({ cartons: "1", per_carton: "10", unit_price: "100" })];
+    const base = { rate: "0.5", rate_paid: "", fee_shipping: "100", fee_customs: "", fee_other: "" };
+    expect(landed(line, { ...base, fee_currency: "SAR" }).rows[0].unit).toBe(60);
+    expect(landed(line, { ...base, fee_currency: "USD" }, 3.75).rows[0].unit).toBe(87.5);
+    expect(landed(line, { ...base, fee_currency: "CNY" }).rows[0].unit).toBe(55);
+    expect(landed(line, { ...base, fee_currency: "USD" }, 3.75).fees).toBe(375);
+  });
 });
