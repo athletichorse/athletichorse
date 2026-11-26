@@ -86,6 +86,17 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
       cartons: "", per_carton: m?.per_carton ? String(m.per_carton) : "1", unit_price: m?.china_price !== null && m?.china_price !== undefined && (m.china_currency ?? "CNY") === "CNY" ? String(m.china_price) : "", carton_cbm: m?.carton_cbm ? String(m.carton_cbm) : "" }]);
     setTerm(""); setHits(null);
   }
+  const linkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function findForLink(q: string, now = false) {
+    setLinkTerm(q);
+    if (linkTimer.current) clearTimeout(linkTimer.current);
+    if (!q.trim()) return setLinkHits(null);
+    linkTimer.current = setTimeout(() => void search(q, setLinkHits), now ? 0 : 300);
+  }
+  function openLink(l: Line) {
+    setLinking(l.key); setLinkHits(null);
+    findForLink(l.supplier_code || l.description, true);
+  }
   async function link(key: string, h: VariantHit) {
     setLinking(null); setLinkTerm(""); setLinkHits(null);
     const m = h.sku ? (await matchCodesAction([h.sku], locale).catch(() => ({} as Record<string, CodeMatch>)))[h.sku] : undefined;
@@ -130,8 +141,38 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
     <input className={`input px-2 py-1.5 ${cls}`} dir="ltr" inputMode={mode} value={value} disabled={ro} aria-label={label} onChange={(e) => on(e.target.value)} />
   );
 
+  const linkLine = lines.find((x) => x.key === linking);
   return (
     <div className="space-y-4">
+      {linkLine && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 pt-16" role="dialog" aria-modal="true" aria-label={C.linkTitle.replace("{code}", linkLine.supplier_code)}
+          onKeyDown={(e) => { if (e.key === "Escape") setLinking(null); }} onClick={(e) => { if (e.target === e.currentTarget) setLinking(null); }} data-testid="cn-link-dialog">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl">
+            <div className="mb-1 flex items-start gap-3">
+              <h3 className="flex-1 text-lg font-semibold">{C.linkTitle.replace("{code}", linkLine.supplier_code || "—")}</h3>
+              <button type="button" className="text-2xl leading-none text-gray-400 hover:text-gray-700" aria-label={t.cancel} onClick={() => setLinking(null)}>×</button>
+            </div>
+            {linkLine.description && <p className="mb-3 text-sm text-gray-500">{linkLine.description}</p>}
+            <div className="flex gap-2">
+              <input autoFocus className="input min-w-0 flex-1" value={linkTerm} placeholder={C.search} aria-label={C.search}
+                onChange={(e) => findForLink(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); findForLink(linkTerm, true); } }} data-testid="cn-link-search" />
+              <button type="button" className="btn-primary" onClick={() => findForLink(linkTerm, true)}>{C.find}</button>
+            </div>
+            <p className="mt-2 text-xs text-gray-500">{C.linkHint}</p>
+            <div className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-[var(--line)]" data-testid="cn-link-results">
+              {linkHits === null && <p className="px-4 py-3 text-sm text-gray-400">{C.linkTypeHint}</p>}
+              {linkHits?.length === 0 && <p className="px-4 py-3 text-sm text-gray-500">{t.stock.notFound}</p>}
+              {linkHits?.map((h) => (
+                <button key={h.variantId} type="button" className="flex w-full items-center gap-3 border-b border-[var(--line)] px-4 py-2.5 text-start last:border-0 hover:bg-gray-50" onClick={() => void link(linkLine.key, h)}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {h.image ? <img src={h.image} alt="" className="h-10 w-10 shrink-0 rounded object-cover" /> : <span className="h-10 w-10 shrink-0 rounded bg-gray-100" />}
+                  <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{h.name}{h.options ? ` · ${h.options}` : ""}</span><span className="block font-mono text-xs text-gray-500" dir="ltr">{h.sku ?? ""}</span></span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {msg && <p className={msg.ok ? "alert-ok" : "alert-err"} role="status">{msg.text}</p>}
 
       <section className="card">
@@ -267,15 +308,7 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
                         <div className="flex min-w-0 items-center gap-2 text-xs">
                           {l.variant_id
                             ? <><span className="min-w-0 truncate"><span className="text-emerald-700" dir="ltr">✓ {l.sku ?? ""}</span>{l.name && <span className="text-gray-500"> {l.name}</span>}</span>{editable && <button type="button" className="shrink-0 text-gray-500 underline" onClick={() => setLine(l.key, { variant_id: null, sku: null, name: null })}>{C.unlink}</button>}</>
-                            : editable && (linking === l.key
-                              ? <span className="relative inline-flex gap-1">
-                                  <input autoFocus className="input w-36 px-2 py-1 text-xs" placeholder={C.search} value={linkTerm} aria-label={C.link} onChange={(e) => setLinkTerm(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void search(linkTerm, setLinkHits); } }} />
-                                  {linkHits && <span className="absolute top-full z-20 mt-1 max-h-56 w-64 overflow-y-auto rounded-lg border border-[var(--line)] bg-white shadow-lg">
-                                    {linkHits.length === 0 && <span className="block px-3 py-2 text-gray-500">{t.stock.notFound}</span>}
-                                    {linkHits.map((h) => <button key={h.variantId} type="button" className="block w-full px-3 py-1.5 text-start hover:bg-gray-50" onClick={() => void link(l.key, h)}>{h.name}{h.options ? ` · ${h.options}` : ""} <span className="font-mono" dir="ltr">{h.sku}</span></button>)}
-                                  </span>}
-                                </span>
-                              : <button type="button" className="text-[var(--brand)] underline" onClick={() => { setLinking(l.key); setLinkTerm(l.supplier_code); setLinkHits(null); }}>🔗 {C.link}</button>)}
+                            : editable && <button type="button" className="text-[var(--brand)] underline" data-testid="cn-link" onClick={() => openLink(l)}>🔗 {C.link}</button>}
                         </div>
                       </div>
                     </div>

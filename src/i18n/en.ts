@@ -550,6 +550,7 @@ const en: Dict = {
     errors: { name: "Type the campaign name.", channel: "Choose a channel.", start: "Choose the start date.", end: "The end date is before the start.", amount: "Check the amounts.", forbidden: "You don't have permission." },
   },
   cn: {
+    linkTitle: "Link supplier code {code} to one of our items", linkHint: "Search by our code or the item's name and pick it. The link is saved for this supplier, so the next sheet links by itself.", linkTypeHint: "Type a code or a name…", find: "Search", 
     feeCurrency: "Fees currency", currencies: { SAR: "SAR", USD: "USD $", CNY: "Yuan ¥" }, feesInSar: "Fees in SAR", 
     factor: "Landed rate (SAR per ¥)", factorTitle: "Landed rate", factorHint: "(Container in yuan + fees in yuan) ÷ container in yuan × the yuan→SAR rate. Each item's price in SAR = its price in yuan × this rate. Fees can be typed in SAR, USD or yuan; they are turned into yuan for this.", 
     reorder: "Reorder", remembered: "Linked items keep their China price, CBM and pieces per carton (and the supplier code), so the next sheet links by itself and a reorder brings them back.", 
