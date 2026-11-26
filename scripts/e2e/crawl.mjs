@@ -730,6 +730,15 @@ await page.goto(BASE + "/purchasing/china/new", { waitUntil: "networkidle" });
   if (!/1,107\.6 SAR/.test(sum) || !/0\.7 \/ 58 CBM/.test(sum)) fail("china", `summary: ${sum}`);
   else if (!/11\.19/.test(row1) || !/✓ E2E-SKU-001/.test(row1) || !/0\.5891/.test(sum)) fail("china", `landed rate / cost of the linked line: ${row1} | ${sum}`);
   else ok("China order: sheet read, code linked to our item, 0.7 / 58 CBM, landed rate (1880 + 250) ÷ 1880 × 0.52 = 0.5891 → 19 ¥ = 11.19 SAR per piece, total 1,107.6 SAR");
+  // "Link to item" opens a search window, starts with the supplier code, finds our items by code or name
+  await page.locator('[data-testid=cn-lines] tr[data-code="JC-9"] [data-testid=cn-link]').click();
+  await page.locator("[data-testid=cn-link-dialog]").waitFor({ timeout: 5000 }).catch(() => fail("china", "link window didn't open"));
+  if ((await page.inputValue("[data-testid=cn-link-search]").catch(() => "")) !== "JC-9") fail("china", "link search should start with the supplier code");
+  await page.fill("[data-testid=cn-link-search]", "E2E-SKU");
+  await page.waitForFunction(() => /E2E-SKU-001/.test(document.querySelector("[data-testid=cn-link-results]")?.textContent ?? ""), null, { timeout: 10000 }).catch(() => {});
+  if (!/E2E-SKU-001/.test(await page.locator("[data-testid=cn-link-results]").innerText().catch(() => ""))) fail("china", "link search finds nothing for E2E-SKU");
+  else ok("link to item: a search window (code or name) with the matching items to pick");
+  await page.keyboard.press("Escape");
   // fees in dollars: 130 USD × 3.75 = 487.5 SAR → total 977.6 + 487.5; back to riyals before saving
   await page.click("[data-testid=cn-fee-USD]");
   const usdTot = await page.locator("[data-testid=cn-total]").innerText();
