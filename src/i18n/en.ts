@@ -550,6 +550,7 @@ const en: Dict = {
     errors: { name: "Type the campaign name.", channel: "Choose a channel.", start: "Choose the start date.", end: "The end date is before the start.", amount: "Check the amounts.", forbidden: "You don't have permission." },
   },
   cn: {
+    factor: "Landed rate (SAR per ¥)", factorTitle: "Landed rate", factorHint: "(Container in yuan + fees in yuan) ÷ container in yuan × the yuan→SAR rate. Each item's price in SAR = its price in yuan × this rate. Fees are typed in SAR and turned into yuan at the same rate.", 
     reorder: "Reorder", remembered: "Linked items keep their China price, CBM and pieces per carton (and the supplier code), so the next sheet links by itself and a reorder brings them back.", 
     title: "China orders", subtitle: "Container orders: the supplier's sheet, cartons, CBM, fees and landed cost per piece (SAR)", newOrder: "New China order", none: "No China orders yet.",
     details: "Order details", name: "Order name", namePh: "e.g. December container", supplier: "Supplier (optional)", store: "Receive into", container: "Container", status: "Status",
@@ -558,7 +559,7 @@ const en: Dict = {
     uploaded: "{n} lines added from the sheet ({m} linked to items).", noHeader: "Couldn't find the columns in this sheet (code, description, cartons, pieces per carton, price, CBM).",
     used: "used", free: "free", goods: "Goods", fees: "Fees", rateDiff: "Rate difference", total: "Total", save: "Save order", saving: "Saving…", unsaved: "Changes not saved yet",
     rateTitle: "Exchange rate", rate: "Order rate (SAR per 1 yuan)", ratePaid: "Rate actually paid (SAR per yuan)", rateDiffTitle: "Yuan rate difference", rateDiffHint: "Type the rate actually paid to see the difference.",
-    feesTitle: "Fees (SAR)", shipping: "Shipping", customs: "Customs clearance", other: "Other fees", feeLoad: "Fees on the goods", feesHint: "For every 100 SAR of goods we pay {x} SAR of fees. Shipping is spread on the items by their CBM, customs and other fees by their value.",
+    feesTitle: "Fees (SAR)", shipping: "Shipping", customs: "Customs clearance", other: "Other fees", feeLoad: "Fees on the goods", feesHint: "For every 100 SAR of goods we pay {x} SAR of fees; the landed rate spreads them on every item by its value.",
     avgUnit: "Average landed cost per piece", items: "Items", linkedOf: "{a} of {b} linked", addLine: "+ New line by hand", search: "Search by code or name", add: "Add",
     code: "Code", desc: "Description", cartons: "Cartons × pieces/carton", pieces: "pieces", price: "Price per piece · amount", cbm: "CBM/carton", landed: "Amount (SAR) · landed per piece",
     link: "Link to item", unlink: "Unlink", remove: "Remove", openPo: "Purchase order / receive", receiveHint: "When it arrives, open its purchase order and receive it: stock goes in and each item's cost becomes its landed cost.",

@@ -4,11 +4,15 @@ import { landed, parseCsvRows, picturesForLines, readChinaSheet, type CnLine } f
 const L = (o: Partial<CnLine>): CnLine => ({ supplier_code: "", description: "", variant_id: null, cartons: "", per_carton: "1", unit_price: "", carton_cbm: "", ...o });
 
 describe("China orders", () => {
-  it("landed cost: same as the database (shipping by CBM, customs + other by value)", () => {
+  it("landed rate (سعر التضريب): (container ¥ + fees ¥) ÷ container ¥ × rate, the same for every item", () => {
     const r = landed([L({ cartons: "4", per_carton: "50", unit_price: "18", carton_cbm: "0.18" }), L({ cartons: "6", per_carton: "50", unit_price: "33", carton_cbm: "0.2" })],
       { rate: "0.52", rate_paid: "", fee_shipping: "1000", fee_customs: "300", fee_other: "100" });
-    expect(r.rows[0].unit).toBe(11.7683);
-    expect(r.rows[1].unit).toBe(20.2211);
+    // fees 1400 SAR = ¥2692.31; (13500 + 2692.31) ÷ 13500 = 1.1994; × 0.52 = 0.6237
+    expect(r.feesCny).toBe(2692.31);
+    expect(r.ratio).toBe(1.1994);
+    expect(r.factor).toBe(0.6237);
+    expect(r.rows[0].unit).toBe(11.2267);
+    expect(r.rows[1].unit).toBe(20.5822);
     expect(r.totCny).toBe(13500);
     expect(r.totCbm).toBe(1.92);
     expect(r.goodsSar).toBe(7020);

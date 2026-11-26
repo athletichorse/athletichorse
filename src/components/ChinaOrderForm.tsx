@@ -177,6 +177,7 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
         </div>
         <div><div className="text-xs text-gray-500">{C.goods}</div><div className="text-xl font-semibold" dir="ltr">{f2(calc.goodsSar)}</div></div>
         <div><div className="text-xs text-gray-500">{C.fees}</div><div className="text-xl font-semibold" dir="ltr">{f2(calc.fees)} <span className="text-xs font-normal text-gray-500">· {calc.feePct}%</span></div></div>
+        <div><div className="text-xs text-gray-500">{C.factor}</div><div className="text-xl font-semibold text-[var(--brand)]" dir="ltr" data-testid="cn-factor">{calc.factor ? calc.factor.toFixed(4) : "—"}</div></div>
         <div><div className="text-xs text-gray-500">{C.rateDiff}</div><div className="text-xl font-semibold" dir="ltr">{calc.rateDiff === null ? "—" : f2(calc.rateDiff)}</div></div>
         <div><div className="text-xs text-gray-500">{C.total}</div><div className="text-2xl font-bold" dir="ltr" data-testid="cn-total">{f2(calc.total)} SAR</div></div>
         <div className="ms-auto text-end">
@@ -202,6 +203,14 @@ export function ChinaOrderForm({ t, locale, suppliers, locations, initial, edita
             <div><label className="label" htmlFor="cn-other">{C.other}</label><input id="cn-other" className="input" dir="ltr" inputMode="decimal" value={fees.fee_other} disabled={ro} onChange={(e) => { setFees({ ...fees, fee_other: e.target.value }); setDirty(true); }} /></div>
           </div>
           <div className="mt-3 flex items-center justify-between rounded-lg bg-gray-50 p-3"><span className="font-medium">{C.feeLoad}</span><b className="text-2xl" dir="ltr">{calc.feePct}%</b></div>
+          <div className="mt-3 rounded-lg border border-[var(--line)] p-3 text-sm" data-testid="cn-factor-steps">
+            <div className="mb-1 font-semibold">{C.factorTitle}</div>
+            <div className="space-y-0.5 text-xs text-gray-600" dir="ltr">
+              <div>(¥{f2(calc.totCny)} + ¥{f2(calc.feesCny)}) ÷ ¥{f2(calc.totCny)} = {calc.ratio.toFixed(4)}</div>
+              <div>{calc.ratio.toFixed(4)} × {f2(Number(fees.rate_paid) > 0 ? Number(fees.rate_paid) : Number(fees.rate) || 0)} = <b className="text-[var(--brand)]">{calc.factor.toFixed(4)}</b></div>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">{C.factorHint}</p>
+          </div>
           <p className="mt-2 text-xs text-gray-500">{C.feesHint.replace("{x}", calc.goodsSar > 0 ? f2((calc.fees / calc.goodsSar) * 100) : "0")}</p>
           <p className="mt-1 text-sm">{C.avgUnit}: <b dir="ltr">{calc.avgUnit === null ? "—" : `${f2(calc.avgUnit)} SAR`}</b></p>
         </section>
