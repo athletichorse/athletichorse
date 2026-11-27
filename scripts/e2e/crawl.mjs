@@ -45,7 +45,7 @@ async function checkPage(page, path, label) {
 }
 
 const browser = await chromium.launch();
-const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/reports/sales", "/sales/reports/analysis", "/sales/reports/invoices", "/sales/reports/treasury", "/sales/reports/b2b", "/sales/reports/purchases", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/purchasing/china", "/purchasing/china/new", "/purchasing/expenses", "/purchasing/expenses/plan", "/sales/reports/finance", "/marketing", "/marketing/campaigns", "/sales?tab=returns", "/sales?tab=website", "/sales?tab=quotes", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
+const ROUTES = ["/", "/products", "/products/new", "/products/groups", "/products/levels", "/staff", "/locations", "/company", "/company/backup", "/permissions", "/upload", "/pos", "/stock", "/stock/new?kind=receipt", "/stock/new?kind=transfer", "/stock/new?kind=count", "/sales", "/sales/reports", "/sales/reports/sales", "/sales/reports/analysis", "/sales/reports/invoices", "/sales/reports/treasury", "/sales/reports/b2b", "/sales/reports/purchases", "/sales/orders", "/sales/collections", "/sales/b2b", "/sales/b2b/new", "/purchasing", "/purchasing/new", "/purchasing/suppliers", "/purchasing/china", "/purchasing/china/new", "/purchasing/expenses", "/purchasing/expenses/plan", "/sales/reports/finance", "/marketing", "/marketing/campaigns", "/sales?tab=returns", "/sales?tab=website", "/sales?tab=quotes", "/pos/shifts", "/pos/day", "/pos/expense-types", "/stock/docs", "/stock/count", "/stock/requests", "/stock/requests/quick", "/stock/shortages", "/stock/condition", "/stock/condition/report", "/stock/defects", "/products/labels", "/staff/employees", "/staff/attendance", "/staff/payroll", "/staff/commission", "/staff/advances", "/audit/hours", "/audit/devices", "/customers", "/stock-log", "/audit"];
 
 // ---------------------------------------------------------------- 1. setup + flows (desktop, English)
 console.log("\n== Setup and main flows (desktop, English)");
@@ -438,6 +438,67 @@ await page.goto(BASE + "/stock-log", { waitUntil: "networkidle" });
 const logTxt = await page.locator("table").first().innerText();
 for (const k of ["Receipt", "Transfer out", "Transfer in", "Write-off", "Count"]) if (!logTxt.includes(k)) fail("stock log", `missing ${k}`);
 ok("stock log lists every movement");
+
+// item condition: sound → damaged / partial (same quantity), red balance, owner alert, report, owner's decision settles the store
+where = "condition";
+{
+  const condSave = async () => {
+    await page.click("[data-testid=cond-save]");
+    await page.waitForSelector("[data-testid=cond-form] .alert-ok, [data-testid=cond-form] .alert-err", { timeout: 15000 });
+    return page.locator("[data-testid=cond-form] .alert-ok, [data-testid=cond-form] .alert-err").first().innerText();
+  };
+  await page.goto(BASE + "/stock/condition", { waitUntil: "networkidle" });
+  await page.locator("#cond-store").selectOption({ label: "Riyadh Branch" });
+  await page.fill("[data-testid=cond-search]", "E2E-ROPE-1");
+  await page.press("[data-testid=cond-search]", "Enter");
+  await page.waitForFunction(() => /On hand\s*7/.test(document.querySelector("[data-testid=cond-info]")?.textContent ?? ""), null, { timeout: 15000 }).catch(() => {});
+  if (!/On hand\s*7/.test(await page.locator("[data-testid=cond-info]").innerText().catch(() => ""))) fail("condition", "item info: on hand 7 not shown");
+  await page.click("[data-testid=cond-from-good]"); await page.click("[data-testid=cond-to-damaged]");
+  await page.fill("[data-testid=cond-qty]", "2");
+  const c1 = await condSave();
+  await page.click("[data-testid=cond-from-good]"); await page.click("[data-testid=cond-to-partial]");
+  await page.fill("[data-testid=cond-qty]", "1");
+  const c2 = await condSave();
+  await page.waitForFunction(() => /Damaged\s*2/.test(document.querySelector("[data-testid=cond-info]")?.textContent ?? "") && /Partial defect\s*1/.test(document.querySelector("[data-testid=cond-info]")?.textContent ?? ""), null, { timeout: 15000 }).catch(() => {});
+  const info = await page.locator("[data-testid=cond-info]").innerText();
+  if (!/condition changed/i.test(c1) || !/condition changed/i.test(c2) || !/On hand\s*7/.test(info) || !/Sound\s*4/.test(info)) fail("condition", `change: ${c1} / ${c2} / ${info.replace(/\s+/g, " ")}`);
+  else ok("item condition: 2 → damaged, 1 → partial defect; on hand stays 7, sound 4");
+  await page.click("[data-testid=cond-from-damaged]"); await page.click("[data-testid=cond-to-good]");
+  await page.fill("[data-testid=cond-qty]", "5");
+  const c3 = await condSave();
+  if (!/Not enough/.test(c3)) fail("condition", `more than there is: ${c3}`); else ok("condition: can't move more pieces than there are in that condition");
+  await page.goto(BASE + "/stock?q=e2e-rope", { waitUntil: "networkidle" });
+  const red = page.locator("td[data-bad='1']");
+  if (!(await red.count()) || !/Damaged 2 · Partial defect 1/.test(await red.first().innerText()) || !/red/.test(await red.first().getAttribute("class") ?? "")) fail("condition", "stock by store: balance not red with the faulty pieces");
+  else ok("stock by store: balance in red with 'Damaged 2 · Partial defect 1'");
+  await page.goto(BASE + "/", { waitUntil: "networkidle" });
+  const al = await page.locator("[data-testid=defects-alert]").innerText().catch(() => "");
+  if (!/3 faulty pieces/.test(al)) fail("condition", `owner alert: ${al}`); else ok("owner sees the alert: 3 faulty pieces waiting for a decision");
+  await page.goto(BASE + "/stock/condition/report", { waitUntil: "networkidle" });
+  const rep = (await page.locator("[data-testid=cond-report]").innerText().catch(() => "")).replace(/\s+/g, " ");
+  if (!/E2E-ROPE-1/.test(rep) || !/28\.6%/.test(rep) || !/14\.3%/.test(rep) || !/42\.9%/.test(rep)) fail("condition", `report: ${rep.slice(0, 200)}`);
+  else ok("condition report: damaged 28.6%, partial 14.3%, not sound 42.9% of the 7 on hand");
+  // owner's decision: scrap 1 damaged, repair 1 damaged, repair the partial one
+  const decide = async (cond, action, qty) => {
+    await page.goto(BASE + "/stock/defects", { waitUntil: "networkidle" });
+    const f = page.locator("[data-testid=defect-case]").filter({ hasText: "E2E" }).filter({ hasText: cond }).first();
+    await f.locator("[data-testid=defect-action]").selectOption(action);
+    await f.locator("[data-testid=defect-qty]").fill(String(qty));
+    await Promise.all([page.waitForURL(/ok=1|err=/, { timeout: 20000 }), f.locator('button:text-is("Apply")').click()]);
+    return page.url();
+  };
+  const d1 = await decide("Damaged", "scrap", 1), d2 = await decide("Damaged", "repair", 1), d3 = await decide("Partial defect", "repair", 1);
+  const hist = (await page.locator("[data-testid=defect-history]").innerText().catch(() => "")).replace(/\s+/g, " ");
+  if (![d1, d2, d3].every((u) => u.includes("ok=1")) || !/Scrap/.test(hist) || !/Repair/.test(hist)) fail("condition", `decisions: ${[d1, d2, d3].join(" ")} ${hist.slice(0, 160)}`);
+  else ok("owner's decisions: scrap 1, repair 2 — listed in the history");
+  await page.goto(BASE + "/stock?q=e2e-rope", { waitUntil: "networkidle" });
+  const after6 = await page.locator("table").first().innerText();
+  await page.goto(BASE + "/", { waitUntil: "networkidle" });
+  if ((await page.locator("[data-testid=defects-alert]").count()) || (await page.goto(BASE + "/stock?q=e2e-rope", { waitUntil: "networkidle" }), await page.locator("td[data-bad='1']").count()) || !/Riyadh Branch[\s\S]*\b6\b|\b6\b[\s\S]*Riyadh/.test(after6)) fail("condition", `after decisions: ${after6.replace(/\s+/g, " ").slice(0, 200)}`);
+  else ok("store settled: scrapped piece left the stock (Riyadh 6), no red balance, alert gone");
+  const back = await stockDoc(page, "receipt", "E2E-ROPE-1", 1);
+  if (!/Posted/.test(back)) fail("condition", `restore stock: ${back}`);
+}
 
 // warehouse user needs a manager's PIN for receipts
 where = "approval";

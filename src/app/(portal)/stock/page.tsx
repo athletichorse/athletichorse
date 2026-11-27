@@ -35,6 +35,9 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
   if (q) query = query.ilike("search", `%${q.replace(/[%_\\]/g, "")}%`);
   const { data, count } = await query.order("name_en").range((page - 1) * PER_PAGE, page * PER_PAGE - 1);
   const rows = (data ?? []) as Row[];
+  // pieces not sound (damaged / partial defect) → the balance shows in red
+  const { data: conds } = rows.length ? await db().from("stock_condition").select("location_id, variant_id, damaged, partial").in("variant_id", [...new Set(rows.map((r) => r.variant_id))]) : { data: [] };
+  const condOf = (r: Row) => conds?.find((c) => c.variant_id === r.variant_id && c.location_id === r.location_id);
   const pages = Math.max(1, Math.ceil((count ?? 0) / PER_PAGE));
   const href = (o: { loc?: string; page?: number; q?: string }) => {
     const u = new URLSearchParams();
@@ -93,7 +96,15 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
                   </td>
                   <td data-label="SKU" className="font-mono text-xs" dir="ltr">{r.sku ?? "—"}</td>
                   {loc === "all" && <td data-label={t.stock.location}>{lname(r.location_id)}</td>}
-                  <td data-label={t.stock.onHand} className={`font-semibold ${Number(r.qty) < 0 ? "text-red-600" : "text-gray-900"}`}>{Number(r.qty).toLocaleString("en-US")}</td>
+                  {(() => {
+                    const c = condOf(r), dmg = Number(c?.damaged ?? 0), par = Number(c?.partial ?? 0);
+                    return (
+                      <td data-label={t.stock.onHand} className={`font-semibold ${Number(r.qty) < 0 || dmg + par > 0 ? "text-red-600" : "text-gray-900"}`} data-bad={dmg + par > 0 ? "1" : undefined}>
+                        {Number(r.qty).toLocaleString("en-US")}
+                        {dmg + par > 0 && <Link href={`/stock/condition?loc=${r.location_id}&v=${r.variant_id}`} className="block text-xs font-normal text-red-600 underline">{dmg > 0 && `${t.cond.damaged} ${dmg}`}{dmg > 0 && par > 0 && " · "}{par > 0 && `${t.cond.partial} ${par}`}</Link>}
+                      </td>
+                    );
+                  })()}
                   <td data-label={t.stock.lastUpdated} className="text-xs text-gray-500">{formatDateTime(new Date(r.updated_at), locale)}</td>
                 </tr>
               ))}

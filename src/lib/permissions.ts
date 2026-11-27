@@ -57,6 +57,8 @@ export const PERMISSION_KEYS = [
   "stock.log",
   "stock.requests", // restock requests → transfers
   "stock.all_locations", // see every location's stock (off: own branch)
+  "stock.condition", // mark pieces sound / damaged / partly faulty
+  "stock.defects", // decide for faulty pieces: return to supplier, repair, scrap (owner gets the alert)
   // Marketing / التسويق
   "marketing.view",
   "marketing.edit", // budget, campaigns, Meta sync
@@ -136,7 +138,7 @@ export const ROLE_DEFAULTS: Record<Role, readonly PermissionKey[]> = {
     (k) => k !== "permissions.edit" && k !== "settings.edit" && k !== "staff.payroll_edit" && !(APPROVAL_ALL as string[]).includes(k),
   ),
   accountant: ["sales.view", "sales.view_all_branches", "sales.website_orders", "sales.b2b", "purchasing.view", "purchasing.pay", "purchasing.expenses", "reports.view", "products.view", "products.view_cost", "customers.view", "stock.view", "stock.log", "stock.all_locations", "audit.view", "staff.payroll", "staff.payroll_edit", "pos.past_shifts"],
-  warehouse: ["purchasing.view", "purchasing.receive", "stock.view", "stock.transfer", "stock.receive", "stock.count", "stock.log", "stock.write_off", "stock.requests", "stock.all_locations", "products.view", "products.labels", "approval.stock_receive", "approval.write_off"],
+  warehouse: ["purchasing.view", "purchasing.receive", "stock.view", "stock.transfer", "stock.receive", "stock.count", "stock.log", "stock.write_off", "stock.requests", "stock.all_locations", "stock.condition", "products.view", "products.labels", "approval.stock_receive", "approval.write_off"],
   cashier: [...cashierBase, "sales.view", ...APPROVAL_ALL],
   pos: [...deskBase, ...APPROVAL_ALL],
   cashier_pos: [...new Set<PermissionKey>([...cashierBase, ...deskBase, "sales.view", ...APPROVAL_ALL])],

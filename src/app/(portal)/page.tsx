@@ -70,8 +70,20 @@ export default async function Home() {
     overdue = { n: old.length, total: old.reduce((a, d) => a + d.amount, 0) };
     soon = { n: next.length, total: next.reduce((a, d) => a + d.amount, 0) };
   }
+  // faulty pieces waiting for the owner's decision (return / repair / scrap)
+  let faulty = 0;
+  if (s.perms.has("stock.defects")) {
+    const { data: fc } = await db().from("stock_condition").select("damaged, partial").or("damaged.gt.0,partial.gt.0").limit(5000);
+    faulty = (fc ?? []).reduce((a, r) => a + Number(r.damaged) + Number(r.partial), 0);
+  }
   return (
     <>
+    {faulty > 0 && (
+      <p className="alert-err no-print mb-4 flex flex-wrap items-center gap-3" data-testid="defects-alert">
+        <span className="flex-1">⚠️ <span dir="ltr">{faulty}</span> {t.cond.defects.alert}</span>
+        <Link href="/stock/defects" className="font-semibold underline">{t.cond.defects.open}</Link>
+      </p>
+    )}
     {overdue.n > 0 && (
       <p className="alert-err no-print mb-4 flex flex-wrap items-center gap-3" data-testid="expenses-reminder">
         <span className="flex-1">{t.expenses.reminder} {overdue.n} · <span dir="ltr">{overdue.total.toFixed(2)}</span></span>
