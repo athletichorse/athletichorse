@@ -21,7 +21,7 @@ I = {
     "arm": IMG + "WhatsApp-Image-2025-08-24-at-21.29.02_3c1c4b24_dd64d437-b6e4-4eec-a76d-2ff8596f404e.jpg",
 }
 I["trophy"] = IMG + "rn-image_picker_lib_temp_0bbe3731-7dd3-4958-b6bd-865a5a0a8c3c.png"  # football-trophy (not the World Cup replica)
-WA = "966541770519"
+WA = "966564816467"
 
 T = {
     "en": {
@@ -400,7 +400,7 @@ def build(lang):
 
 <section class="ah-ev__sec" style="margin-bottom:24px">
  <div class="ah-ev__band" data-rv>
-  <div><strong>{esc(t['phone'])}:</strong> <a class="ah-ev__tel" href="https://wa.me/{WA}" target="_blank" rel="noopener" style="color:var(--g);font-weight:700">+966 54 177 0519</a></div>
+  <div><strong>{esc(t['phone'])}:</strong> <a class="ah-ev__tel" href="https://wa.me/{WA}" target="_blank" rel="noopener" style="color:var(--g);font-weight:700">+966 56 481 6467</a></div>
   <div>{esc(t['email'])} <a href="mailto:info@athletic-horse.com" style="color:var(--g);font-weight:700">info@athletic-horse.com</a></div>
  </div>
  <p style="margin-top:20px;font-weight:700">{esc(t['browse'])}</p>

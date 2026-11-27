@@ -1,3 +1,12 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
 {
   "current": {
     "logo": "shopify://shop_images/alhisan-alriyadi-logo-transparent.png",
@@ -16,7 +25,7 @@
     "color_dark": "#0B0F0C",
     "color_sale": "#D61F45",
     "page_width": 1440,
-    "store_phone": "+966 57 387 3497",
+    "store_phone": "+966 56 481 6467",
     "store_email": "info@athletic-horse.com",
     "store_address": "Al Boghdadiyah Al Sharqiyah, Jeddah 22235, Saudi Arabia",
     "cr_number": "7053046608",
@@ -29,7 +38,7 @@
     "social_x_link": "",
     "social_tiktok_link": "https://www.tiktok.com/@athletic_horse",
     "social_snapchat_link": "https://www.snapchat.com/@athletic_horse",
-    "social_whatsapp_number": "966573873497",
+    "social_whatsapp_number": "966564816467",
     "show_whatsapp_button": true,
     "social_linktree_link": "https://linktr.ee/Alhisan",
     "sections": {

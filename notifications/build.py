@@ -21,7 +21,7 @@ LINE = '#E3E9E5'
 TINT = '#F2F7F3'
 PAGE = '#EDF1EE'
 LOGO_WHITE = 'https://cdn.shopify.com/s/files/1/0847/8952/6778/files/alhisan-alriyadi-logo-white.png?v=1792476034'
-WHATSAPP = 'https://wa.me/966573873497'
+WHATSAPP = 'https://wa.me/966564816467'
 
 SOCIAL = [
     ('Snapchat', 'https://www.snapchat.com/@athletic_horse'),

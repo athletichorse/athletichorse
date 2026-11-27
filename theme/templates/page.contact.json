@@ -1,12 +1,21 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
 {
   "sections": {
     "contact-info": {
       "type": "contact-info",
       "settings": {
-        "whatsapp_number": "966573873497",
-        "whatsapp_display": "+966 57 387 3497",
-        "bulk_number": "966541770519",
-        "bulk_display": "+966 54 177 0519",
+        "whatsapp_number": "966564816467",
+        "whatsapp_display": "+966 56 481 6467",
+        "bulk_number": "966564816467",
+        "bulk_display": "+966 56 481 6467",
         "address": "Al Boghdadiyah Al Sharqiyah, Jeddah 22235, Saudi Arabia",
         "maps_url": "https://share.google/B3QeRfIAdghP2ynlt",
         "linktree_url": "https://linktr.ee/Alhisan",
