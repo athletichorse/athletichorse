@@ -7,7 +7,7 @@
   --dark: var(--color-dark, #0B0F0C);
   --ink: var(--color-ink, #111614);
   --ink-2: var(--color-ink-soft, #3D4641);
-  --muted: #6B746F;
+  --muted: #5F6964; /* darkened 27 Nov 2026 for 4.5:1 contrast on light surfaces */
   --line: var(--color-border, #E3E7E4);
   --surface: var(--color-background-alt, #F3F5F4);
   --bg: var(--color-background, #FFFFFF);
@@ -2243,3 +2243,38 @@ html[lang="ar"] .ah-nav__link.ah-nav__link--event { font-weight: 600; }
 /* Landing pages (page.landing) */
 .ah-landing { padding-top: 16px; padding-bottom: var(--section-gap); }
 @media (min-width: 990px) { .ah-landing { padding-top: 28px; } }
+
+/* ===== UI/UX audit fixes (27 Nov 2026) ===== */
+/* Contrast: crossed-out prices were 2.3:1 */
+.ah-price__was, .ah-section--deals .ah-price__was { color: #6E7772; }
+/* White Friday title: dark offset shadow instead of lime so "WHITE" reads on the light banner */
+.ah-wf__t1 { text-shadow: 5px 5px 0 var(--brand-dark, #0F3D22); }
+/* Readable small labels */
+.ah-wf__unit small { font-size: 12px; }
+.ah-1111__badge-core small { font-size: 11.5px; letter-spacing: .02em; }
+/* Collection toolbar: keep "36 products" on one line */
+.ah-toolbar__count { white-space: nowrap; }
+/* Tap targets on phones */
+@media (max-width: 989px) {
+  .ah-footer__col li a { display: inline-flex; align-items: center; min-height: 40px; }
+  .ah-drawer__account { min-height: 44px; }
+}
+/* Floating WhatsApp: smaller on phones; hidden on product pages there (WhatsApp sits next to Add to cart) */
+@media (max-width: 989px) {
+  .wa-float { width: 48px; height: 48px; bottom: 16px; inset-inline-end: 14px; }
+  .wa-float svg { width: 24px; height: 24px; }
+  .template-product .wa-float { display: none; }
+}
+/* Mobile header slides away on scroll down (app.js adds .ah-hdr-hide) */
+@media (max-width: 989px) {
+  #shopify-section-header { transition: transform .35s cubic-bezier(.22, 1, .36, 1); }
+  html.ah-hdr-hide #shopify-section-header { transform: translateY(-100%); }
+}
+@media (prefers-reduced-motion: reduce) { html.ah-hdr-hide #shopify-section-header { transform: none; } }
+.ah-price__was, .ah-section--deals .ah-price__was { color: #646D68; } /* 4.9:1 on the grey card surface */
+.ah-wf__tile-off, .ah-wf__tile-price, .ah-wf__tile-price .ah-money__num { font-size: 12px; }
+@media (max-width: 989px) { .ah-crumbs a { display: inline-flex; align-items: center; min-height: 32px; } }
+@media (max-width: 989px) {
+  .wa-float { transition: transform .35s cubic-bezier(.22, 1, .36, 1); }
+  html.ah-hdr-hide .wa-float { transform: translateY(160%); }
+}

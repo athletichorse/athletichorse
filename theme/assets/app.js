@@ -1163,3 +1163,24 @@
     initPolicy();
   });
 })();
+
+/* Mobile header: slide away while scrolling down, come back on scroll up (27 Nov 2026 UX audit).
+   Frees ~150px of screen on phones. Transform only; never while a drawer is open; off for reduced motion. */
+(function () {
+  var sec = document.getElementById('shopify-section-header');
+  if (!sec || !window.matchMedia) return;
+  var mq = window.matchMedia('(max-width: 989px)'), calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var lastY = window.scrollY, ticking = false;
+  function anyOpen() { return !!document.querySelector('.mobile-drawer.is-open, .ah-cart-drawer.is-open, [data-cart-drawer].is-open, .ah-overlay.is-open'); }
+  function update() {
+    ticking = false;
+    var y = window.scrollY, hide = false;
+    if (mq.matches && !calm.matches && !anyOpen() && y > 220) {
+      hide = y > lastY + 4 ? true : (y < lastY - 4 ? false : document.documentElement.classList.contains('ah-hdr-hide'));
+    }
+    document.documentElement.classList.toggle('ah-hdr-hide', hide);
+    lastY = y;
+  }
+  window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+  document.addEventListener('focusin', function (e) { if (sec.contains(e.target)) document.documentElement.classList.remove('ah-hdr-hide'); });
+})();
