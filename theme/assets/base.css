@@ -2278,3 +2278,20 @@ html[lang="ar"] .ah-nav__link.ah-nav__link--event { font-weight: 600; }
   .wa-float { transition: transform .35s cubic-bezier(.22, 1, .36, 1); }
   html.ah-hdr-hide .wa-float { transform: translateY(160%); }
 }
+
+/* Phones/tablets (<1200px): the search bar is folded into a search icon next to the menu button (27 Nov 2026).
+   Tap the icon to open the bar under the header (input gets focus); tap again / Esc to close. */
+.ah-header__start { display: flex; align-items: center; gap: 2px; justify-self: start; }
+.ah-header__search-toggle .ah-st__close { display: none; }
+html.ah-search-open .ah-header__search-toggle .ah-st__open { display: none; }
+html.ah-search-open .ah-header__search-toggle .ah-st__close { display: block; }
+@media (max-width: 1199px) {
+  .ah-header__mobile-search { display: none !important; }
+  html.ah-search-open .ah-header__mobile-search { display: block !important; animation: ahSearchIn .28s cubic-bezier(.22, 1, .36, 1) both; }
+}
+@keyframes ahSearchIn { from { opacity: 0; transform: translateY(-8px); } }
+@media (min-width: 1200px) {
+  .ah-header__start { display: none; }
+  .ah-header__mobile-search { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) { html.ah-search-open .ah-header__mobile-search { animation: none; } }

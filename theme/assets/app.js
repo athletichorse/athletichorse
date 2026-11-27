@@ -1171,7 +1171,7 @@
   if (!sec || !window.matchMedia) return;
   var mq = window.matchMedia('(max-width: 989px)'), calm = window.matchMedia('(prefers-reduced-motion: reduce)');
   var lastY = window.scrollY, ticking = false;
-  function anyOpen() { return !!document.querySelector('.mobile-drawer.is-open, .ah-cart-drawer.is-open, [data-cart-drawer].is-open, .ah-overlay.is-open'); }
+  function anyOpen() { return document.documentElement.classList.contains('ah-search-open') || !!document.querySelector('.mobile-drawer.is-open, .ah-cart-drawer.is-open, [data-cart-drawer].is-open, .ah-overlay.is-open'); }
   function update() {
     ticking = false;
     var y = window.scrollY, hide = false;
@@ -1183,4 +1183,18 @@
   }
   window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
   document.addEventListener('focusin', function (e) { if (sec.contains(e.target)) document.documentElement.classList.remove('ah-hdr-hide'); });
+})();
+
+/* Search icon (phones/tablets): toggles the search bar under the header */
+(function () {
+  var btn = document.querySelector('[data-search-toggle]'), wrap = document.getElementById('HeaderSearchMobileWrap');
+  if (!btn || !wrap) return;
+  var root = document.documentElement, input = wrap.querySelector('input[type=search]');
+  function set(open) {
+    root.classList.toggle('ah-search-open', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) { root.classList.remove('ah-hdr-hide'); if (input) setTimeout(function () { input.focus(); }, 30); }
+  }
+  btn.addEventListener('click', function () { set(!root.classList.contains('ah-search-open')); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && root.classList.contains('ah-search-open')) { set(false); btn.focus(); } });
 })();

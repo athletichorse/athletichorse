@@ -49,6 +49,7 @@ Older themes (Update 5, 6, 7 and "Stock cap + i18n fix") were deleted on 27 Nov 
 ## UI/UX audit (27 Nov 2026)
 - Automated Playwright audit (contrast, tap targets, tiny text, overflow, RTL) over home/collection/product/cart/search/contact/about/blog/policy/event pages, mobile + desktop, EN + AR. Fixed: `--muted` darkened to #5F6964 (4.5:1), crossed-out price #646D68, White Friday "WHITE" dark shadow, countdown/badge/tile text ≥11.5px, footer + drawer + breadcrumb tap targets, collection count no-wrap, desktop header fit, Event Production nav pill.
 - Phones: header slides away on scroll down and back on scroll up (`app.js` adds `html.ah-hdr-hide`; transform only; never while a drawer is open); the floating WhatsApp button (48px) slides away with it and is hidden on product pages (WhatsApp button sits next to Add to cart).
+- Below 1200px the header search bar is folded into a search icon next to the menu button (`[data-search-toggle]`, `html.ah-search-open`, Esc closes); header is 65px instead of ~121px.
 - Known non-bug: on repeat visits Shopify redirects /cart through shop.app (Shop Pay recognition) — blocked in the cloud sandbox, fine for customers.
 
 ## Order attribution ("Came from")

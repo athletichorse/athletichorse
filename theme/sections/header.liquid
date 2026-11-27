@@ -7,9 +7,15 @@
 
 <header class="ah-header" data-ah-header>
   <div class="container ah-header__bar">
-    <button class="ah-icon-btn ah-header__menu" data-drawer-open aria-expanded="false" aria-label="{{ 'general.header.menu' | t }}">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h10"/></svg>
-    </button>
+    <div class="ah-header__start">
+      <button class="ah-icon-btn ah-header__menu" data-drawer-open aria-expanded="false" aria-label="{{ 'general.header.menu' | t }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h10"/></svg>
+      </button>
+      <button type="button" class="ah-icon-btn ah-header__search-toggle" data-search-toggle aria-expanded="false" aria-controls="HeaderSearchMobileWrap" aria-label="{{ 'general.header.search' | t }}">
+        <svg class="ah-st__open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-3.5-3.5"/></svg>
+        <svg class="ah-st__close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
 
     {%- render 'logo', css_class: 'ah-header__logo' -%}
 
@@ -124,7 +130,7 @@
     </div>
   </div>
 
-  <div class="ah-header__mobile-search">
+  <div class="ah-header__mobile-search" id="HeaderSearchMobileWrap">
     <div class="container">
       <form action="{{ routes.search_url }}" method="get" role="search" class="ah-search">
         <input type="hidden" name="type" value="product">
