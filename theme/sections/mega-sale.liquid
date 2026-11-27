@@ -16,6 +16,26 @@
     assign live = true
   endif
   assign coll = collections[section.settings.collection]
+  comment
+    Two phases (owner, 27 Nov): White Friday "today only" until 28 Nov 00:00 Riyadh (1795813200),
+    then "November Sale" until end_ts. Phase texts are locale keys sections.mega_sale.wf_* / nov_*.
+  endcomment
+  assign phase_end = 1795813200
+  assign ph = 'sections.mega_sale.nov_'
+  assign cd_end = end_ts
+  if now_ts < phase_end
+    assign ph = 'sections.mega_sale.wf_'
+    assign cd_end = phase_end
+  endif
+  assign k_tape_en = ph | append: 'tape_en'
+  assign k_tape_ar = ph | append: 'tape_ar'
+  assign k_tape_b = ph | append: 'tape_b'
+  assign k_until = ph | append: 'until'
+  assign k_flag = ph | append: 'flag'
+  assign k_t1 = ph | append: 'title_a'
+  assign k_t2 = ph | append: 'title_b'
+  assign k_ring = ph | append: 'badge_ring'
+  assign k_ends = ph | append: 'ends_in'
 -%}
 {%- if live and coll and coll.products_count > 0 -%}
 {%- liquid
@@ -43,7 +63,7 @@
     assign jump_cheapest = '#ah-1111-cheapest-' | append: section.id
   endif
 -%}
-<section class="ah-1111" data-ah-mega data-end="{{ end_ts }}">
+<section class="ah-1111" data-ah-mega data-end="{{ end_ts }}" data-cd="{{ cd_end }}">
   {%- if section.settings.show_hero -%}
   {%- liquid
     assign picks = ''
@@ -77,21 +97,21 @@
     <div class="ah-wf__tapes" aria-hidden="true">
       <div class="ah-wf__tape ah-wf__tape--a"><div class="ah-wf__tape-track" dir="ltr">
         {%- for i in (1..4) -%}
-          <span>WHITE FRIDAY</span><i>✦</i><span>الجمعة البيضاء</span><i>✦</i><span dir="auto">{{ 'sections.mega_sale.strip_off' | t: percent: max_off }}</span><i>✦</i>
+          <span>{{ k_tape_en | t }}</span><i>✦</i><span>{{ k_tape_ar | t }}</span><i>✦</i><span dir="auto">{{ 'sections.mega_sale.strip_off' | t: percent: max_off }}</span><i>✦</i>
         {%- endfor -%}
       </div></div>
       <div class="ah-wf__tape ah-wf__tape--b"><div class="ah-wf__tape-track ah-wf__tape-track--rev" dir="ltr">
         {%- for i in (1..4) -%}
-          <span dir="auto">{{ 'sections.mega_sale.tape_extended' | t }}</span><i>●</i><span dir="auto">{{ 'sections.mega_sale.until' | t }}</span><i>●</i><span dir="auto">{{ 'sections.mega_sale.perk_cod' | t }}</span><i>●</i>
+          <span dir="auto">{{ k_tape_b | t }}</span><i>●</i><span dir="auto">{{ k_until | t }}</span><i>●</i><span dir="auto">{{ 'sections.mega_sale.perk_cod' | t }}</span><i>●</i>
         {%- endfor -%}
       </div></div>
     </div>
 
     <div class="container ah-1111__inner ah-wf__inner">
       <div class="ah-wf__copy">
-        <span class="ah-wf__flag">{%- render 'icon', name: 'flag' -%}{{ 'sections.mega_sale.flag' | t }}</span>
-        <h2 class="ah-wf__title"><span class="ah-wf__t1">{{ 'sections.mega_sale.title_a' | t }}</span><span class="ah-wf__t2">{{ 'sections.mega_sale.title_b' | t }}</span></h2>
-        <p class="ah-wf__until">{%- render 'icon', name: 'clock' -%}<span>{{ 'sections.mega_sale.until' | t }}</span></p>
+        <span class="ah-wf__flag">{%- render 'icon', name: 'flag' -%}{{ k_flag | t }}</span>
+        <h2 class="ah-wf__title"><span class="ah-wf__t1">{{ k_t1 | t }}</span><span class="ah-wf__t2">{{ k_t2 | t }}</span></h2>
+        <p class="ah-wf__until">{%- render 'icon', name: 'clock' -%}<span>{{ k_until | t }}</span></p>
         <p class="ah-wf__sub">{{ 'sections.mega_sale.subtitle_html' | t: percent: max_off }}</p>
         <div class="ah-wf__ctas">
           <a href="{{ jump_discount }}" class="ah-btn ah-wf__btn"{% if section.settings.show_rails %} data-ah-jump{% endif %}>{{ 'sections.mega_sale.cta_discount' | t }}</a>
@@ -106,7 +126,7 @@
 
       <div class="ah-wf__visual">
         <div class="ah-1111__badge ah-wf__badge" aria-hidden="true">
-          <svg class="ah-1111__badge-ring" viewBox="0 0 120 120"><defs><path id="ah1111c-{{ section.id }}" d="M60 60m-46 0a46 46 0 1 1 92 0a46 46 0 1 1 -92 0"/></defs><text><textPath href="#ah1111c-{{ section.id }}" textLength="288" lengthAdjust="spacingAndGlyphs">{{ 'sections.mega_sale.badge_ring' | t }}</textPath></text></svg>
+          <svg class="ah-1111__badge-ring" viewBox="0 0 120 120"><defs><path id="ah1111c-{{ section.id }}" d="M60 60m-46 0a46 46 0 1 1 92 0a46 46 0 1 1 -92 0"/></defs><text><textPath href="#ah1111c-{{ section.id }}" textLength="288" lengthAdjust="spacingAndGlyphs">{{ k_ring | t }}</textPath></text></svg>
           <span class="ah-1111__badge-core"><small>{{ 'sections.mega_sale.badge_up_to' | t }}</small><b dir="ltr">{{ max_off }}%</b><small>{{ 'sections.mega_sale.badge_off' | t }}</small></span>
         </div>
         <div class="ah-wf__tiles">
@@ -123,7 +143,7 @@
           {%- endfor -%}
         </div>
         <div class="ah-wf__clock" aria-live="off">
-          <span class="ah-wf__clock-label">{%- render 'icon', name: 'clock' -%}{{ 'sections.mega_sale.ends_in' | t }}</span>
+          <span class="ah-wf__clock-label">{%- render 'icon', name: 'clock' -%}{{ k_ends | t }}</span>
           <div class="ah-wf__units">
             <span class="ah-wf__unit"><b data-u="d">00</b><small>{{ 'sections.mega_sale.days' | t }}</small></span>
             <span class="ah-wf__unit"><b data-u="h">00</b><small>{{ 'sections.mega_sale.hours' | t }}</small></span>
@@ -211,6 +231,7 @@
     var el = document.currentScript.previousElementSibling;
     if (!el || !el.hasAttribute('data-ah-mega')) return;
     var end = parseInt(el.getAttribute('data-end'), 10) * 1000;
+    var cd = parseInt(el.getAttribute('data-cd') || el.getAttribute('data-end'), 10) * 1000;
     el.querySelectorAll('[data-ah-jump]').forEach(function (a) {
       a.addEventListener('click', function (e) {
         var target = document.querySelector(a.getAttribute('href'));
@@ -227,8 +248,13 @@
     el.querySelectorAll('[data-u]').forEach(function (b) { units[b.getAttribute('data-u')] = b; });
     function pad(n) { return (n < 10 ? '0' : '') + n; }
     function tick() {
-      var left = Math.floor((end - Date.now()) / 1000);
-      if (left <= 0) { el.hidden = true; return; }
+      if (Date.now() >= end) { el.hidden = true; return; }
+      var left = Math.floor((cd - Date.now()) / 1000);
+      if (left <= 0) {
+        /* White Friday day is over: reload once to show the November Sale banner. */
+        try { if (!sessionStorage.getItem('ahPhase' + cd)) { sessionStorage.setItem('ahPhase' + cd, '1'); location.reload(); return; } } catch (e) {}
+        left = 0;
+      }
       if (!units.d) { setTimeout(tick, 60000); return; }
       units.d.textContent = pad(Math.floor(left / 86400));
       units.h.textContent = pad(Math.floor(left % 86400 / 3600));

@@ -5,10 +5,19 @@
 {%- liquid
   assign wf_end = 1796072400
   assign wf_now = 'now' | date: '%s' | plus: 0
+  comment
+    White Friday is today only (until 28 Nov 00:00 Riyadh), then the November Sale runs to the end of November.
+  endcomment
+  assign wf_tag = 'sections.mega_sale.nov_pdp_tag'
+  assign wf_cd = wf_end
+  if wf_now < 1795813200
+    assign wf_tag = 'sections.mega_sale.wf_pdp_tag'
+    assign wf_cd = 1795813200
+  endif
 -%}
 {%- if product.compare_at_price > product.price and wf_now >= 1794258000 and wf_now < wf_end -%}
-  <div class="ah-wf-deal" data-wf-deal data-end="{{ wf_end }}">
-    <span class="ah-wf-deal__tag">{%- render 'icon', name: 'sale' -%}{{ 'sections.mega_sale.pdp_tag' | t }}</span>
+  <div class="ah-wf-deal" data-wf-deal data-end="{{ wf_cd }}">
+    <span class="ah-wf-deal__tag">{%- render 'icon', name: 'sale' -%}{{ wf_tag | t }}</span>
     <span class="ah-wf-deal__time">{{ 'sections.mega_sale.pdp_ends' | t }} <b data-wf-left dir="ltr"></b></span>
   </div>
   <script>
