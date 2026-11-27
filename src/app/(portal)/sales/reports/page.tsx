@@ -32,6 +32,7 @@ export default async function ReportsHub() {
     { key: "stock", cards: [
       { key: "itemHistory", href: "/sales/reports/sales#history" }, { key: "stockLog", href: "/stock-log", perm: "stock.log" },
       { key: "shortages", href: "/stock/shortages", perm: "stock.view" }, { key: "stockValue", href: "/stock", perm: "stock.view" },
+      { key: "condition", href: "/stock/condition/report", perm: "stock.view" },
     ] },
     { key: "customers", cards: [
       { key: "b2b", href: "/sales/reports/b2b", perm: "sales.b2b" }, { key: "website", href: "/sales/orders", perm: "sales.website_orders" },

@@ -37,6 +37,8 @@ export function buildSections(t: Dict, perms: Perms, role?: Role): Section[] {
         ...(perms.has("stock.requests") ? [{ label: t.stock.flow.tabs.requests, href: "/stock/requests" }] : []),
         { label: t.stock.flow.tabs.stock, href: "/stock" },
         { label: t.stock.flow.tabs.shortages, href: "/stock/shortages" },
+        ...(any(perms, "stock.condition", "stock.view") ? [{ label: t.cond.tab, href: "/stock/condition" }] : []),
+        ...(perms.has("stock.defects") ? [{ label: t.cond.defectsTab, href: "/stock/defects" }] : []),
         ...(perms.has("stock.log") ? [{ label: t.menu.stockLog, href: "/stock-log" }] : []),
         ...(!till && perms.has("locations.edit") ? [{ label: t.stock.flow.tabs.warehouses, href: "/locations" }] : []),
       ],
