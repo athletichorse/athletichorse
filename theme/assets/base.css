@@ -2239,3 +2239,7 @@ html[lang="ar"] .ah-nav__link.ah-nav__link--event { font-weight: 600; }
 }
 .ah-nav__link--home svg, .ah-nav__link--event svg { flex: none; }
 .ah-nav__link--home svg { width: 18px; height: 18px; }
+
+/* Landing pages (page.landing) */
+.ah-landing { padding-top: 16px; padding-bottom: var(--section-gap); }
+@media (min-width: 990px) { .ah-landing { padding-top: 28px; } }

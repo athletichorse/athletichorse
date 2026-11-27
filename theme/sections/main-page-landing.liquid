@@ -1,0 +1,13 @@
+{%- comment -%}
+  Full-width landing page (page.landing template): no breadcrumb or title, the page content designs its own hero.
+  Used by the Event Production page.
+{%- endcomment -%}
+<div class="container ah-landing">
+  <div class="rte ah-landing__body">
+    {{ page.content }}
+  </div>
+</div>
+
+{% schema %}
+{ "name": "Landing page", "settings": [] }
+{% endschema %}

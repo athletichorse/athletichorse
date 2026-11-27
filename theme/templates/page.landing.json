@@ -1,0 +1,6 @@
+{
+  "sections": {
+    "main": { "type": "main-page-landing", "settings": {} }
+  },
+  "order": ["main"]
+}

@@ -28,6 +28,10 @@ PH = {
     "bag": IMG + "cb108b9d-7acc-434c-9762-e6906d55237d.png",
     "shorts": IMG + "238d631c-fd76-4c26-b05e-891cce0add2b.jpg",
     "kit": IMG + "rn-image_picker_lib_temp_9af26313-093c-4f17-acd2-ba13589dd515.jpg",
+    # owner photos (27 Nov), upscaled + sharpened, in Shopify Files
+    "wristband": IMG + "ep-wristband.jpg", "tent": IMG + "ep-tent.jpg", "buoys": IMG + "ep-buoys.jpg",
+    "gate": IMG + "ep-gate.jpg", "bibs": IMG + "ep-bibs.jpg", "beachflag": IMG + "ep-beach-flag.jpg",
+    "lanyard": IMG + "ep-lanyard.jpg", "idcard": IMG + "ep-id-card.jpg",
 }
 
 # Line icons (24x24, stroke = currentColor)
@@ -59,7 +63,9 @@ def icon(name, cls="ah-ep__ic"):
 
 
 ITEMS = ["medal", "tshirt", "vest", "flag", "tent", "barrier", "bracelet", "bag", "buoy", "gate", "shorts", "lanyard", "id", "number"]
-PHOTO = {"medal": "medal", "tshirt": "tshirt", "vest": "vest", "flag": "flag", "bracelet": "bracelet", "bag": "bag", "shorts": "shorts", "number": "bib"}
+PHOTO = {"medal": "medal", "tshirt": "tshirt", "vest": "vest", "flag": "beachflag", "tent": "tent", "bracelet": "wristband", "bag": "bag", "buoy": "buoys",
+         "gate": "gate", "shorts": "shorts", "lanyard": "lanyard", "id": "idcard", "number": "bibs"}
+COVER = {"wristband", "tent", "buoys", "gate", "bibs", "beachflag", "lanyard", "idcard"}  # full photos fill the card
 HUE = {"medal": "#e2b33c", "tshirt": "#2f7de1", "vest": "#f97316", "flag": "#14532d", "tent": "#0ea5a4", "barrier": "#d61f45", "bracelet": "#8b5cf6",
        "bag": "#0f766e", "buoy": "#f59e0b", "gate": "#e11d48", "shorts": "#1d4ed8", "lanyard": "#16a34a", "id": "#334155", "number": "#b6f23a"}
 
@@ -203,7 +209,8 @@ CSS = r"""
 .ah-ep__eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--g)}
 [dir=rtl] .ah-ep__eyebrow{letter-spacing:0}
 .ah-ep__eyebrow i{width:26px;height:2px;background:currentColor;display:block}
-.ah-ep__h2{font-size:clamp(1.7rem,4vw,2.7rem);line-height:1.1;letter-spacing:-.02em;margin:10px 0 26px!important}
+.ah-ep .ah-ep__h2{font-size:clamp(1.7rem,4vw,2.7rem);line-height:1.1;letter-spacing:-.02em;margin:10px 0 26px!important;color:var(--ink);font-weight:800}
+.ah-ep h3{font-family:inherit;letter-spacing:-.01em;font-weight:800;margin-top:0!important}
 /* hero */
 .ah-ep__hero{position:relative;border-radius:30px;background:var(--gd);color:#fff;padding:clamp(28px,6vw,72px) clamp(22px,5vw,64px);overflow:hidden;isolation:isolate;min-height:min(86vh,720px);display:flex;flex-direction:column;justify-content:center}
 .ah-ep__blob{position:absolute;border-radius:50%;filter:blur(10px);z-index:-1;will-change:transform}
@@ -212,7 +219,7 @@ CSS = r"""
 @keyframes ahEpDrift{to{transform:translate3d(6%,8%,0) scale(1.12)}}
 .ah-ep__grid{position:absolute;inset:0;z-index:-1;opacity:.12;background-image:linear-gradient(rgba(255,255,255,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.5) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(70% 70% at 50% 40%,#000,transparent);mask-image:radial-gradient(70% 70% at 50% 40%,#000,transparent)}
 .ah-ep__hero .ah-ep__eyebrow{color:var(--lime)}
-.ah-ep__h1{font-size:clamp(2.3rem,7vw,4.8rem);line-height:1.02;letter-spacing:-.03em;color:#fff;margin:14px 0 18px!important;max-width:12em}
+.ah-ep .ah-ep__h1{font-size:clamp(2.3rem,7vw,4.8rem);line-height:1.04;letter-spacing:-.03em;color:#fff;font-weight:800;margin:14px 0 18px!important;max-width:12em}
 .ah-ep__w{display:inline-block;opacity:0;transform:translate3d(0,.5em,0) rotate(2deg);animation:ahEpUp .9s var(--ease) both;animation-delay:calc(var(--i)*80ms + 120ms)}
 @keyframes ahEpUp{to{opacity:1;transform:none}}
 .ah-ep__h1 em{font-style:normal;color:var(--lime)}
@@ -236,12 +243,12 @@ CSS = r"""
 .ah-ep__fl{position:absolute;display:grid;place-items:center;width:clamp(46px,6vw,64px);height:clamp(46px,6vw,64px);border-radius:18px;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);color:#fff;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:ahEpFloat 7s ease-in-out infinite;animation-delay:var(--d);will-change:transform}
 .ah-ep__fl .ah-ep__ic{width:52%;height:52%}
 @keyframes ahEpFloat{50%{transform:translate3d(0,-14px,0) rotate(6deg)}}
-.ah-ep__fl--1{top:12%;inset-inline-end:8%;color:var(--lime)}
+.ah-ep__fl--1{top:14%;inset-inline-end:8%;color:var(--lime)}
 .ah-ep__fl--2{top:38%;inset-inline-end:20%}
 .ah-ep__fl--3{bottom:16%;inset-inline-end:6%}
 .ah-ep__fl--4{top:8%;inset-inline-end:32%}
 .ah-ep__fl--5{bottom:8%;inset-inline-end:28%;color:var(--lime)}
-@media (max-width:749px){.ah-ep__fl--2,.ah-ep__fl--4{display:none}.ah-ep__fl{opacity:.55}.ah-ep__fl--1{top:5%}.ah-ep__fl--3{bottom:4%}.ah-ep__fl--5{bottom:4%;inset-inline-end:auto;inset-inline-start:58%}}
+@media (max-width:749px){.ah-ep__fl--2,.ah-ep__fl--4{display:none}.ah-ep__fl{opacity:.55}.ah-ep__fl--1{top:22px}.ah-ep__fl--3{bottom:4%}.ah-ep__fl--5{bottom:4%;inset-inline-end:auto;inset-inline-start:58%}}
 /* marquee */
 .ah-ep__mq{margin:22px 0 0;overflow:hidden;border-radius:999px;background:var(--gt);-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
 .ah-ep__mq-track{display:flex;width:max-content;gap:0;animation:ahEpMq 34s linear infinite}
@@ -262,6 +269,8 @@ CSS = r"""
 .ah-ep__card:hover{box-shadow:0 20px 40px -24px rgba(11,46,25,.45)}
 .ah-ep__media{position:relative;aspect-ratio:4/3.4;display:grid;place-items:center;background:radial-gradient(90% 90% at 30% 20%,color-mix(in srgb,var(--h) 28%,#fff),color-mix(in srgb,var(--h) 10%,#fff));overflow:hidden}
 .ah-ep__media img{width:74%;height:74%;object-fit:contain;mix-blend-mode:multiply;transition:transform .8s var(--ease)}
+.ah-ep__media img.ah-ep__cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;mix-blend-mode:normal}
+.ah-ep__card:hover .ah-ep__media img.ah-ep__cover{transform:scale(1.05)}
 .ah-ep__card:hover .ah-ep__media img{transform:scale(1.06) rotate(-2deg)}
 .ah-ep__media .ah-ep__big{width:44%;height:44%;color:color-mix(in srgb,var(--h) 80%,#000);animation:ahEpBob 5s ease-in-out infinite}
 @keyframes ahEpBob{50%{transform:translate3d(0,-8px,0) rotate(-4deg)}}
@@ -288,7 +297,7 @@ CSS = r"""
 .ah-ep__stack{display:grid;gap:18px}
 .ah-ep__ev{position:sticky;top:calc(88px + var(--k)*14px);border-radius:26px;padding:clamp(22px,4vw,40px);min-height:clamp(200px,34vw,300px);color:#fff;background:linear-gradient(135deg,var(--c1),var(--c2));display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start;transform-origin:top center;will-change:transform;box-shadow:0 -10px 30px -20px rgba(0,0,0,.4)}
 .ah-ep__ev-n{font-size:clamp(2.4rem,6vw,4rem);line-height:.9;font-weight:900;color:rgba(255,255,255,.22);font-variant-numeric:tabular-nums}
-.ah-ep__ev h3{font-size:clamp(1.3rem,3vw,2rem);line-height:1.15;color:#fff;margin-bottom:10px!important}
+.ah-ep .ah-ep__ev h3{font-size:clamp(1.3rem,3vw,2rem);line-height:1.15;color:#fff;margin-bottom:10px!important}
 .ah-ep__ev p{color:rgba(255,255,255,.86);max-width:38em}
 .ah-ep__ev-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
 .ah-ep__ev-tags span{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.14)}
@@ -317,13 +326,21 @@ CSS = r"""
 .ah-ep__chip[aria-pressed=true] .ah-ep__ic{color:var(--lime)}
 .ah-ep__row{display:grid;gap:14px}
 @media (min-width:600px){.ah-ep__row{grid-template-columns:1fr 1fr}}
-.ah-ep__in{width:100%;min-height:50px;padding:0 16px;border-radius:14px;border:1px solid #CBD5CF;background:#fff;font:inherit;color:var(--ink)}
+.ah-ep__in{display:block;width:100%;max-width:100%;min-width:0;min-height:50px;padding:0 16px;border-radius:14px;border:1px solid #CBD5CF;background:#fff;font:inherit;font-size:16px;color:var(--ink);-webkit-appearance:none;appearance:none}
+.ah-ep__in[type=date]{line-height:50px;text-align:start}
+.ah-ep__in::-webkit-date-and-time-value{text-align:start}
 .ah-ep__in:focus{outline:2px solid var(--g);outline-offset:1px}
-.ah-ep__range{width:100%;accent-color:var(--g)}
+.ah-ep__range{flex:1;min-width:0;height:28px;-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
+.ah-ep__range::-webkit-slider-runnable-track{height:8px;border-radius:8px;background:linear-gradient(90deg,var(--g) var(--v,4%),#CBD5CF var(--v,4%))}
+[dir=rtl] .ah-ep__range::-webkit-slider-runnable-track{background:linear-gradient(-90deg,var(--g) var(--v,4%),#CBD5CF var(--v,4%))}
+.ah-ep__range::-moz-range-track{height:8px;border-radius:8px;background:#CBD5CF}
+.ah-ep__range::-moz-range-progress{height:8px;border-radius:8px;background:var(--g)}
+.ah-ep__range::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-10px;border-radius:50%;background:var(--lime);border:3px solid var(--g);box-shadow:0 4px 10px -4px rgba(0,0,0,.4)}
+.ah-ep__range::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:var(--lime);border:3px solid var(--g)}
 .ah-ep__qty{display:flex;align-items:center;gap:14px}
 .ah-ep__qty output{min-width:64px;font-weight:900;font-size:1.3rem;color:var(--g);font-variant-numeric:tabular-nums}
 .ah-ep__sum{position:sticky;top:96px;border-radius:24px;background:var(--gd);color:#fff;padding:26px}
-.ah-ep__sum h3{color:#fff;font-size:1.2rem;margin-bottom:14px!important}
+.ah-ep .ah-ep__sum h3{color:#fff;font-size:1.2rem;margin-bottom:14px!important}
 .ah-ep__sum ul{display:grid;gap:8px;margin-bottom:18px}
 .ah-ep__sum li{display:flex;justify-content:space-between;gap:12px;font-size:.92rem;border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:8px}
 .ah-ep__sum li span:first-child{color:rgba(255,255,255,.62)}
@@ -399,7 +416,7 @@ JS = r"""
       evs.forEach(function(ev,i){var nx=evs[i+1]; if(!nx){ev.style.transform='';return;}
         var a=ev.getBoundingClientRect(), b=nx.getBoundingClientRect(), o=Math.max(0,Math.min(1,(a.bottom-b.top)/a.height));
         ev.style.transform='scale('+(1-o*.06).toFixed(4)+')';ev.style.opacity=(1-o*.35).toFixed(3);});
-      if(orbit&&hero){var h=hero.getBoundingClientRect(); if(h.bottom>0) orbit.style.transform='translate3d(0,'+(h.top*-.18).toFixed(1)+'px,0)';}
+      if(orbit&&hero){var h=hero.getBoundingClientRect(); if(h.bottom>0) orbit.style.transform='translate3d(0,'+(Math.max(0,-h.top)*.18).toFixed(1)+'px,0)';}
     }
     if(steps&&line){var s=steps.getBoundingClientRect(), p=Math.max(0,Math.min(1,(vh*.75-s.top)/s.height)); line.style.setProperty('--p',calm?1:p.toFixed(3));}
     if(bar&&hero){var hb=hero.getBoundingClientRect().bottom, qb=qbox?qbox.getBoundingClientRect():null, inQ=qb&&qb.top<vh&&qb.bottom>0; bar.classList.toggle('is-on',hb<0&&!inQ);}
@@ -424,6 +441,7 @@ JS = r"""
   function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
   function render(){
     qout.textContent=qty.value+(qty.value==qty.max?'+':'');
+    qty.style.setProperty('--v',((qty.value-qty.min)/(qty.max-qty.min)*100).toFixed(1)+'%');
     var rows=[[L.m_items,picked.join(L.sep)],[L.m_event,ev],[L.m_qty,qty.value+(qty.value==qty.max?'+':'')],[L.m_date,date.value],[L.m_city,city.value],[L.m_name,nm.value],[L.m_extra,extras.join(L.sep)]].filter(function(r){return r[1]});
     sum.innerHTML=rows.map(function(r){return '<li><span>'+esc(r[0])+'</span><span>'+esc(r[1])+'</span></li>'}).join('');
     empty.hidden=picked.length>0;
@@ -471,7 +489,8 @@ def build(lang):
     for i, k in enumerate(ITEMS):
         name, desc = t["cards"][k]
         if k in PHOTO:
-            media = f'<img src="{PH[PHOTO[k]]}?width=520" srcset="{PH[PHOTO[k]]}?width=360 360w, {PH[PHOTO[k]]}?width=520 520w" sizes="(min-width:990px) 280px, 78vw" alt="{name}" loading="lazy" width="520" height="520">'
+            fit = ' class="ah-ep__cover"' if PHOTO[k] in COVER else ''
+            media = f'<img{fit} src="{PH[PHOTO[k]]}?width=520" srcset="{PH[PHOTO[k]]}?width=360 360w, {PH[PHOTO[k]]}?width=520 520w" sizes="(min-width:990px) 280px, 78vw" alt="{name}" loading="lazy" width="520" height="520">'
         else:
             media = icon(k, "ah-ep__ic ah-ep__big")
         cards.append(f'''<article class="ah-ep__card" style="--h:{HUE[k]}"><div class="ah-ep__media">{media}<span class="ah-ep__badge">{icon(k)}</span><span class="ah-ep__num">{i + 1:02d}</span></div>
@@ -508,7 +527,7 @@ def build(lang):
 <span class="ah-ep__lbl">{t["q_items"]}</span><div class="ah-ep__chips">{chips}</div>
 <span class="ah-ep__lbl">{t["q_event"]}</span><div class="ah-ep__chips">{evchips}</div>
 <label class="ah-ep__lbl" for="ah-ep-qty">{t["q_qty"]}</label>
-<div class="ah-ep__qty"><input class="ah-ep__range" id="ah-ep-qty" name="qty" type="range" min="10" max="5000" step="10" value="200"><output data-qty-out>200</output></div>
+<div class="ah-ep__qty"><input class="ah-ep__range" id="ah-ep-qty" name="qty" type="range" min="10" max="5000" step="10" value="200" style="--v:3.8%"><output data-qty-out>200</output></div>
 <div class="ah-ep__row"><div><label class="ah-ep__lbl" for="ah-ep-date">{t["q_date"]}</label><input class="ah-ep__in" id="ah-ep-date" name="date" type="date"></div>
 <div><label class="ah-ep__lbl" for="ah-ep-city">{t["q_city"]}</label><input class="ah-ep__in" id="ah-ep-city" name="city" type="text" placeholder="{t["q_city_ph"]}" autocomplete="address-level2"></div></div>
 <label class="ah-ep__lbl" for="ah-ep-org">{t["q_name"]}</label><input class="ah-ep__in" id="ah-ep-org" name="org" type="text" placeholder="{t["q_name_ph"]}" autocomplete="organization">
