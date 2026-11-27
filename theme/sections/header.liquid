@@ -86,6 +86,7 @@
             </div>
           </div>
         </li>
+        {%- if pages['event-production'] != blank -%}{%- assign ep_url = routes.root_url | append: '/pages/event-production' | replace: '//', '/' -%}<li class="ah-nav__item"><a href="{{ ep_url }}" class="ah-nav__link ah-nav__link--event{% if page.handle == 'event-production' %} is-active{% endif %}">{{ 'general.header.event_production' | t }}</a></li>{%- endif -%}
         <li class="ah-nav__item"><a href="{{ pages['about-us'].url | default: '/pages/about-us' }}" class="ah-nav__link{% if page.handle == 'about-us' %} is-active{% endif %}">{{ 'general.header.about' | t }}</a></li>
         <li class="ah-nav__item"><a href="{{ pages.contact.url | default: '/pages/contact' }}" class="ah-nav__link{% if page.handle == 'contact' %} is-active{% endif %}">{{ 'general.header.contact' | t }}</a></li>
       </ul>

@@ -37,7 +37,8 @@
         {%- if wf_link != blank -%}<a href="{{ wf_link }}" class="ah-announce__wf">{{ msg_1 | replace: '[riyal]', riyal }}</a>{%- elsif section.settings.link != blank -%}<a href="{{ section.settings.link }}">{{ msg_1 | replace: '[riyal]', riyal }}</a>{%- else -%}{{ msg_1 | replace: '[riyal]', riyal }}{%- endif -%}
       </p>
       <p class="ah-announce__msg" data-announce-msg>{{ msg_3 }}</p>
-      <p class="ah-announce__msg" data-announce-msg>{{ msg_2 }}</p>
+      {%- assign ep_url = routes.root_url | append: '/pages/event-production' | replace: '//', '/' -%}
+      <p class="ah-announce__msg" data-announce-msg>{%- if section.settings.message_2 == blank and pages['event-production'] != blank -%}<a href="{{ ep_url }}">{{ msg_2 }}</a>{%- else -%}{{ msg_2 }}{%- endif -%}</p>
     </div>
     <div class="ah-announce__side">
       <a href="{{ pages.contact.url | default: '/pages/contact' }}">{{ 'general.footer.contact' | t }}</a>

@@ -17,7 +17,7 @@
       "label": "Announcements",
       "message": "Delivery to every city in Saudi Arabia · Cash on delivery",
       "returns": "Cash on delivery across Saudi Arabia · Returns within 3 days",
-      "business_inquiry": "Teams & bulk orders: +966 56 481 6467",
+      "business_inquiry": "Events, teams & bulk orders – get a quote",
       "returns_link": "Returns"
     },
     "header": {
@@ -34,7 +34,8 @@
       "mega_promo": "Build your home gym",
       "home": "Home",
       "about": "About us",
-      "contact": "Contact us"
+      "contact": "Contact us",
+      "event_production": "Event Production"
     },
     "breadcrumb": {
       "home": "Home",
@@ -302,8 +303,9 @@
       "directions": "Get directions",
       "store_name": "Athletic Horse",
       "whatsapp_support": "WhatsApp support",
-      "whatsapp_bulk": "Bulk & wholesale orders",
-      "bulk_message": "Hello, I would like a quote for a bulk order."
+      "whatsapp_bulk": "Events & bulk orders",
+      "bulk_message": "Hello, I would like a quote for a bulk order.",
+      "bulk_link": "Get a quote on our Event Production page"
     },
     "about": {
       "eyebrow": "Our story",

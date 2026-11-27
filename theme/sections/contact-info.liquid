@@ -13,10 +13,13 @@
           <span><strong>{{ 'sections.contact.whatsapp_support' | t }}</strong><span dir="ltr">{{ section.settings.whatsapp_display | default: section.settings.whatsapp_number }}</span></span>
         </a>
       {%- endif -%}
-      {%- if section.settings.bulk_number != blank -%}
-        <a href="https://wa.me/{{ section.settings.bulk_number }}?text={{ 'sections.contact.bulk_message' | t | url_encode }}" class="ah-channel ah-channel--wa" target="_blank" rel="noopener noreferrer">
-          <span class="ah-channel__icon">{%- render 'icon', name: 'whatsapp' -%}</span>
-          <span><strong>{{ 'sections.contact.whatsapp_bulk' | t }}</strong><span dir="ltr">{{ section.settings.bulk_display | default: section.settings.bulk_number }}</span></span>
+      {%- comment -%} Bulk orders and events go to the Event Production page (its WhatsApp is only on that page). {%- endcomment -%}
+      {%- assign ep_page = pages['event-production'] -%}
+      {%- if ep_page != blank -%}
+        {%- assign ep_url = routes.root_url | append: '/pages/event-production' | replace: '//', '/' -%}
+        <a href="{{ ep_url }}" class="ah-channel">
+          <span class="ah-channel__icon">{%- render 'icon', name: 'chat' -%}</span>
+          <span><strong>{{ 'sections.contact.whatsapp_bulk' | t }}</strong><span>{{ 'sections.contact.bulk_link' | t }}</span></span>
         </a>
       {%- endif -%}
       {%- if settings.store_phone != blank -%}
