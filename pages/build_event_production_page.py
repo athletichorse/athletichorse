@@ -32,7 +32,7 @@ PH = {
     "wristband": IMG + "ep-wristband.jpg", "tent": IMG + "ep-tent.jpg", "buoys": IMG + "ep-buoys.jpg",
     "gate": IMG + "ep-gate.jpg", "bibs": IMG + "ep-bibs.jpg", "beachflag": IMG + "ep-beach-flag.jpg",
     "lanyard": IMG + "ep-lanyard.jpg", "idcard": IMG + "ep-id-card.jpg",
-    "barrier": IMG + "ep-barrier.jpg", "eptshirt": IMG + "ep-tshirt.jpg", "bags": IMG + "ep-bags.jpg",
+    "barrier": IMG + "ep-barrier.jpg", "medals": IMG + "ep-medals.jpg", "eptshirt": IMG + "ep-tshirt.jpg", "bags": IMG + "ep-bags.jpg",
 }
 
 # Line icons (24x24, stroke = currentColor)
@@ -64,9 +64,9 @@ def icon(name, cls="ah-ep__ic"):
 
 
 ITEMS = ["medal", "tshirt", "vest", "flag", "tent", "barrier", "bracelet", "bag", "buoy", "gate", "shorts", "lanyard", "id", "number"]
-PHOTO = {"medal": "medal", "tshirt": "eptshirt", "vest": "vest", "flag": "beachflag", "tent": "tent", "barrier": "barrier", "bracelet": "wristband", "bag": "bags", "buoy": "buoys",
+PHOTO = {"medal": "medals", "tshirt": "eptshirt", "vest": "vest", "flag": "beachflag", "tent": "tent", "barrier": "barrier", "bracelet": "wristband", "bag": "bags", "buoy": "buoys",
          "gate": "gate", "shorts": "shorts", "lanyard": "lanyard", "id": "idcard", "number": "bibs"}
-COVER = {"wristband", "tent", "buoys", "gate", "bibs", "beachflag", "lanyard", "idcard", "barrier"}  # full photos fill the card
+COVER = {"medals", "wristband", "tent", "buoys", "gate", "bibs", "beachflag", "lanyard", "idcard", "barrier"}  # full photos fill the card
 HUE = {"medal": "#e2b33c", "tshirt": "#2f7de1", "vest": "#f97316", "flag": "#14532d", "tent": "#0ea5a4", "barrier": "#d61f45", "bracelet": "#8b5cf6",
        "bag": "#0f766e", "buoy": "#f59e0b", "gate": "#e11d48", "shorts": "#1d4ed8", "lanyard": "#16a34a", "id": "#334155", "number": "#b6f23a"}
 
